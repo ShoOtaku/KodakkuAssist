@@ -5,7 +5,7 @@ echo ==================================================
 
 
 echo.
-echo [2/5] Generating OnlineRepo.json...
+echo Generating OnlineRepo.json...
 dotnet run --project ScriptParser/ScriptParser.csproj
 
 echo.
