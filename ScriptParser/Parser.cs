@@ -19,6 +19,19 @@ public class ScriptInfo
 
 public class Parser
 {
+    private static string ExtractAttributeValue(string attributes, string key)
+    {
+        // 这个正则表达式更灵活，可以匹配 key: "value" 或 key: variableName
+        var match = Regex.Match(attributes, $@"\b{key}\s*:\s*(""([^""]*)""|([^,\])]+))");
+        if (match.Success)
+        {
+            // 组2用于带引号的值，组3用于不带引号的值（变量）
+            string value = match.Groups[2].Success ? match.Groups[2].Value : match.Groups[3].Value;
+            return value.Trim();
+        }
+        return "";
+    }
+
     public static void Main(string[] args)
     {
         var workspacePath = Environment.GetEnvironmentVariable("GITHUB_WORKSPACE") ?? ".";
@@ -45,16 +58,16 @@ public class Parser
                 Console.WriteLine($"---> Processing file: {Path.GetFileName(file)}");
                 var content = File.ReadAllText(file);
 
-                var match = Regex.Match(content, @"\[ScriptType\(([^\]]+)\)\]", RegexOptions.Singleline);
+                var match = Regex.Match(content, @"\[ScriptType\((.*?)\)\]", RegexOptions.Singleline);
                 if (match.Success)
                 {
                     var info = new ScriptInfo();
-                    var attributes = match.Groups[1].Value.Replace("\n", " ").Replace("\r", " ");
+                    var attributes = match.Groups[1].Value;
 
-                    info.Name = Regex.Match(attributes, @"name:\s*""([^""]+)""").Groups[1].Value;
-                    info.Guid = Regex.Match(attributes, @"guid:\s*""([^""]+)""").Groups[1].Value;
-                    info.Version = Regex.Match(attributes, @"version:\s*""([^""]+)""").Groups[1].Value;
-                    info.Author = Regex.Match(attributes, @"author:\s*""([^""]+)""").Groups[1].Value;
+                    info.Name = ExtractAttributeValue(attributes, "name");
+                    info.Guid = ExtractAttributeValue(attributes, "guid");
+                    info.Version = ExtractAttributeValue(attributes, "version");
+                    info.Author = ExtractAttributeValue(attributes, "author");
 
                     var territoryMatch = Regex.Match(attributes, @"territorys:\s*\[([^\]]+)\]");
                     if (territoryMatch.Success)
@@ -67,8 +80,15 @@ public class Parser
 
                     info.DownloadUrl = $"https://raw.githubusercontent.com/{githubRepo}/main/Scripts/{Path.GetFileName(file)}";
 
-                    scriptInfos.Add(info);
-                    Console.WriteLine($"---> Successfully parsed: {info.Name}");
+                    if (!string.IsNullOrEmpty(info.Name) && !string.IsNullOrEmpty(info.Guid))
+                    {
+                        scriptInfos.Add(info);
+                        Console.WriteLine($"---> Successfully parsed: {info.Name}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"---> Warning: Parsed file {Path.GetFileName(file)} but essential info (Name/Guid) is missing.");
+                    }
                 }
                 else
                 {
