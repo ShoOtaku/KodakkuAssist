@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("ScriptParser")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3b0dc5c323bc68d68bbe9dda605a6cc9eeb710a5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1f4e84d03c8a17f942618bce869f89b9aa13992d")]
 [assembly: System.Reflection.AssemblyProductAttribute("ScriptParser")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ScriptParser")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

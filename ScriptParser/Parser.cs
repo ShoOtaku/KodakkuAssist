@@ -21,38 +21,36 @@ public class Parser
 {
     public static void Main(string[] args)
     {
-        // 获取仓库的根目录
         var workspacePath = Environment.GetEnvironmentVariable("GITHUB_WORKSPACE") ?? ".";
-        // *** 重要 ***: 定义脚本所在的文件夹。
-        // 推荐做法是将所有脚本放在 "Scripts" 文件夹中。
-        // 如果您的脚本文件在仓库根目录，请将下面这行改为 var scriptsPath = workspacePath;
-        var scriptsPath = Path.Combine(workspacePath, "Scripts"); 
+        var scriptsPath = Path.Combine(workspacePath, "Scripts");
         var jsonFilePath = Path.Combine(workspacePath, "OnlineRepo.json");
         var githubRepo = Environment.GetEnvironmentVariable("GITHUB_REPOSITORY") ?? "ShoOtaku/KodakkuAssist";
 
         var scriptInfos = new List<ScriptInfo>();
 
-        Console.WriteLine($"Scanning for scripts in: {scriptsPath}");
+        Console.WriteLine($"---> Scanning for scripts in: {scriptsPath}");
 
         if (Directory.Exists(scriptsPath))
         {
-            // 注意：SearchOption.TopDirectoryOnly 意味着只搜索当前文件夹，不搜索子文件夹。
-            foreach (var file in Directory.GetFiles(scriptsPath, "*.cs", SearchOption.TopDirectoryOnly))
+            var files = Directory.GetFiles(scriptsPath, "*.cs", SearchOption.TopDirectoryOnly);
+            if (files.Length == 0)
             {
-                // 避免解析自身
+                Console.WriteLine("---> Warning: No .cs files found in the Scripts directory.");
+            }
+
+            foreach (var file in files)
+            {
                 if (Path.GetFileName(file).Equals("Parser.cs", StringComparison.OrdinalIgnoreCase)) continue;
 
-                Console.WriteLine($"Processing file: {Path.GetFileName(file)}");
+                Console.WriteLine($"---> Processing file: {Path.GetFileName(file)}");
                 var content = File.ReadAllText(file);
 
-                // 使用正则表达式匹配 [ScriptType(...)] 属性
-                var match = Regex.Match(content, @"\[ScriptType\(([^\]]+)\)\]");
+                var match = Regex.Match(content, @"\[ScriptType\(([^\]]+)\)\]", RegexOptions.Singleline);
                 if (match.Success)
                 {
                     var info = new ScriptInfo();
-                    var attributes = match.Groups[1].Value;
+                    var attributes = match.Groups[1].Value.Replace("\n", " ").Replace("\r", " ");
 
-                    // 提取各个参数
                     info.Name = Regex.Match(attributes, @"name:\s*""([^""]+)""").Groups[1].Value;
                     info.Guid = Regex.Match(attributes, @"guid:\s*""([^""]+)""").Groups[1].Value;
                     info.Version = Regex.Match(attributes, @"version:\s*""([^""]+)""").Groups[1].Value;
@@ -67,25 +65,26 @@ public class Parser
                             .ToList();
                     }
 
-                    // 自动生成下载链接
-                    // 注意：这里假设您的脚本都在 "Scripts" 文件夹下
                     info.DownloadUrl = $"https://raw.githubusercontent.com/{githubRepo}/main/Scripts/{Path.GetFileName(file)}";
 
                     scriptInfos.Add(info);
-                    Console.WriteLine($"Successfully parsed: {info.Name}");
+                    Console.WriteLine($"---> Successfully parsed: {info.Name}");
+                }
+                else
+                {
+                    Console.WriteLine($"---> Warning: No [ScriptType] attribute found in {Path.GetFileName(file)}.");
                 }
             }
         }
         else
         {
-            Console.WriteLine($"Error: Directory not found at {scriptsPath}");
+            Console.WriteLine($"---> Error: Directory not found at {scriptsPath}. Please ensure your scripts are in a 'Scripts' folder in the repository root.");
         }
 
-        // 设置JSON序列化选项以美化输出
         var options = new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
         var jsonString = JsonSerializer.Serialize(scriptInfos, options);
 
         File.WriteAllText(jsonFilePath, jsonString);
-        Console.WriteLine($"Successfully generated OnlineRepo.json at: {jsonFilePath}");
+        Console.WriteLine($"---> Generated OnlineRepo.json with {scriptInfos.Count} entries.");
     }
 }
