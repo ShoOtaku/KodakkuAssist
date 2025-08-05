@@ -6,14 +6,14 @@ using System.Numerics;
 using Newtonsoft.Json;
 using KodakkuAssist.Module.Draw.Manager;
 
-namespace A12S_Scripts
+namespace A8S_Scripts
 {
-    [ScriptType(name: "亚历山-大零式机神城 律动之章4",
+    [ScriptType(name: "亚历山大零式机神城 律动之章4",
                 territorys: [532],
                 guid: "f5e4d3c2-b1a0-9876-5432-10fedcba9876",
                 version: "1.0.8",
                 author: "XSZYYS")]
-    public class A12S
+    public class A8S
     {
         /// <summary>
         /// This method is called when the script is initialized.
