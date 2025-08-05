@@ -1,0 +1,15 @@
+C:\Users\Administrator\Documents\GitHub\KodakkuAssist\ScriptParser\bin\Debug\net8.0\ScriptParser.exe
+C:\Users\Administrator\Documents\GitHub\KodakkuAssist\ScriptParser\bin\Debug\net8.0\ScriptParser.deps.json
+C:\Users\Administrator\Documents\GitHub\KodakkuAssist\ScriptParser\bin\Debug\net8.0\ScriptParser.runtimeconfig.json
+C:\Users\Administrator\Documents\GitHub\KodakkuAssist\ScriptParser\bin\Debug\net8.0\ScriptParser.dll
+C:\Users\Administrator\Documents\GitHub\KodakkuAssist\ScriptParser\bin\Debug\net8.0\ScriptParser.pdb
+C:\Users\Administrator\Documents\GitHub\KodakkuAssist\ScriptParser\obj\Debug\net8.0\ScriptParser.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Administrator\Documents\GitHub\KodakkuAssist\ScriptParser\obj\Debug\net8.0\ScriptParser.AssemblyInfoInputs.cache
+C:\Users\Administrator\Documents\GitHub\KodakkuAssist\ScriptParser\obj\Debug\net8.0\ScriptParser.AssemblyInfo.cs
+C:\Users\Administrator\Documents\GitHub\KodakkuAssist\ScriptParser\obj\Debug\net8.0\ScriptParser.csproj.CoreCompileInputs.cache
+C:\Users\Administrator\Documents\GitHub\KodakkuAssist\ScriptParser\obj\Debug\net8.0\ScriptParser.sourcelink.json
+C:\Users\Administrator\Documents\GitHub\KodakkuAssist\ScriptParser\obj\Debug\net8.0\ScriptParser.dll
+C:\Users\Administrator\Documents\GitHub\KodakkuAssist\ScriptParser\obj\Debug\net8.0\refint\ScriptParser.dll
+C:\Users\Administrator\Documents\GitHub\KodakkuAssist\ScriptParser\obj\Debug\net8.0\ScriptParser.pdb
+C:\Users\Administrator\Documents\GitHub\KodakkuAssist\ScriptParser\obj\Debug\net8.0\ScriptParser.genruntimeconfig.cache
+C:\Users\Administrator\Documents\GitHub\KodakkuAssist\ScriptParser\obj\Debug\net8.0\ref\ScriptParser.dll
