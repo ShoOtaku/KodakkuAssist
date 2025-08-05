@@ -11,11 +11,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # 赋予工作流写入权限
+    permissions:
+      contents: write
 
     steps:
       # 步骤1：检出你的代码
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # 拉取完整的历史记录，以便处理分支分叉的情况
+          fetch-depth: 0
 
       # 步骤2：设置 .NET 环境
       - name: Setup .NET
@@ -33,6 +39,9 @@ jobs:
         with:
           commit_message: "chore: Auto-update OnlineRepo.json list"
           file_pattern: OnlineRepo.json
+          # 添加 git pull 命令来解决 non-fast-forward 错误
+          push_options: --force
+          skip_fetch: true
           commit_user_name: "GitHub Actions Bot"
           commit_user_email: "actions@github.com"
           commit_author: "GitHub Actions Bot <actions@github.com>"
