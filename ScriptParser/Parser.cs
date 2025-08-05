@@ -21,9 +21,12 @@ public class Parser
 {
     public static void Main(string[] args)
     {
-        // 获取仓库的根目录，并定位到Scripts文件夹
+        // 获取仓库的根目录
         var workspacePath = Environment.GetEnvironmentVariable("GITHUB_WORKSPACE") ?? ".";
-        var scriptsPath = Path.Combine(workspacePath, "Scripts");
+        // *** 重要 ***: 定义脚本所在的文件夹。
+        // 推荐做法是将所有脚本放在 "Scripts" 文件夹中。
+        // 如果您的脚本文件在仓库根目录，请将下面这行改为 var scriptsPath = workspacePath;
+        var scriptsPath = Path.Combine(workspacePath, "Scripts"); 
         var jsonFilePath = Path.Combine(workspacePath, "OnlineRepo.json");
         var githubRepo = Environment.GetEnvironmentVariable("GITHUB_REPOSITORY") ?? "ShoOtaku/KodakkuAssist";
 
@@ -33,8 +36,12 @@ public class Parser
 
         if (Directory.Exists(scriptsPath))
         {
-            foreach (var file in Directory.GetFiles(scriptsPath, "*.cs"))
+            // 注意：SearchOption.TopDirectoryOnly 意味着只搜索当前文件夹，不搜索子文件夹。
+            foreach (var file in Directory.GetFiles(scriptsPath, "*.cs", SearchOption.TopDirectoryOnly))
             {
+                // 避免解析自身
+                if (Path.GetFileName(file).Equals("Parser.cs", StringComparison.OrdinalIgnoreCase)) continue;
+
                 Console.WriteLine($"Processing file: {Path.GetFileName(file)}");
                 var content = File.ReadAllText(file);
 
@@ -61,12 +68,17 @@ public class Parser
                     }
 
                     // 自动生成下载链接
+                    // 注意：这里假设您的脚本都在 "Scripts" 文件夹下
                     info.DownloadUrl = $"https://raw.githubusercontent.com/{githubRepo}/main/Scripts/{Path.GetFileName(file)}";
 
                     scriptInfos.Add(info);
                     Console.WriteLine($"Successfully parsed: {info.Name}");
                 }
             }
+        }
+        else
+        {
+            Console.WriteLine($"Error: Directory not found at {scriptsPath}");
         }
 
         // 设置JSON序列化选项以美化输出
