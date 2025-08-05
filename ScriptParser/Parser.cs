@@ -45,8 +45,7 @@ public class Parser
                 Console.WriteLine($"---> Processing file: {Path.GetFileName(file)}");
                 var content = File.ReadAllText(file);
 
-                // 更新后的正则表达式，可以更好地处理跨行属性
-                var match = Regex.Match(content, @"\[ScriptType\((.*?)\)\]", RegexOptions.Singleline);
+                var match = Regex.Match(content, @"\[ScriptType\(([^\]]+)\)\]", RegexOptions.Singleline);
                 if (match.Success)
                 {
                     var info = new ScriptInfo();
