@@ -9,5 +9,16 @@
     ],
     "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/refs/heads/main/A8S.cs",
     "UpdateInfo": "巨型激光炮, 双重火箭飞拳, 超级跳跃, 末世宣言, 激光战轮, 和幻影系统。"
+  },
+  {
+    "Name": "亚历山大零式机神城 天动之章4 (A12S)",
+    "Guid": "b3a4c5d6-e7f8-9a0b-1c2d-3e4f5a6b7c8d",
+    "Version": "0.0.1",
+    "Author": "XSZYYS",
+    "TerritoryIds": [
+      587
+    ],
+    "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/refs/heads/main/A12S.cs",
+    "UpdateInfo": ""
   }
 ]
