@@ -10,7 +10,7 @@ namespace A8S_Scripts
 {
     [ScriptType(name: "亚历山大零式机神城 律动之章4",
                 territorys: [532],
-                guid: "f5e4d3c2-b1a0-9876-5432-10fedcba9876",
+                guid: "2313EAA7-0C90-4802-AA48-C9CFF30BFBEA",
                 version: "1.0.9",
                 author: "XSZYYS")]
     public class A8S
