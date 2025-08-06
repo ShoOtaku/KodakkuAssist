@@ -32,7 +32,7 @@ namespace A12S_Scripts
 
             dp.Name = "A12S_PunishingRay_Danger_Zone";
             dp.Owner = @event.TargetId;
-            dp.Scale = new Vector2(4, 4);
+            dp.Scale = new Vector2(5, 5);
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = castTime;
 
