@@ -25,14 +25,14 @@ namespace A8S_Scripts
         {
             if (!uint.TryParse(@event["DurationMilliseconds"], out var castTime))
             {
-                castTime = 5000;
+                castTime = 3000;
             }
 
             var dp = accessory.Data.GetDefaultDrawProperties();
 
             dp.Name = "A8S_MegaBeam_Danger_Zone";         // Unique name for the drawing
             dp.Owner = @event.SourceId;                    // Anchor the drawing to the caster
-            dp.Scale = new Vector2(10, 50);                // Set the rectangle's size: 10m width, 50m length
+            dp.Scale = new Vector2(6, 70);                // Set the rectangle's size: 10m width, 50m length
             dp.Color = accessory.Data.DefaultDangerColor;  // Use the default danger color
             dp.DestoryAt = castTime;                       // The drawing will disappear when the cast finishes
 
@@ -47,14 +47,14 @@ namespace A8S_Scripts
         {
             if (!uint.TryParse(@event["DurationMilliseconds"], out var castTime))
             {
-                castTime = 5000;
+                castTime = 4000;
             }
 
             var dp = accessory.Data.GetDefaultDrawProperties();
 
             dp.Name = "A8S_DoubleRocketPunch_Danger_Zone"; // Unique name for the drawing
             dp.Owner = @event.TargetId;                     // Anchor the drawing to the target of the ability
-            dp.Scale = new Vector2(5, 5);                   // Set the circle's radius to 5m
+            dp.Scale = new Vector2(3, 3);                   // Set the circle's radius to 5m
             dp.Color = accessory.Data.DefaultDangerColor;   // Use the default danger color
             dp.DestoryAt = castTime;                        // The drawing will disappear when the cast finishes
 
@@ -69,14 +69,14 @@ namespace A8S_Scripts
         {
             if (!uint.TryParse(@event["DurationMilliseconds"], out var castTime))
             {
-                castTime = 5000;
+                castTime = 3000;
             }
 
             var dp = accessory.Data.GetDefaultDrawProperties();
 
             dp.Name = "A8S_SuperJump_Danger_Zone";          // Unique name for the drawing
             dp.Owner = @event.SourceId;                      // The drawing's position is relative to the caster
-            dp.Scale = new Vector2(5, 5);                    // Set the circle's radius to 5m
+            dp.Scale = new Vector2(10, 10);                    // Set the circle's radius to 5m
             dp.Color = accessory.Data.DefaultDangerColor;    // Use the default danger color
             dp.DestoryAt = castTime;                         // The drawing will disappear when the cast finishes
 
@@ -99,6 +99,29 @@ namespace A8S_Scripts
             dp.Radian = MathF.PI / 2;                       // Set the angle to 90 degrees (PI/2 radians)
             dp.Color = accessory.Data.DefaultDangerColor;   // Use the default danger color
             dp.DestoryAt = 5000;                            // The drawing will last for 5000ms (5 seconds)
+
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+        }
+
+        [ScriptMethod(name: "末世宣言（读条）",
+                      eventType: EventTypeEnum.StartCasting,
+                      eventCondition: ["ActionId:5734"])]
+        public void ApocalypticRayCast(Event @event, ScriptAccessory accessory)
+        {
+            // 获取读条时长，默认为2000ms
+            if (!uint.TryParse(@event["DurationMilliseconds"], out var castTime))
+            {
+                castTime = 2000;
+            }
+
+            var dp = accessory.Data.GetDefaultDrawProperties();
+
+            dp.Name = "A8S_ApocalypticRay_Cast_Danger_Zone";  // Unique name for the drawing
+            dp.Owner = @event.SourceId;                        // Anchor the drawing to the caster
+            dp.Scale = new Vector2(25, 25);                    // Same scale as existing Apocalyptic Ray
+            dp.Radian = MathF.PI / 2;                          // Same 90 degree angle
+            dp.Color = accessory.Data.DefaultDangerColor;      // Same danger color
+            dp.DestoryAt = castTime;                           // Use cast duration as destroy time
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
         }
