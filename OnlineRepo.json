@@ -1,5 +1,14 @@
 [
   {
+    "Name": "调试脚本 (By Chat Command)",
+    "Guid": "B866F3EA-35A3-4BAA-8259-17A0D7608928",
+    "Version": "0.0.1",
+    "Author": "XSZYYS",
+    "TerritoryIds": [],
+    "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/main/Scripts/Debug.cs",
+    "UpdateInfo": ""
+  },
+  {
     "Name": "亚历山大零式机神城 天动之章4",
     "Guid": "3A494EDE-416B-4878-B8A5-3322EE5F8843",
     "Version": "0.0.1",
