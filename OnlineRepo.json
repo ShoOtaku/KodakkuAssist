@@ -20,6 +20,17 @@
     "UpdateInfo": ""
   },
   {
+    "Name": "新月岛CE",
+    "Guid": "15725518-8F8E-413A-BEA8-E19CC861CF93",
+    "Version": "0.0.1",
+    "Author": "XSZYYS",
+    "TerritoryIds": [
+      9999
+    ],
+    "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/main/Scripts/新月岛CE.cs",
+    "UpdateInfo": ""
+  },
+  {
     "Name": "亚历山大零式机神城 律动之章4",
     "Guid": "2113EAA7-0C90-4802-AA48-C9CFF30BFBEA",
     "Version": "0.0.1",
