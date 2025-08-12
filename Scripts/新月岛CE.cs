@@ -291,7 +291,7 @@ namespace EurekaOrthosCeScripts
         [ScriptMethod(
             name: "指令 (With Extreme Prejudice)",
             eventType: EventTypeEnum.Tether,
-            eventCondition: ["Id:regex:^(303|304|306)$"]
+            eventCondition: ["Id:regex:^(012F|0130|0131)$"]
         )]
         public void RockSlideStoneSwell(Event @event, ScriptAccessory accessory)
         {
@@ -299,7 +299,7 @@ namespace EurekaOrthosCeScripts
 
             switch (tetherId)
             {
-                case 303:
+                case 0x012F:
                     {
                         var dp = accessory.Data.GetDefaultDrawProperties();
                         dp.Name = $"ExtremePrejudice_Circle_{@event.TargetId}";
@@ -311,7 +311,7 @@ namespace EurekaOrthosCeScripts
                         accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
                         break;
                     }
-                case 304:
+                case 0x0130:
                     {
                         // 绘制第一条直线
                         var dp1 = accessory.Data.GetDefaultDrawProperties();
@@ -335,7 +335,7 @@ namespace EurekaOrthosCeScripts
                         accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
                         break;
                     }
-                case 306:
+                case 0x0131:
                     {
                         var dp = accessory.Data.GetDefaultDrawProperties();
                         dp.Name = $"ExtremePrejudice_Circle_{@event.SourceId}";
