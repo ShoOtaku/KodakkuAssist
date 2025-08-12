@@ -20,9 +20,9 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.0.8",
+        version: "0.0.9",
         author: "XSZYYS",
-        note: "用于新月岛紧急遭遇战。"
+        note: "用于新月岛紧急遭遇战，更新了指令罐。"
     )]
     public class 新月岛CE
     {
@@ -290,65 +290,69 @@ namespace EurekaOrthosCeScripts
 
 
         [ScriptMethod(
-            name: "指令 (With Extreme Prejudice)",
+            name: "指令 - 圆形 (目标) (With Extreme Prejudice)",
             eventType: EventTypeEnum.Tether,
-            eventCondition: ["Id:regex:^(012F|0130|0131)$"]
+            eventCondition: ["Id:012F"]
         )]
-        public void RockSlideStoneSwell(Event @event, ScriptAccessory accessory)
+        public void RockSlideStoneSwell_CircleTarget(Event @event, ScriptAccessory accessory)
         {
-            uint tetherId = uint.Parse(@event["Id"], NumberStyles.HexNumber);
+            accessory.Log.Debug($"指令 (Tether 012F) 触发: 绘制圆形AOE, 目标: {@event.TargetId}");
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = $"ExtremePrejudice_Circle_{@event.TargetId}";
+            dp.Owner = @event.TargetId;
+            dp.Scale = new Vector2(16);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 6100;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+        }
 
-            switch (tetherId)
-            {
-                case 0x012F:
-                    {
-                        var dp = accessory.Data.GetDefaultDrawProperties();
-                        dp.Name = $"ExtremePrejudice_Circle_{@event.TargetId}";
-                        dp.Owner = @event.TargetId;
-                        dp.Scale = new Vector2(16);
-                        dp.Color = accessory.Data.DefaultDangerColor;
-                        dp.DestoryAt = 6100;
-                        dp.ScaleMode |= ScaleMode.ByTime;
-                        accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
-                        break;
-                    }
-                case 0x0130:
-                    {
-                        // 绘制第一条直线
-                        var dp1 = accessory.Data.GetDefaultDrawProperties();
-                        dp1.Name = $"ExtremePrejudice_Cross1_{@event.TargetId}";
-                        dp1.Owner = @event.TargetId;
-                        dp1.Scale = new Vector2(10, 80);
-                        dp1.Color = accessory.Data.DefaultDangerColor;
-                        dp1.DestoryAt = 6100;
-                        dp1.ScaleMode |= ScaleMode.ByTime;
-                        accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp1);
+        [ScriptMethod(
+            name: "指令 - 十字 (目标) (With Extreme Prejudice)",
+            eventType: EventTypeEnum.Tether,
+            eventCondition: ["Id:0130"]
+        )]
+        public void RockSlideStoneSwell_Cross(Event @event, ScriptAccessory accessory)
+        {
+            accessory.Log.Debug($"指令 (Tether 0130) 触发: 绘制十字AOE, 目标: {@event.TargetId}");
+            // 绘制第一条直线
+            var dp1 = accessory.Data.GetDefaultDrawProperties();
+            dp1.Name = $"ExtremePrejudice_Cross1_{@event.TargetId}";
+            dp1.Owner = @event.TargetId;
+            dp1.Scale = new Vector2(10, 80);
+            dp1.Color = accessory.Data.DefaultDangerColor;
+            dp1.DestoryAt = 6100;
+            dp1.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp1);
 
-                        // 绘制第二条垂直的直线
-                        var dp2 = accessory.Data.GetDefaultDrawProperties();
-                        dp2.Name = $"ExtremePrejudice_Cross2_{@event.TargetId}";
-                        dp2.Owner = @event.TargetId;
-                        dp2.Scale = new Vector2(10, 80);
-                        dp2.Rotation = MathF.PI / 2;
-                        dp2.Color = accessory.Data.DefaultDangerColor;
-                        dp2.DestoryAt = 6100;
-                        dp2.ScaleMode |= ScaleMode.ByTime;
-                        accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
-                        break;
-                    }
-                case 0x0131:
-                    {
-                        var dp = accessory.Data.GetDefaultDrawProperties();
-                        dp.Name = $"ExtremePrejudice_Circle_{@event.SourceId}";
-                        dp.Owner = @event.SourceId;
-                        dp.Scale = new Vector2(16);
-                        dp.Color = accessory.Data.DefaultDangerColor;
-                        dp.DestoryAt = 6100;
-                        dp.ScaleMode |= ScaleMode.ByTime;
-                        accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
-                        break;
-                    }
-            }
+            // 绘制第二条垂直的直线
+            var dp2 = accessory.Data.GetDefaultDrawProperties();
+            dp2.Name = $"ExtremePrejudice_Cross2_{@event.TargetId}";
+            dp2.Owner = @event.TargetId;
+            dp2.Scale = new Vector2(10, 80);
+            dp2.Rotation = MathF.PI / 2;
+            dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.DestoryAt = 6100;
+            dp2.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
+        }
+
+        [ScriptMethod(
+            name: "指令 - 圆形 (目标) (With Extreme Prejudice)",
+            eventType: EventTypeEnum.Tether,
+            eventCondition: ["Id:0131"]
+        )]
+        public void RockSlideStoneSwell_CircleSource(Event @event, ScriptAccessory accessory)
+        {
+            accessory.Log.Debug($"指令 (Tether 0131) 触发: 绘制圆形AOE, 目标: {@event.TargetId}");
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = $"ExtremePrejudice_Circle_{@event.TargetId}";
+            dp.Owner = @event.TargetId;
+            dp.Scale = new Vector2(16);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 6100;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
 
 
@@ -1427,14 +1431,12 @@ namespace EurekaOrthosCeScripts
         }
         #endregion
         #region CompanyOfStone
-        private const uint DualfistFlurryFirstId = 41828;
-        private const uint DualfistFlurryRepeatId = 43152;
         [ScriptMethod(
-            name: "双拳连击 - 起始 (CompanyOfStone)",
+            name: "双拳连击 (CompanyOfStone)",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:41828"]
+            eventCondition: ["ActionId:41828"] // 技能ID Dualfist Flurry
         )]
-        public void DoubleFistStart(Event @event, ScriptAccessory accessory)
+        public void DualfistFlurry(Event @event, ScriptAccessory accessory)
         {
             var caster = accessory.Data.Objects.SearchById(@event.SourceId);
             if (caster == null)
@@ -1442,59 +1444,42 @@ namespace EurekaOrthosCeScripts
                 accessory.Log.Error($"无法找到双拳连击的施法者: {@event.SourceId}");
                 return;
             }
-            var targetPos = JsonConvert.DeserializeObject<Vector3>(@event["EffectPosition"]);
-            var snappedPos = new Vector3(
-                MathF.Round(targetPos.X * 2f) * 0.5f,
-                targetPos.Y,
-                MathF.Round(targetPos.Z * 2f) * 0.5f
-            );
+
+            // 获取初始位置和前进方向
+            var currentPos = JsonConvert.DeserializeObject<Vector3>(@event["EffectPosition"]);
             var direction = new Vector3(MathF.Sin(caster.Rotation), 0, MathF.Cos(caster.Rotation));
-            var line = new FlurryLine
-            {
-                ID = $"Flurry_{caster.EntityId}_{_flurryLines.Count}",
-                NextExplosionPosition = snappedPos,
-                Direction = direction,
-                ExplosionsLeft = 3
-            };
-            _flurryLines.Add(line);
 
-            var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = $"{line.ID}_{line.ExplosionsLeft}";
-            dp.Position = line.NextExplosionPosition;
-            dp.Scale = new Vector2(line.Radius);
-            dp.Color = accessory.Data.DefaultDangerColor;
-            dp.Delay = 10000;
-            dp.DestoryAt = line.DelayMs;
-            dp.ScaleMode |= ScaleMode.ByTime;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
-        }
-        [ScriptMethod(
-            name: "双拳连击 - 后续 (CompanyOfStone)",
-            eventType: EventTypeEnum.ActionEffect,
-            eventCondition: ["ActionId:regex:^(41828|43152)$"]
-        )]
-        public void DualfistFlurryAdvance(Event @event, ScriptAccessory accessory)
-        {
-            var explosionPos = JsonConvert.DeserializeObject<Vector3>(@event["SourcePosition"]);
-            var line = _flurryLines.FirstOrDefault(l => Vector3.Distance(l.NextExplosionPosition, explosionPos) < 1.0f);
-            if (line == null) return;
-            line.ExplosionsLeft--;
-            if (line.ExplosionsLeft <= 0)
+            // 定义技能参数
+            const int totalExplosions = 3;      // 总共3次爆炸
+            const float radius = 6f;            // 爆炸半径
+            const float stepDistance = 7f;      // 每次前进距离
+            const int firstExplosionTime = 6000;// 第一次爆炸时间 (基于6秒咏唱)
+            const int subsequentInterval = 1100;// 后续爆炸间隔
+            const int warningDuration = 2000;   // 警告显示时间
+            const int lingerDuration = 500;     // 爆炸后残留时间
+
+            // 循环创建所有爆炸的绘图
+            for (int i = 0; i < totalExplosions; i++)
             {
-                _flurryLines.Remove(line);
-                return;
+                var dp = accessory.Data.GetDefaultDrawProperties();
+                dp.Name = $"CompanyOfStone_DualfistFlurry_Danger_Zone_{i}";
+                dp.Position = currentPos;
+                dp.Scale = new Vector2(radius);
+                dp.Color = accessory.Data.DefaultDangerColor;
+
+                // 计算每次爆炸的精确时间
+                int explosionTime = firstExplosionTime + (i * subsequentInterval);
+
+                // 设置绘图的延迟显示和销毁时间
+                dp.Delay = explosionTime - warningDuration;
+                dp.DestoryAt = warningDuration + lingerDuration;
+                dp.ScaleMode |= ScaleMode.ByTime;
+
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+
+                // 为下一次循环计算新的位置
+                currentPos += direction * stepDistance;
             }
-            line.NextExplosionPosition += line.Direction * line.StepDistance;
-
-            var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = $"{line.ID}_{line.ExplosionsLeft}";
-            dp.Position = line.NextExplosionPosition;
-            dp.Scale = new Vector2(line.Radius);
-            dp.Color = accessory.Data.DefaultDangerColor;
-            dp.Delay = line.DelayMs;
-            dp.DestoryAt = line.DelayMs;
-            dp.ScaleMode |= ScaleMode.ByTime;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
         #endregion
     }
