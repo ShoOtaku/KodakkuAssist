@@ -20,16 +20,16 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.0.13",
+        version: "0.0.16",
         author: "XSZYYS",
-        note: "用于新月岛紧急遭遇战。"
+        note: "新月岛部分CE绘制已完成：\r\n死亡爪（地板出现小怪未绘制，其余均绘制）\r\n神秘土偶（全部画完）\r\n黑色连队（全部画完）\r\n水晶龙（全部画完）\r\n狂战士（全部画完）\r\n指令罐（全部画完）\r\n回廊恶魔（全部画完）\r\n未测试：\r\n进化加鲁拉（运动会未测试）\r\n鬼火苗（有问题，待修复）\r\n石质骑士团（转转手未写，地火未测试）\r\n未写：\r\n金钱龟\r\n复原狮\r\n跃立狮\r\n鲨鱼\r\n夺心魔"
     )]
     public class 新月岛CE
     {
         /// <summary>
         /// 脚本初始化
         /// </summary>
-        // --- Noise Complaint 状态变量 ---
+        // --- 进化加鲁拉 状态变量 ---
         private Vector3? _noiseComplaintArenaCenter;
         private bool _noiseComplaintCenterRecorded = false;
         private bool? _lightningIsCardinal;
@@ -40,7 +40,12 @@ namespace EurekaOrthosCeScripts
         private readonly int[] _rampageDelays = { 5200, 3200 };
         private readonly List<FlurryLine> _flurryLines = new();
         private int _activeMechanicId; // 41175 for Rumble, 41176 for Birdserk, 41177 for Rampage
-        private bool _isRampageSequenceRunning;
+        private Vector3 _chargeStartPosition; // 存储冲锋开始时的位置
+        // --- “Rushing Rumble Rampage”连续冲锋机制专用状态变量 ---
+        private bool _isRampageSequenceRunning = false;
+        private int _rampageChargeIndex = 0;
+        private Vector3 _rampageNextChargeStartPos;
+        private readonly object _mechanicLock = new();
         private class PendingMechanic
         {
             public Vector3 Position { get; set; }
@@ -51,6 +56,7 @@ namespace EurekaOrthosCeScripts
         // 脚本状态变量
         private readonly List<PendingMechanic> _pendingMechanics = new(4);
         private bool _isFirstSequence = true;
+        private readonly List<(string Name, int Delay)> _tidalGuillotineAoes = new(3);
         private class FlurryLine
         {
             public string ID { get; init; }
@@ -65,18 +71,18 @@ namespace EurekaOrthosCeScripts
         {
             accessory.Log.Debug("新月岛CE脚本已加载。");
             accessory.Method.RemoveDraw(".*"); // 清理旧的绘图
-            // 初始化Noise Complaint机制的状态
+            // 初始化进化加鲁拉机制的状态
             //_noiseComplaintArenaCenter = null;
             //_noiseComplaintCenterRecorded = false;
             _lightningIsCardinal = null;
             _activeBirds.Clear();
         }
 
-        // --- Black Regiment ---
+        // --- 黑色连队 ---
 
 
         [ScriptMethod(
-            name: "陆行鸟冲 (Black Regiment)",
+            name: "陆行鸟冲 (黑色连队)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41163"]
         )]
@@ -95,7 +101,7 @@ namespace EurekaOrthosCeScripts
 
 
         [ScriptMethod(
-            name: "陆行鸟乱羽 (Black Regiment)",
+            name: "陆行鸟乱羽 (黑色连队)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41164"]
         )]
@@ -112,7 +118,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "陆行鸟风暴 (Black Regiment)",
+            name: "陆行鸟风暴 (黑色连队)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41147"]
         )]
@@ -130,7 +136,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "陆行鸟气旋 (Black Regiment)",
+            name: "陆行鸟气旋 (黑色连队)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41148"]
         )]
@@ -148,7 +154,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "陆行鸟屠杀 (Black Regiment)",
+            name: "陆行鸟屠杀 (黑色连队)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41151"]
         )]
@@ -193,7 +199,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "神秘热量 (From Times Bygone)",
+            name: "神秘热量 (神秘土偶)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41137"]
         )]
@@ -213,7 +219,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "大爆炸 (From Times Bygone)",
+            name: "大爆炸 (神秘土偶)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41130"]
         )]
@@ -233,7 +239,7 @@ namespace EurekaOrthosCeScripts
 
 
         [ScriptMethod(
-            name: "死亡射线 (From Times Bygone)",
+            name: "死亡射线 (神秘土偶)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41133"]
         )]
@@ -253,7 +259,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "钢铁之击 (From Times Bygone)",
+            name: "钢铁之击 (神秘土偶)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41131"]
         )]
@@ -276,7 +282,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "奥术之球 (From Times Bygone)",
+            name: "奥术之球 (神秘土偶)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41135"]
         )]
@@ -296,11 +302,11 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
 
-        // --- With Extreme Prejudice ---
+        // --- 指令罐 ---
 
 
         [ScriptMethod(
-            name: "指令 - 圆形 (目标) (With Extreme Prejudice)",
+            name: "指令 - 圆形 (目标) (指令罐)",
             eventType: EventTypeEnum.Tether,
             eventCondition: ["Id:012F"]
         )]
@@ -318,7 +324,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "指令 - 十字 (目标) (With Extreme Prejudice)",
+            name: "指令 - 十字 (目标) (指令罐)",
             eventType: EventTypeEnum.Tether,
             eventCondition: ["Id:0130"]
         )]
@@ -348,7 +354,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "指令 - 圆形 (目标) (With Extreme Prejudice)",
+            name: "指令 - 圆形 (目标) (指令罐)",
             eventType: EventTypeEnum.Tether,
             eventCondition: ["Id:0131"]
         )]
@@ -385,12 +391,12 @@ namespace EurekaOrthosCeScripts
                 accessory.Method.RemoveDraw($"ExtremePrejudice_Circle_{@event.SourceId}");
             }
         }
-        #region Noise Complaint
-        // --- Noise Complaint ---
+        #region 进化加鲁拉
+        // --- 进化加鲁拉 ---
 
 
         [ScriptMethod(
-            name: "场地中心记录 (Noise Complaint)",
+            name: "场地中心记录 (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41188"],
             userControl: false
@@ -401,12 +407,12 @@ namespace EurekaOrthosCeScripts
             {
                 _noiseComplaintArenaCenter = JsonConvert.DeserializeObject<Vector3>(@event["SourcePosition"]);
                 _noiseComplaintCenterRecorded = true;
-                accessory.Log.Debug($"Noise Complaint Arena Center recorded at: {_noiseComplaintArenaCenter}");
+                accessory.Log.Debug($"进化加鲁拉 Arena Center recorded at: {_noiseComplaintArenaCenter}");
             }
         }
 
         [ScriptMethod(
-            name: "雷圈 (Noise Complaint)",
+            name: "雷圈 (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41186"]
         )]
@@ -423,7 +429,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "核爆 (Noise Complaint)",
+            name: "核爆 (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41187"]
         )]
@@ -440,7 +446,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "雷光十字 (Noise Complaint)",
+            name: "雷光十字 (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41184"]
         )]
@@ -458,7 +464,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "猛挥 (Noise Complaint)",
+            name: "猛挥 (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(43262|41180)$"]
         )]
@@ -476,7 +482,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "冲锋-方向记录 (Noise Complaint)",
+            name: "冲锋-方向记录 (进化加鲁拉)",
             eventType: EventTypeEnum.StatusAdd,
             eventCondition: ["StatusID:2193"],
             userControl: false
@@ -488,31 +494,64 @@ namespace EurekaOrthosCeScripts
             TryDrawMechanics(accessory);
         }
         [ScriptMethod(
-            name: "冲锋-小鸟记录 (Noise Complaint)",
+            name: "冲锋-小鸟记录 (进化加鲁拉)",
             eventType: EventTypeEnum.TargetIcon,
             eventCondition: ["Id:0242"],
             userControl: false
         )]
         public void RushingRumbleRampage_Icon(Event @event, ScriptAccessory accessory)
         {
-            _activeBirds.Enqueue(@event.TargetId);
-            accessory.Log.Debug($"小鸟ID:{@event.TargetId} 已记录。队列中的小鸟数量：{_activeBirds.Count}");
-            TryDrawMechanics(accessory);
+            // 如果连续冲锋序列正在进行，这个图标会触发下一次冲锋。
+            if (_isRampageSequenceRunning)
+            {
+                accessory.Log.Debug($"检测到连续冲锋的小鸟标记。冲锋索引: {_rampageChargeIndex}。");
+                var bird = accessory.Data.Objects.SearchById(@event.TargetId);
+                if (bird == null)
+                {
+                    accessory.Log.Error($"未能找到用于连续冲锋 {_rampageChargeIndex} 的小鸟 {@event.TargetId}。");
+                    return;
+                }
 
+                // 绘制这一段的连续冲锋。
+                DrawRampageCharge(accessory, _rampageNextChargeStartPos, bird, _rampageChargeIndex);
 
+                // 为下一次冲锋更新状态。
+                _rampageNextChargeStartPos = bird.Position; // 下一次冲锋从这只鸟的位置开始。
+                _rampageChargeIndex++;
+
+                accessory.Log.Debug($"已绘制连续冲锋 {_rampageChargeIndex - 1}。下一次冲锋将从 {bird.Position} 开始。");
+
+                // 如果所有冲锋都已完成（通常是3次），则重置状态。
+                if (_rampageChargeIndex >= 3)
+                {
+                    accessory.Log.Debug("连续冲锋序列完成。");
+                    ResetState();
+                }
+            }
+            // 对于其他机制，仅将小鸟入队并尝试绘制。
+            else
+            {
+                _activeBirds.Enqueue(@event.TargetId);
+                accessory.Log.Debug($"小鸟ID: {@event.TargetId} 已为非连续冲锋机制入队。队列数量: {_activeBirds.Count}");
+                TryDrawMechanics(accessory);
+            }
         }
 
         [ScriptMethod(
-            name: "RushingRumble (Noise Complaint)",
+            name: "RushingRumble (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41175"]
         )]
         public void OnRushingRumbleStart(Event @event, ScriptAccessory accessory)
         {
-            // 只记录技能ID和BossID，不立即绘制
             _activeMechanicId = 41175;
             _bossId = @event.SourceId;
-            // 尝试触发绘制，以防小鸟和方向信息已经先到了
+            var boss = accessory.Data.Objects.SearchById(_bossId);
+            if (boss != null)
+            {
+                _chargeStartPosition = boss.Position; // 记录冲锋起始位置
+                accessory.Log.Debug($"单次冲锋启动，记录起始位置: {_chargeStartPosition}");
+            }
             TryDrawMechanics(accessory);
         }
         /*
@@ -584,7 +623,7 @@ namespace EurekaOrthosCeScripts
         */
 
         [ScriptMethod(
-            name: "狂鸟冲锋 (Noise Complaint)",
+            name: "狂鸟冲锋 (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41176"]
         )]
@@ -628,7 +667,7 @@ namespace EurekaOrthosCeScripts
         }
         */
         [ScriptMethod(
-            name: "Rushing Rumble Rampage (Noise Complaint)",
+            name: "Rushing Rumble Rampage (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41177"]
         )]
@@ -636,32 +675,38 @@ namespace EurekaOrthosCeScripts
         {
             _activeMechanicId = 41177;
             _bossId = @event.SourceId;
-            TryDrawMechanics(accessory);
+            _isRampageSequenceRunning = true;
+            _rampageChargeIndex = 0;
+
+            var boss = accessory.Data.Objects.SearchById(_bossId);
+            if (boss != null)
+            {
+                _rampageNextChargeStartPos = boss.Position;
+                accessory.Log.Debug($"连续冲锋初始位置已设置为Boss位置: {_rampageNextChargeStartPos}");
+            }
+            else
+            {
+                accessory.Log.Error("序列开始时未能找到“Rushing Rumble Rampage”的Boss。正在重置状态。");
+                ResetState();
+            }
         }
         private void TryDrawMechanics(ScriptAccessory accessory)
         {
-            // 如果没有激活的技能，直接返回
-            if (_activeMechanicId == 0) return;
+            // 如果连续冲锋正在进行或没有激活的机制，则不执行任何操作。
+            if (_isRampageSequenceRunning || _activeMechanicId == 0) return;
 
-            // 根据激活的技能ID，检查其特定条件
             switch (_activeMechanicId)
             {
-                // 单次冲锋：需要方向和小鸟
+                // 单次冲锋：需要方向和一只小鸟。
                 case 41175 when _lightningIsCardinal != null && _activeBirds.Count > 0:
                     DrawRushingRumble(accessory);
-                    ResetState(); // 执行后重置状态
-                    break;
-
-                // 狂鸟冲锋：只需要小鸟
-                case 41176 when _activeBirds.Count > 0:
-                    DrawBirdserkRush(accessory);
                     ResetState();
                     break;
 
-                // 连续冲锋：需要方向和小鸟，且序列尚未开始
-                case 41177 when _lightningIsCardinal != null && _activeBirds.Count > 0 && !_isRampageSequenceRunning:
-                    _isRampageSequenceRunning = true; // 标记序列已开始，防止重复启动
-                    _ = StartRampageSequenceAsync(accessory); // 异步启动序列
+                // 狂鸟冲锋：只需要一只小鸟。
+                case 41176 when _activeBirds.Count > 0:
+                    DrawBirdserkRush(accessory);
+                    ResetState();
                     break;
             }
         }
@@ -672,22 +717,25 @@ namespace EurekaOrthosCeScripts
             _bossId = 0;
             _activeMechanicId = 0;
             _isRampageSequenceRunning = false;
+            _rampageChargeIndex = 0;
+            _chargeStartPosition = Vector3.Zero;
         }
         private void DrawRushingRumble(ScriptAccessory accessory)
         {
-            var bird = accessory.Data.Objects.SearchById(_activeBirds.Dequeue());
+            if (!_activeBirds.TryDequeue(out var birdId)) return;
+            var bird = accessory.Data.Objects.SearchById(birdId);
             var boss = accessory.Data.Objects.SearchById(_bossId);
             if (bird == null || boss == null) return;
 
-            var destination = bird.Position - boss.Position;
+            var destination = bird.Position;
 
-            // 1. 直线冲锋
+            // 1. 从Boss到小鸟的直线冲锋
             var dpRumble = accessory.Data.GetDefaultDrawProperties();
             dpRumble.Name = $"NoiseComplaint_Rumble_{bird.EntityId}";
             dpRumble.Owner = _bossId;
             dpRumble.TargetPosition = destination;
             dpRumble.Scale = new Vector2(8, 100);
-            dpRumble.ScaleMode |= ScaleMode.YByDistance | ScaleMode.ByTime;
+            dpRumble.ScaleMode |= ScaleMode.YByDistance;
             dpRumble.Color = accessory.Data.DefaultDangerColor;
             dpRumble.DestoryAt = 6300;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpRumble);
@@ -698,15 +746,13 @@ namespace EurekaOrthosCeScripts
             dpCircle.Position = destination;
             dpCircle.Scale = new Vector2(30);
             dpCircle.Color = accessory.Data.DefaultDangerColor;
-            dpCircle.Delay = 0;
             dpCircle.DestoryAt = 9400;
-            dpCircle.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
 
             // 3. 四连扇形
             var dirToBoss = boss.Position - destination;
             var initialAngle = MathF.Atan2(dirToBoss.X, dirToBoss.Z);
-            if (_lightningIsCardinal == false) // 如果是斜点
+            if (_lightningIsCardinal == false) // 如果是斜角方向则调整
             {
                 initialAngle += 45 * MathF.PI / 180.0f;
             }
@@ -722,28 +768,28 @@ namespace EurekaOrthosCeScripts
                 dpCone.Color = accessory.Data.DefaultDangerColor;
                 dpCone.Delay = 5400;
                 dpCone.DestoryAt = 5000;
-                dpCone.ScaleMode |= ScaleMode.ByTime;
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
             }
         }
 
         private void DrawBirdserkRush(ScriptAccessory accessory)
         {
-            var bird = accessory.Data.Objects.SearchById(_activeBirds.Dequeue());
+            if (!_activeBirds.TryDequeue(out var birdId)) return;
+            var bird = accessory.Data.Objects.SearchById(birdId);
             if (bird == null) return;
 
-            // 绘制冲锋路径
+            // 从Boss到小鸟的直线冲锋
             var dpCharge = accessory.Data.GetDefaultDrawProperties();
             dpCharge.Name = $"NoiseComplaint_BirdserkRush_Charge_{_bossId}";
             dpCharge.Owner = _bossId;
             dpCharge.TargetObject = bird.EntityId;
             dpCharge.Scale = new Vector2(8, 100);
-            dpCharge.ScaleMode |= ScaleMode.YByDistance | ScaleMode.ByTime;
+            dpCharge.ScaleMode |= ScaleMode.YByDistance;
             dpCharge.Color = accessory.Data.DefaultDangerColor;
             dpCharge.DestoryAt = 6300;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
 
-            // 绘制最终的扇形AOE
+            // 从Boss朝向小鸟的大范围扇形顺劈
             var dpCone = accessory.Data.GetDefaultDrawProperties();
             dpCone.Name = $"NoiseComplaint_BirdserkRush_Cone_{_bossId}";
             dpCone.Owner = _bossId;
@@ -755,7 +801,59 @@ namespace EurekaOrthosCeScripts
             dpCone.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
         }
+        private void DrawRampageCharge(ScriptAccessory accessory, Vector3 chargeStartPos, IGameObject bird, int chargeIndex)
+        {
+            if (_lightningIsCardinal == null)
+            {
+                accessory.Log.Error("无法绘制连续冲锋，雷电方向未知。");
+                return;
+            }
 
+            var destination = bird.Position;
+
+            // 1. 直线冲锋
+            var dpCharge = accessory.Data.GetDefaultDrawProperties();
+            dpCharge.Name = $"NoiseComplaint_Rampage_Charge_{chargeIndex}";
+            dpCharge.Position = chargeStartPos;
+            dpCharge.TargetPosition = destination;
+            dpCharge.Scale = new Vector2(8, 100);
+            dpCharge.ScaleMode |= ScaleMode.YByDistance;
+            dpCharge.Color = accessory.Data.DefaultDangerColor;
+            dpCharge.DestoryAt = 6300;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
+
+            // 2. 目标点的大圆形AOE
+            var dpCircle = accessory.Data.GetDefaultDrawProperties();
+            dpCircle.Name = $"NoiseComplaint_Rampage_Circle_{chargeIndex}";
+            dpCircle.Position = destination;
+            dpCircle.Scale = new Vector2(30);
+            dpCircle.Color = accessory.Data.DefaultDangerColor;
+            dpCircle.DestoryAt = 9400;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
+
+            // 3. 从目标点发出的四个扇形AOE
+            var chargeDirectionVector = destination - chargeStartPos;
+            var initialAngle = MathF.Atan2(chargeDirectionVector.X, chargeDirectionVector.Z);
+            if (_lightningIsCardinal == false) // 如果是斜角方向则调整
+            {
+                initialAngle += 45 * MathF.PI / 180.0f;
+            }
+
+            for (int i = 0; i < 4; i++)
+            {
+                var dpCone = accessory.Data.GetDefaultDrawProperties();
+                dpCone.Name = $"NoiseComplaint_Rampage_Cone_{chargeIndex}_{i}";
+                dpCone.Position = destination;
+                dpCone.Scale = new Vector2(70);
+                dpCone.Radian = 45 * MathF.PI / 180.0f;
+                dpCone.Rotation = initialAngle + (i * 90 * MathF.PI / 180.0f);
+                dpCone.Color = accessory.Data.DefaultDangerColor;
+                dpCone.Delay = 5400;
+                dpCone.DestoryAt = 5000;
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
+            }
+        }
+        /*
         private async Task StartRampageSequenceAsync(ScriptAccessory accessory)
         {
             accessory.Log.Debug("Rushing Rumble Rampage (41177) sequence initiated.");
@@ -846,6 +944,7 @@ namespace EurekaOrthosCeScripts
                 await ProcessNextRampageCharge(accessory, destination, chargeIndex + 1);
             }
         }
+        */
         /*
         public void HandleRushingRumbleRampage(Event @event, ScriptAccessory accessory)
         {
@@ -951,7 +1050,7 @@ namespace EurekaOrthosCeScripts
         */
 
         [ScriptMethod(
-            name: "绘图移除 (Noise Complaint)",
+            name: "绘图移除 (进化加鲁拉)",
             eventType: EventTypeEnum.ActionEffect,
             eventCondition: ["ActionId:regex:^(41178|41180|41179|42984)$"],
             userControl: false
@@ -980,9 +1079,9 @@ namespace EurekaOrthosCeScripts
         }
         #endregion
 
-        #region CrawlingDeath
+        #region 死亡爪
         [ScriptMethod(
-            name: "爪痕 (CrawlingDeath)",
+            name: "爪痕 (死亡爪)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(41315|41316|41317)$"]
         )]
@@ -991,7 +1090,7 @@ namespace EurekaOrthosCeScripts
         {
             var nailId = @event.ActionId;
             var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = $"CrawlingDeath_LethalNails_{nailId}";
+            dp.Name = $"死亡爪_LethalNails_{nailId}";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(7, 60);
             dp.Color = accessory.Data.DefaultDangerColor;
@@ -1015,7 +1114,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "垂直交错 (CrawlingDeath)",
+            name: "垂直交错 (死亡爪)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41323"]
         )]
@@ -1033,7 +1132,39 @@ namespace EurekaOrthosCeScripts
             for (int i = 0; i < 4; i++)
             {
                 var dp = accessory.Data.GetDefaultDrawProperties();
-                dp.Name = $"CrawlingDeath_Crosshatch_{names[i]}_{@event.SourceId}";
+                dp.Name = $"死亡爪_Crosshatch_{names[i]}_{@event.SourceId}";
+                dp.Owner = @event.SourceId;
+                dp.Scale = new Vector2(50);
+                dp.Radian = 90 * MathF.PI / 180.0f;
+                dp.Rotation = rotations[i];
+                dp.Color = accessory.Data.DefaultDangerColor;
+                dp.Delay = delays[i];
+                dp.DestoryAt = duration;
+                dp.ScaleMode |= ScaleMode.ByTime;
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+                accessory.Log.Debug($"  绘制扇形: {dp.Name}, Rotation: {dp.Rotation}, Delay: {dp.Delay}ms");
+            }
+        }
+        [ScriptMethod(
+            name: "垂直交错长 (死亡爪)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41330"]
+        )]
+        public void VerticalCrosslonghatch(Event @event, ScriptAccessory accessory)
+        {
+            accessory.Log.Debug($"垂直交错 (VerticalCrosshatch) 触发. ActionId: {@event.ActionId}, SourceId: {@event.SourceId}");
+            const int frontBackDelay = 2500;
+            const int leftRightDelay = 5000;
+            const int duration = 5000;
+
+            float[] rotations = { 0, MathF.PI, MathF.PI / 2, -MathF.PI / 2 };
+            int[] delays = { frontBackDelay, frontBackDelay, leftRightDelay, leftRightDelay };
+            string[] names = { "Front", "Back", "Right", "Left" };
+
+            for (int i = 0; i < 4; i++)
+            {
+                var dp = accessory.Data.GetDefaultDrawProperties();
+                dp.Name = $"死亡爪_Crosshatch_{names[i]}_{@event.SourceId}";
                 dp.Owner = @event.SourceId;
                 dp.Scale = new Vector2(50);
                 dp.Radian = 90 * MathF.PI / 180.0f;
@@ -1048,7 +1179,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "水平交错 (CrawlingDeath)",
+            name: "水平交错 (死亡爪)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41324"]
         )]
@@ -1066,7 +1197,39 @@ namespace EurekaOrthosCeScripts
             for (int i = 0; i < 4; i++)
             {
                 var dp = accessory.Data.GetDefaultDrawProperties();
-                dp.Name = $"CrawlingDeath_Crosshatch_{names[i]}_{@event.SourceId}";
+                dp.Name = $"死亡爪_Crosshatch_{names[i]}_{@event.SourceId}";
+                dp.Owner = @event.SourceId;
+                dp.Scale = new Vector2(50);
+                dp.Radian = 90 * MathF.PI / 180.0f;
+                dp.Rotation = rotations[i];
+                dp.Color = accessory.Data.DefaultDangerColor;
+                dp.Delay = delays[i];
+                dp.DestoryAt = duration;
+                dp.ScaleMode |= ScaleMode.ByTime;
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+                accessory.Log.Debug($"  绘制扇形: {dp.Name}, Rotation: {dp.Rotation}, Delay: {dp.Delay}ms");
+            }
+        }
+        [ScriptMethod(
+            name: "水平交错长 (死亡爪)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41331"]
+        )]
+        public void HorizontalCrosslonghatch(Event @event, ScriptAccessory accessory)
+        {
+            accessory.Log.Debug($"水平交错 (HorizontalCrosshatch) 触发. ActionId: {@event.ActionId}, SourceId: {@event.SourceId}");
+            const int frontBackDelay = 5000;
+            const int leftRightDelay = 2500;
+            const int duration = 5000;
+
+            float[] rotations = { 0, MathF.PI, MathF.PI / 2, -MathF.PI / 2 };
+            int[] delays = { frontBackDelay, frontBackDelay, leftRightDelay, leftRightDelay };
+            string[] names = { "Front", "Back", "Right", "Left" };
+
+            for (int i = 0; i < 4; i++)
+            {
+                var dp = accessory.Data.GetDefaultDrawProperties();
+                dp.Name = $"死亡爪_Crosshatch_{names[i]}_{@event.SourceId}";
                 dp.Owner = @event.SourceId;
                 dp.Scale = new Vector2(50);
                 dp.Radian = 90 * MathF.PI / 180.0f;
@@ -1081,7 +1244,7 @@ namespace EurekaOrthosCeScripts
         }
         /*
         [ScriptMethod(
-            name: "SkulkingOrders (CrawlingDeath)(未完成）",
+            name: "SkulkingOrders (死亡爪)(未完成）",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId: regex: ^(41326|41329)$"]
         )]
@@ -1093,9 +1256,9 @@ namespace EurekaOrthosCeScripts
 
         #endregion
 
-        #region TrialByClaw
+        #region 水晶龙
         [ScriptMethod(
-            name: "PrismaticWing（钢铁月环）(TrialByClaw)",
+            name: "PrismaticWing（钢铁月环）(水晶龙)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(42766|42767|42768|42769)$"]
         )]
@@ -1107,7 +1270,7 @@ namespace EurekaOrthosCeScripts
                 case 42766: // 钢铁
                     {
                         var dp = accessory.Data.GetDefaultDrawProperties();
-                        dp.Name = $"TrialByClaw_PrismaticWing_{AID}";
+                        dp.Name = $"水晶龙_PrismaticWing_{AID}";
                         dp.Owner = @event.SourceId;
                         dp.Scale = new Vector2(22, 22);
                         dp.Color = accessory.Data.DefaultDangerColor;
@@ -1119,7 +1282,7 @@ namespace EurekaOrthosCeScripts
                 case 42768:
                     {
                         var dp = accessory.Data.GetDefaultDrawProperties();
-                        dp.Name = $"TrialByClaw_PrismaticWing_{AID}";
+                        dp.Name = $"水晶龙_PrismaticWing_{AID}";
                         dp.Owner = @event.SourceId;
                         dp.Scale = new Vector2(22, 22);
                         dp.Color = accessory.Data.DefaultDangerColor;
@@ -1131,7 +1294,7 @@ namespace EurekaOrthosCeScripts
                 case 42767: // 月环
                     {
                         var dp = accessory.Data.GetDefaultDrawProperties();
-                        dp.Name = $"TrialByClaw_PrismaticWing_{AID}";
+                        dp.Name = $"水晶龙_PrismaticWing_{AID}";
                         dp.Owner = @event.SourceId;
                         dp.Scale = new Vector2(31, 31);
                         dp.InnerScale = new Vector2(5, 5);
@@ -1144,7 +1307,7 @@ namespace EurekaOrthosCeScripts
                 case 42769: // 月环
                     {
                         var dp = accessory.Data.GetDefaultDrawProperties();
-                        dp.Name = $"TrialByClaw_PrismaticWing_{AID}";
+                        dp.Name = $"水晶龙_PrismaticWing_{AID}";
                         dp.Owner = @event.SourceId;
                         dp.Scale = new Vector2(31, 31);
                         dp.InnerScale = new Vector2(5, 5);
@@ -1157,7 +1320,7 @@ namespace EurekaOrthosCeScripts
             }
         }
         [ScriptMethod(
-            name: "结晶能量/混沌 (TrialByClaw)",
+            name: "结晶能量/混沌 (水晶龙)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(42728|42729|42730|42731|42732|42733|42734|42735|41758|41759|41760|41761)$"]
         )]
@@ -1266,9 +1429,9 @@ namespace EurekaOrthosCeScripts
 
         #endregion
 
-        #region Unbridled
+        #region 新月狂战士
         [ScriptMethod(
-           name: "严厉扫荡 (Unbridled)",
+           name: "严厉扫荡 (新月狂战士)",
            eventType: EventTypeEnum.StartCasting,
            eventCondition: ["ActionId:42691"]
        )]
@@ -1276,7 +1439,7 @@ namespace EurekaOrthosCeScripts
         public void ScathingSweep(Event @event, ScriptAccessory accessory)
         {
             var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = "Unbridled_Sweep_Danger_Zone";
+            dp.Name = "新月狂战士_Sweep_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(60, 60);
             dp.Color = new Vector4(0.957f, 0.140f, 0.140f, 0.8f);
@@ -1286,14 +1449,14 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "狂怒1(Unbridled)",
+            name: "狂怒1(新月狂战士)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:37323"]
         )]
-        public void UnbridledRage1(Event @event, ScriptAccessory accessory)
+        public void 新月狂战士Rage1(Event @event, ScriptAccessory accessory)
         {
             var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = "Unbridled_Rage1_Danger_Zone";
+            dp.Name = "新月狂战士_Rage1_Danger_Zone";
             dp.Position = @event.TargetPosition;
             dp.Scale = new Vector2(8, 8);
             dp.Color = accessory.Data.DefaultDangerColor;
@@ -1302,7 +1465,7 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
 
             var dp2 = accessory.Data.GetDefaultDrawProperties();
-            dp2.Name = "Unbridled_BedrockUplift1_Danger_Zone";
+            dp2.Name = "新月狂战士_BedrockUplift1_Danger_Zone";
             dp2.Position = @event.TargetPosition;
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(8, 8);
@@ -1313,14 +1476,14 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
         }
         [ScriptMethod(
-            name: "狂怒2(Unbridled)",
+            name: "狂怒2(新月狂战士)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:30872"]
         )]
-        public void UnbridledRage2(Event @event, ScriptAccessory accessory)
+        public void 新月狂战士Rage2(Event @event, ScriptAccessory accessory)
         {
             var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = "Unbridled_Rage2_Danger_Zone";
+            dp.Name = "新月狂战士_Rage2_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(24, 24);
             dp.Color = accessory.Data.DefaultDangerColor;
@@ -1328,7 +1491,7 @@ namespace EurekaOrthosCeScripts
             dp.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
             var dp2 = accessory.Data.GetDefaultDrawProperties();
-            dp2.Name = "Unbridled_BedrockUplift2_Danger_Zone";
+            dp2.Name = "新月狂战士_BedrockUplift2_Danger_Zone";
             dp2.Owner = @event.SourceId;
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(24, 24);
@@ -1339,14 +1502,14 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
         }
         [ScriptMethod(
-            name: "狂怒3(Unbridled)",
+            name: "狂怒3(新月狂战士)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:30873"]
         )]
-        public void UnbridledRage3(Event @event, ScriptAccessory accessory)
+        public void 新月狂战士Rage3(Event @event, ScriptAccessory accessory)
         {
             var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = "Unbridled_Rage3_Danger_Zone";
+            dp.Name = "新月狂战士_Rage3_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(16, 16);
             dp.Color = accessory.Data.DefaultDangerColor;
@@ -1355,7 +1518,7 @@ namespace EurekaOrthosCeScripts
             dp.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
             var dp2 = accessory.Data.GetDefaultDrawProperties();
-            dp2.Name = "Unbridled_BedrockUplift3_Danger_Zone";
+            dp2.Name = "新月狂战士_BedrockUplift3_Danger_Zone";
             dp2.Owner = @event.SourceId;
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(16, 16);
@@ -1366,14 +1529,14 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
         }
         [ScriptMethod(
-            name: "狂怒4(Unbridled)",
+            name: "狂怒4(新月狂战士)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:30874"]
         )]
-        public void UnbridledRage4(Event @event, ScriptAccessory accessory)
+        public void 新月狂战士Rage4(Event @event, ScriptAccessory accessory)
         {
             var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = "Unbridled_Rage4_Danger_Zone";
+            dp.Name = "新月狂战士_Rage4_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(8, 8);
             dp.Color = accessory.Data.DefaultDangerColor;
@@ -1382,7 +1545,7 @@ namespace EurekaOrthosCeScripts
             dp.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
             var dp2 = accessory.Data.GetDefaultDrawProperties();
-            dp2.Name = "Unbridled_BedrockUplift4_Danger_Zone";
+            dp2.Name = "新月狂战士_BedrockUplift4_Danger_Zone";
             dp2.Owner = @event.SourceId;
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(16, 16);
@@ -1393,14 +1556,14 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
         }
         [ScriptMethod(
-            name: "激烈爆发(Unbridled)",
+            name: "激烈爆发(新月狂战士)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:37804"]
         )]
-        public void UnbridledFury(Event @event, ScriptAccessory accessory)
+        public void 新月狂战士Fury(Event @event, ScriptAccessory accessory)
         {
             var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = "Unbridled_Fury_Danger_Zone";
+            dp.Name = "新月狂战士_Fury_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(13, 13);
             dp.Color = new Vector4(0.957f, 0.140f, 0.140f, 0.8f);
@@ -1409,16 +1572,16 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
         #endregion
-        #region CalamityBound
+        #region 回廊恶魔
         [ScriptMethod(
-            name: "爆炸 (CalamityBound)",
+            name: "爆炸 (回廊恶魔)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41357"]
         )]
         public void Explosion(Event @event, ScriptAccessory accessory)
         {
             var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = "CalamityBound_Explosion_Danger_Zone";
+            dp.Name = "回廊恶魔_Explosion_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(22, 22);
             dp.Color = accessory.Data.DefaultDangerColor;
@@ -1427,14 +1590,14 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
         [ScriptMethod(
-            name: "潮汐吐息(CalamityBound)",
+            name: "潮汐吐息(回廊恶魔)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41360"]
         )]
         public void TidalBreath(Event @event, ScriptAccessory accessory)
         {
             var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = "CalamityBound_TidalBreath_Danger_Zone";
+            dp.Name = "回廊恶魔_TidalBreath_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(40);
             dp.Radian = 180 * MathF.PI / 180.0f;
@@ -1496,11 +1659,11 @@ namespace EurekaOrthosCeScripts
             }
         }
         #endregion
-        #region FlameOfDusk
+        #region 鬼火苗
         [ScriptMethod(
-            name: "预告 - 记录机制（FlameOfDusk）",
+            name: "预告 - 记录机制（鬼火苗）",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:regex:^(41377|41374|41378)$"],
+            eventCondition: ["ActionId:regex:^(41377|41374|41379)$"],
             userControl: false
         )]
         public void OnTelegraph(Event @event, ScriptAccessory accessory)
@@ -1548,12 +1711,13 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "激活外壳 - 绘制AOE/击退（FlameOfDusk）",
+            name: "激活外壳 - 绘制AOE/击退（鬼火苗）",
             eventType: EventTypeEnum.ActionEffect,
             eventCondition: ["ActionId:41371"] // ActivateHusk
         )]
         public void OnActivateHusk(Event @event, ScriptAccessory accessory)
         {
+            var activatorPos = JsonConvert.DeserializeObject<Vector3>(@event["SourcePosition"]);
             var targetId = @event.TargetId;
             var husk = accessory.Data.Objects.SearchById(targetId);
             if (husk == null)
@@ -1564,13 +1728,23 @@ namespace EurekaOrthosCeScripts
 
             var huskPos = husk.Position;
             accessory.Log.Debug($"外壳被激活: ID={targetId}, 位置={huskPos}");
-
-            // 找到位置最接近的待处理机制
-            var mech = _pendingMechanics.OrderBy(p => Vector3.Distance(p.Position, huskPos)).FirstOrDefault();
-            if (mech == null)
+            PendingMechanic mech;
+            // 在访问和修改共享列表时使用锁
+            lock (_mechanicLock)
             {
-                accessory.Log.Error($"在位置 {huskPos} 附近找不到待处理的机制。");
-                return;
+                // 通过匹配“激活者”的位置来找到对应的“待处理”机制
+                mech = _pendingMechanics.OrderBy(p => Vector3.Distance(p.Position, activatorPos)).FirstOrDefault();
+
+                // 使用一个小的容差(1.0f)来确认位置匹配
+                if (mech == null || Vector3.Distance(mech.Position, activatorPos) > 1.0f)
+                {
+                    accessory.Log.Error($"在位置 {activatorPos} 附近找不到匹配的待处理机制。");
+                    return;
+                }
+
+                // 从列表中移除已处理的机制
+                _pendingMechanics.Remove(mech);
+                accessory.Log.Debug($"匹配并移除机制: 类型={mech.ShapeActionId}, 原始位置={mech.Position}");
             }
 
             // 从列表中移除已处理的机制
@@ -1586,7 +1760,7 @@ namespace EurekaOrthosCeScripts
                 // 绘制十字AOE
                 case 41377:
                     {
-                        var baseName = $"FlameOfDusk_Cross_{husk.EntityId}";
+                        var baseName = $"鬼火苗_Cross_{husk.EntityId}";
                         DrawCrossAOE(accessory, baseName, huskPos, husk.Rotation, remainingTime, 5000);
                         accessory.Log.Debug($"绘制十字AOE: Name={baseName}, Delay={remainingTime}ms");
                         break;
@@ -1595,10 +1769,11 @@ namespace EurekaOrthosCeScripts
                 case 41374:
                     {
                         var dp = accessory.Data.GetDefaultDrawProperties();
-                        dp.Name = $"FlameOfDusk_Donut_{husk.EntityId}";
+                        dp.Name = $"鬼火苗_Donut_{husk.EntityId}";
                         dp.Position = huskPos;
                         dp.Scale = new Vector2(50);
                         dp.InnerScale = new Vector2(7);
+                        dp.Radian = 360 * MathF.PI / 180.0f;
                         dp.Color = accessory.Data.DefaultDangerColor;
                         dp.Delay = remainingTime;
                         dp.DestoryAt = 5000;
@@ -1610,7 +1785,7 @@ namespace EurekaOrthosCeScripts
                 case 41379:
                     {
                         var dp = accessory.Data.GetDefaultDrawProperties();
-                        dp.Name = $"FlameOfDusk_Knockback_{husk.EntityId}";
+                        dp.Name = $"鬼火苗_Knockback_{husk.EntityId}";
                         dp.Owner = accessory.Data.Me; // 从玩家自己开始绘制
                         dp.TargetPosition = huskPos;  // 击退源是外壳的位置
                         dp.Rotation = 20f;            // 击退距离为20
@@ -1628,7 +1803,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "Boss直接AOE（FlameOfDusk）",
+            name: "Boss直接AOE（鬼火苗）",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(42034|42032)$"]
         )]
@@ -1639,18 +1814,18 @@ namespace EurekaOrthosCeScripts
 
             if (@event.ActionId == 42034)
             {
-                var baseName = "FlameOfDusk_Boss_Cross";
+                var baseName = "鬼火苗_Boss_Cross";
                 DrawCrossAOE(accessory, baseName, caster.Position, caster.Rotation, 0, 5800);
                 accessory.Log.Debug($"绘制Boss直接十字AOE: {baseName}");
             }
             else // ShadesNestBoss
             {
                 var dp = accessory.Data.GetDefaultDrawProperties();
-                dp.Name = "FlameOfDusk_Boss_Donut";
+                dp.Name = "鬼火苗_Boss_Donut";
                 dp.Owner = @event.SourceId;
                 dp.Color = accessory.Data.DefaultDangerColor;
+                dp.Radian = 360 * MathF.PI / 180.0f;
                 dp.DestoryAt = 5800;
-                dp.ScaleMode |= ScaleMode.ByTime;
                 dp.Scale = new Vector2(50);
                 dp.InnerScale = new Vector2(7);
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -1659,7 +1834,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "移除绘图（FlameOfDusk）",
+            name: "移除绘图（鬼火苗）",
             eventType: EventTypeEnum.ActionEffect,
             eventCondition: ["ActionId:regex:^(42035|42033|41397|42034|42032)$"],
             userControl: false
@@ -1670,25 +1845,25 @@ namespace EurekaOrthosCeScripts
             {
                 case 42035:
                 case 42034:
-                    var crossName = @event.ActionId == 42035 ? $"FlameOfDusk_Cross_{@event.SourceId}" : "FlameOfDusk_Boss_Cross";
+                    var crossName = @event.ActionId == 42035 ? $"鬼火苗_Cross_{@event.SourceId}" : "鬼火苗_Boss_Cross";
                     accessory.Method.RemoveDraw($"{crossName}_1");
                     accessory.Method.RemoveDraw($"{crossName}_2");
                     accessory.Log.Debug($"移除十字绘图: {crossName}");
                     break;
 
                 case 42033:
-                    accessory.Method.RemoveDraw($"FlameOfDusk_Donut_{@event.SourceId}");
-                    accessory.Log.Debug($"移除月环绘图: FlameOfDusk_Donut_{@event.SourceId}");
+                    accessory.Method.RemoveDraw($"鬼火苗_Donut_{@event.SourceId}");
+                    accessory.Log.Debug($"移除月环绘图: 鬼火苗_Donut_{@event.SourceId}");
                     break;
 
                 case 42032:
-                    accessory.Method.RemoveDraw("FlameOfDusk_Boss_Donut");
+                    accessory.Method.RemoveDraw("鬼火苗_Boss_Donut");
                     accessory.Log.Debug("移除Boss月环绘图");
                     break;
 
                 case 41397:
-                    accessory.Method.RemoveDraw($"FlameOfDusk_Knockback_{@event.SourceId}");
-                    accessory.Log.Debug($"移除击退绘图: FlameOfDusk_Knockback_{@event.SourceId}");
+                    accessory.Method.RemoveDraw($"鬼火苗_Knockback_{@event.SourceId}");
+                    accessory.Log.Debug($"移除击退绘图: 鬼火苗_Knockback_{@event.SourceId}");
                     break;
             }
         }
@@ -1720,6 +1895,86 @@ namespace EurekaOrthosCeScripts
             dp2.DestoryAt = duration;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
         }
+        #endregion
+        #region SharkAttack
+        [ScriptMethod(
+            name: "Hydrocleave (SharkAttack)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:43149"]
+        )]
+        public void HydrocleaveDraw (Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "SharkAttack_Hydrocleave_Danger_Zone";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(50);
+            dp.Radian = 60 * MathF.PI / 180.0f; 
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 5000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+        }
+        [ScriptMethod(
+            name: "潮汐断头台(SharkAttack)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41723"]
+        )]
+        public void OnTidalGuillotineFirstCast(Event @event, ScriptAccessory accessory)
+        {
+            // 清空旧的列表，开始新序列
+            _tidalGuillotineAoes.Clear();
+
+            var pos = JsonConvert.DeserializeObject<Vector3>(@event["TargetPosition"]);
+            var castTime = 8000;
+            var name = $"TidalGuillotine_AOE_0";
+
+            // 记录第一个AOE
+            _tidalGuillotineAoes.Add((name, castTime));
+
+            // 绘制第一个AOE
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = name;
+            dp.Position = pos;
+            dp.Scale = new Vector2(20);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = castTime + 1000; // 咏唱结束后1秒销毁
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+
+            accessory.Log.Debug($"记录了第一个潮汐断头台AOE，位置: {pos}，爆炸时间: {castTime}ms");
+        }
+        [ScriptMethod(
+            name: "潮汐断头台 - 记录后续AOE(SharkAttack)",
+            eventType: EventTypeEnum.ActionEffect, 
+            eventCondition: ["ActionId:41682"]
+        )]
+        public void OnTidalGuillotineTeleport(Event @event, ScriptAccessory accessory)
+        {
+            if (_tidalGuillotineAoes.Count >= 3) return; // 最多3个
+
+            var pos = JsonConvert.DeserializeObject<Vector3>(@event["TargetPosition"]);
+            var index = _tidalGuillotineAoes.Count;
+            var name = $"TidalGuillotine_AOE_{index}";
+
+            // 根据是第几个AOE来决定延迟时间
+            var delay = index == 1 ? 8700 : 9900;
+
+            // 记录后续的AOE
+            _tidalGuillotineAoes.Add((name, delay));
+
+            // 绘制后续的AOE
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = name;
+            dp.Position = pos;
+            dp.Scale = new Vector2(20);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.Delay = delay - 4000;
+            dp.DestoryAt = 4000 + 1000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+
+            accessory.Log.Debug($"记录了第 {index + 1} 个潮汐断头台AOE，位置: {pos}，爆炸延迟: {delay}ms");
+        }
+
         #endregion
     }
 }
