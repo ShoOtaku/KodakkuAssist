@@ -20,9 +20,9 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.0.10",
+        version: "0.0.13",
         author: "XSZYYS",
-        note: "用于新月岛紧急遭遇战，进化加鲁拉的运动会已完成。"
+        note: "用于新月岛紧急遭遇战。"
     )]
     public class 新月岛CE
     {
@@ -41,6 +41,16 @@ namespace EurekaOrthosCeScripts
         private readonly List<FlurryLine> _flurryLines = new();
         private int _activeMechanicId; // 41175 for Rumble, 41176 for Birdserk, 41177 for Rampage
         private bool _isRampageSequenceRunning;
+        private class PendingMechanic
+        {
+            public Vector3 Position { get; set; }
+            public uint ShapeActionId { get; init; } // 用来区分是十字、月环还是击退
+            public DateTime ActivationTime { get; init; }
+        }
+
+        // 脚本状态变量
+        private readonly List<PendingMechanic> _pendingMechanics = new(4);
+        private bool _isFirstSequence = true;
         private class FlurryLine
         {
             public string ID { get; init; }
@@ -1438,7 +1448,7 @@ namespace EurekaOrthosCeScripts
         [ScriptMethod(
             name: "双拳连击 (CompanyOfStone)",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:41828"] // 技能ID Dualfist Flurry
+            eventCondition: ["ActionId:41828"]
         )]
         public void DualfistFlurry(Event @event, ScriptAccessory accessory)
         {
@@ -1454,11 +1464,11 @@ namespace EurekaOrthosCeScripts
             var direction = new Vector3(MathF.Sin(caster.Rotation), 0, MathF.Cos(caster.Rotation));
 
             // 定义技能参数
-            const int totalExplosions = 9;      // 总共3次爆炸
-            const float radius = 6f;            // 爆炸半径
-            const float stepDistance = 7f;      // 每次前进距离
-            const int firstExplosionTime = 6000;// 第一次爆炸时间 (基于6秒咏唱)
-            const int subsequentInterval = 1100;// 后续爆炸间隔
+            const int totalExplosions = 9;      
+            const float radius = 6f;            
+            const float stepDistance = 6f;      // 每次前进距离
+            const int firstExplosionTime = 10000;// 第一次爆炸时间 (基于6秒咏唱)
+            const int subsequentInterval = 1000;// 后续爆炸间隔
             const int warningDuration = 2000;   // 警告显示时间
             const int lingerDuration = 500;     // 爆炸后残留时间
 
@@ -1484,6 +1494,231 @@ namespace EurekaOrthosCeScripts
                 // 为下一次循环计算新的位置
                 currentPos += direction * stepDistance;
             }
+        }
+        #endregion
+        #region FlameOfDusk
+        [ScriptMethod(
+            name: "预告 - 记录机制（FlameOfDusk）",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex:^(41377|41374|41378)$"],
+            userControl: false
+        )]
+        public void OnTelegraph(Event @event, ScriptAccessory accessory)
+        {
+            var casterPos = JsonConvert.DeserializeObject<Vector3>(@event["SourcePosition"]);
+
+            // 根据当前是第几次机制和已记录的机制数量，来确定延迟时间
+            float delaySeconds = (_pendingMechanics.Count, _isFirstSequence) switch
+            {
+                (0, true) => 16.1f,
+                (1, true) => 18.4f,
+                (2, true) => 20.8f,
+                (3, true) => 23.2f,
+                (0, false) => 14.9f,
+                (1, false) => 15.3f,
+                (2, false) => 22.1f,
+                (3, false) => 22.5f,
+                _ => 0
+            };
+
+            if (delaySeconds == 0)
+            {
+                accessory.Log.Error($"无法确定机制延迟时间: Count={_pendingMechanics.Count}, isFirst={_isFirstSequence}");
+                return;
+            }
+
+            var activationTime = DateTime.Now.AddSeconds(delaySeconds);
+
+            var pending = new PendingMechanic
+            {
+                Position = casterPos,
+                ShapeActionId = @event.ActionId,
+                ActivationTime = activationTime
+            };
+
+            _pendingMechanics.Add(pending);
+            accessory.Log.Debug($"记录了新的待处理机制: 类型={pending.ShapeActionId}, 位置={pending.Position}, 激活时间={pending.ActivationTime:HH:mm:ss.fff}");
+
+            // 如果记录了4个，说明第一轮预告结束
+            if (_pendingMechanics.Count == 4)
+            {
+                _isFirstSequence = false;
+                accessory.Log.Debug("第一轮预告记录完毕，切换到第二轮时间轴。");
+            }
+        }
+
+        [ScriptMethod(
+            name: "激活外壳 - 绘制AOE/击退（FlameOfDusk）",
+            eventType: EventTypeEnum.ActionEffect,
+            eventCondition: ["ActionId:41371"] // ActivateHusk
+        )]
+        public void OnActivateHusk(Event @event, ScriptAccessory accessory)
+        {
+            var targetId = @event.TargetId;
+            var husk = accessory.Data.Objects.SearchById(targetId);
+            if (husk == null)
+            {
+                accessory.Log.Error($"找不到被激活的外壳: ID={targetId}");
+                return;
+            }
+
+            var huskPos = husk.Position;
+            accessory.Log.Debug($"外壳被激活: ID={targetId}, 位置={huskPos}");
+
+            // 找到位置最接近的待处理机制
+            var mech = _pendingMechanics.OrderBy(p => Vector3.Distance(p.Position, huskPos)).FirstOrDefault();
+            if (mech == null)
+            {
+                accessory.Log.Error($"在位置 {huskPos} 附近找不到待处理的机制。");
+                return;
+            }
+
+            // 从列表中移除已处理的机制
+            _pendingMechanics.Remove(mech);
+            accessory.Log.Debug($"匹配并移除机制: 类型={mech.ShapeActionId}, 位置={mech.Position}");
+
+            // 计算从现在到激活时间的剩余毫秒数
+            var remainingTime = (int)(mech.ActivationTime - DateTime.Now).TotalMilliseconds;
+            if (remainingTime < 0) remainingTime = 0;
+
+            switch (mech.ShapeActionId)
+            {
+                // 绘制十字AOE
+                case 41377:
+                    {
+                        var baseName = $"FlameOfDusk_Cross_{husk.EntityId}";
+                        DrawCrossAOE(accessory, baseName, huskPos, husk.Rotation, remainingTime, 5000);
+                        accessory.Log.Debug($"绘制十字AOE: Name={baseName}, Delay={remainingTime}ms");
+                        break;
+                    }
+                // 绘制月环AOE
+                case 41374:
+                    {
+                        var dp = accessory.Data.GetDefaultDrawProperties();
+                        dp.Name = $"FlameOfDusk_Donut_{husk.EntityId}";
+                        dp.Position = huskPos;
+                        dp.Scale = new Vector2(50);
+                        dp.InnerScale = new Vector2(7);
+                        dp.Color = accessory.Data.DefaultDangerColor;
+                        dp.Delay = remainingTime;
+                        dp.DestoryAt = 5000;
+                        accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                        accessory.Log.Debug($"绘制月环AOE: Name={dp.Name}, Delay={dp.Delay}ms");
+                        break;
+                    }
+                // 绘制击退预测
+                case 41379:
+                    {
+                        var dp = accessory.Data.GetDefaultDrawProperties();
+                        dp.Name = $"FlameOfDusk_Knockback_{husk.EntityId}";
+                        dp.Owner = accessory.Data.Me; // 从玩家自己开始绘制
+                        dp.TargetPosition = huskPos;  // 击退源是外壳的位置
+                        dp.Rotation = 20f;            // 击退距离为20
+                        dp.Scale = new Vector2(2f, 1f); // 线条宽度2，末端圆圈半径1
+                        dp.Color = new(0.3f, 1.0f, 0f, 1.5f);
+                        dp.Delay = remainingTime;
+                        dp.DestoryAt = 5000; // 持续时间
+
+                        // 发送位移绘制指令
+                        accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Displacement, dp);
+                        accessory.Log.Debug($"绘制击退预测: Name={dp.Name}, From=Me, To={huskPos}, Distance=20, Delay={dp.Delay}ms");
+                        break;
+                    }
+            }
+        }
+
+        [ScriptMethod(
+            name: "Boss直接AOE（FlameOfDusk）",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex:^(42034|42032)$"]
+        )]
+        public void OnBossAOE(Event @event, ScriptAccessory accessory)
+        {
+            var caster = accessory.Data.Objects.SearchById(@event.SourceId);
+            if (caster == null) return;
+
+            if (@event.ActionId == 42034)
+            {
+                var baseName = "FlameOfDusk_Boss_Cross";
+                DrawCrossAOE(accessory, baseName, caster.Position, caster.Rotation, 0, 5800);
+                accessory.Log.Debug($"绘制Boss直接十字AOE: {baseName}");
+            }
+            else // ShadesNestBoss
+            {
+                var dp = accessory.Data.GetDefaultDrawProperties();
+                dp.Name = "FlameOfDusk_Boss_Donut";
+                dp.Owner = @event.SourceId;
+                dp.Color = accessory.Data.DefaultDangerColor;
+                dp.DestoryAt = 5800;
+                dp.ScaleMode |= ScaleMode.ByTime;
+                dp.Scale = new Vector2(50);
+                dp.InnerScale = new Vector2(7);
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                accessory.Log.Debug($"绘制Boss直接月环AOE: {dp.Name}");
+            }
+        }
+
+        [ScriptMethod(
+            name: "移除绘图（FlameOfDusk）",
+            eventType: EventTypeEnum.ActionEffect,
+            eventCondition: ["ActionId:regex:^(42035|42033|41397|42034|42032)$"],
+            userControl: false
+        )]
+        public void OnCastFinished(Event @event, ScriptAccessory accessory)
+        {
+            switch (@event.ActionId)
+            {
+                case 42035:
+                case 42034:
+                    var crossName = @event.ActionId == 42035 ? $"FlameOfDusk_Cross_{@event.SourceId}" : "FlameOfDusk_Boss_Cross";
+                    accessory.Method.RemoveDraw($"{crossName}_1");
+                    accessory.Method.RemoveDraw($"{crossName}_2");
+                    accessory.Log.Debug($"移除十字绘图: {crossName}");
+                    break;
+
+                case 42033:
+                    accessory.Method.RemoveDraw($"FlameOfDusk_Donut_{@event.SourceId}");
+                    accessory.Log.Debug($"移除月环绘图: FlameOfDusk_Donut_{@event.SourceId}");
+                    break;
+
+                case 42032:
+                    accessory.Method.RemoveDraw("FlameOfDusk_Boss_Donut");
+                    accessory.Log.Debug("移除Boss月环绘图");
+                    break;
+
+                case 41397:
+                    accessory.Method.RemoveDraw($"FlameOfDusk_Knockback_{@event.SourceId}");
+                    accessory.Log.Debug($"移除击退绘图: FlameOfDusk_Knockback_{@event.SourceId}");
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 绘制一个由两个Straight组成的十字形AOE
+        /// </summary>
+        private void DrawCrossAOE(ScriptAccessory accessory, string baseName, Vector3 position, float rotation, int delay, int duration)
+        {
+            // 水平部分
+            var dp1 = accessory.Data.GetDefaultDrawProperties();
+            dp1.Name = $"{baseName}_1";
+            dp1.Position = position;
+            dp1.Rotation = rotation;
+            dp1.Scale = new Vector2(15, 200); // 宽度15, 长度 200
+            dp1.Color = accessory.Data.DefaultDangerColor;
+            dp1.Delay = delay;
+            dp1.DestoryAt = duration;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp1);
+
+            // 垂直部分
+            var dp2 = accessory.Data.GetDefaultDrawProperties();
+            dp2.Name = $"{baseName}_2";
+            dp2.Position = position;
+            dp2.Rotation = rotation + MathF.PI / 2; // 旋转90度
+            dp2.Scale = new Vector2(15, 100);
+            dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.Delay = delay;
+            dp2.DestoryAt = duration;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
         }
         #endregion
     }
