@@ -18,8 +18,8 @@ namespace EurekaOrthosCeScripts
     [ScriptType(
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
-        territorys: [1252], //等国服更新
-        version: "0.0.4",
+        territorys: [1252],
+        version: "0.0.5",
         author: "XSZYYS",
         note: "用于新月岛紧急遭遇战。"
     )]
@@ -293,7 +293,7 @@ namespace EurekaOrthosCeScripts
         )]
         public void RockSlideStoneSwell(Event @event, ScriptAccessory accessory)
         {
-            uint tetherId = uint.Parse(@event["Id"]);
+            uint tetherId = uint.Parse(@event["Id"], NumberStyles.HexNumber);
 
             switch (tetherId)
             {
