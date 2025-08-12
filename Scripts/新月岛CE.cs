@@ -19,7 +19,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252], //等国服更新
-        version: "0.0.3",
+        version: "0.0.4",
         author: "XSZYYS",
         note: "用于新月岛紧急遭遇战。"
     )]
@@ -131,8 +131,6 @@ namespace EurekaOrthosCeScripts
             dp.Radian = MathF.PI * 2;
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 7000;
-            dp.ScaleMode |= ScaleMode.ByTime;
-
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
         }
 
@@ -735,7 +733,7 @@ namespace EurekaOrthosCeScripts
         [ScriptMethod(
             name: "爪痕 (CrawlingDeath)",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:regex: ^(41315|41316|41317)$"]
+            eventCondition: ["ActionId:regex:^(41315|41316|41317)$"]
         )]
 
         public void LethalNails(Event @event, ScriptAccessory accessory)
@@ -768,7 +766,7 @@ namespace EurekaOrthosCeScripts
         [ScriptMethod(
             name: "纵横交错 (CrawlingDeath)",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:regex: ^(41323|41324)$"]
+            eventCondition: ["ActionId:regex:^(41323|41324)$"]
         )]
         public void Crosshatch(Event @event, ScriptAccessory accessory)
         {
@@ -814,7 +812,7 @@ namespace EurekaOrthosCeScripts
         [ScriptMethod(
             name: "PrismaticWing（钢铁月环）(TrialByClaw)",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId: regex: ^(42766|42767|42768|42769)$"]
+            eventCondition: ["ActionId:regex:^(42766|42767|42768|42769)$"]
         )]
         public void PrismaticWing(Event @event, ScriptAccessory accessory)
         {
@@ -852,9 +850,9 @@ namespace EurekaOrthosCeScripts
                         dp.Owner = @event.SourceId;
                         dp.Scale = new Vector2(31, 31);
                         dp.InnerScale = new Vector2(5, 5);
+                        dp.Radian = 360 * MathF.PI / 180.0f;
                         dp.Color = accessory.Data.DefaultDangerColor;
                         dp.DestoryAt = 7000;
-                        dp.ScaleMode |= ScaleMode.ByTime;
                         accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
                         break;
                     }
@@ -865,9 +863,9 @@ namespace EurekaOrthosCeScripts
                         dp.Owner = @event.SourceId;
                         dp.Scale = new Vector2(31, 31);
                         dp.InnerScale = new Vector2(5, 5);
+                        dp.Radian = 360 * MathF.PI / 180.0f;
                         dp.Color = accessory.Data.DefaultDangerColor;
                         dp.DestoryAt = 4500;
-                        dp.ScaleMode |= ScaleMode.ByTime;
                         accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
                         break;
                     }
@@ -876,7 +874,7 @@ namespace EurekaOrthosCeScripts
         [ScriptMethod(
             name: "结晶能量/混沌 (TrialByClaw)",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:regex: ^(42728|42729|42730|42731|42732|42733|42734|42735|41758|41759|41760|41761)$"]
+            eventCondition: ["ActionId:regex:^(42728|42729|42730|42731|42732|42733|42734|42735|41758|41759|41760|41761)$"]
         )]
         public void CrystallizedEnergyAndChaos(Event @event, ScriptAccessory accessory)
         {
@@ -884,7 +882,6 @@ namespace EurekaOrthosCeScripts
             dp.Name = $"CrawlingDeath_Crystallized_{@event.ActionId}";
             dp.Owner = @event.SourceId;
             dp.Color = accessory.Data.DefaultDangerColor;
-            dp.ScaleMode |= ScaleMode.ByTime;
 
             switch (@event.ActionId)
             {
@@ -898,6 +895,7 @@ namespace EurekaOrthosCeScripts
                 case 42729:
                     dp.Scale = new Vector2(13, 13);
                     dp.InnerScale = new Vector2(7, 7);
+                    dp.Radian = 360 * MathF.PI / 180.0f;
                     dp.Delay = 3000;
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -905,6 +903,7 @@ namespace EurekaOrthosCeScripts
                 case 42730:
                     dp.Scale = new Vector2(19, 19);
                     dp.InnerScale = new Vector2(13, 13);
+                    dp.Radian = 360 * MathF.PI / 180.0f;
                     dp.Delay = 3000;
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -912,6 +911,7 @@ namespace EurekaOrthosCeScripts
                 case 42731:
                     dp.Scale = new Vector2(25, 25);
                     dp.InnerScale = new Vector2(19, 19);
+                    dp.Radian = 360 * MathF.PI / 180.0f;
                     dp.Delay = 3000;
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -927,6 +927,7 @@ namespace EurekaOrthosCeScripts
                 case 42733:
                     dp.Scale = new Vector2(13, 13);
                     dp.InnerScale = new Vector2(7, 7);
+                    dp.Radian = 360 * MathF.PI / 180.0f;
                     dp.Delay = 6000;
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -934,6 +935,7 @@ namespace EurekaOrthosCeScripts
                 case 42734:
                     dp.Scale = new Vector2(19, 19);
                     dp.InnerScale = new Vector2(13, 13);
+                    dp.Radian = 360 * MathF.PI / 180.0f;
                     dp.Delay = 6000;
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -941,6 +943,7 @@ namespace EurekaOrthosCeScripts
                 case 42735:
                     dp.Scale = new Vector2(25, 25);
                     dp.InnerScale = new Vector2(19, 19);
+                    dp.Radian = 360 * MathF.PI / 180.0f;
                     dp.Delay = 6000;
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -955,18 +958,21 @@ namespace EurekaOrthosCeScripts
                 case 41759:
                     dp.Scale = new Vector2(13, 13);
                     dp.InnerScale = new Vector2(7, 7);
+                    dp.Radian = 360 * MathF.PI / 180.0f;
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
                     break;
                 case 41760:
                     dp.Scale = new Vector2(19, 19);
                     dp.InnerScale = new Vector2(13, 13);
+                    dp.Radian = 360 * MathF.PI / 180.0f;
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
                     break;
                 case 41761:
                     dp.Scale = new Vector2(25, 25);
                     dp.InnerScale = new Vector2(19, 19);
+                    dp.Radian = 360 * MathF.PI / 180.0f;
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
                     break;
@@ -1016,9 +1022,9 @@ namespace EurekaOrthosCeScripts
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(8, 8);
             dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.Radian = 360 * MathF.PI / 180.0f;
             dp2.Delay = 6500;
             dp2.DestoryAt = 3000;
-            dp2.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
         }
         [ScriptMethod(
@@ -1041,10 +1047,10 @@ namespace EurekaOrthosCeScripts
             dp2.Owner = @event.SourceId;
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(24, 24);
+            dp2.Radian = 360 * MathF.PI / 180.0f;
             dp2.Color = accessory.Data.DefaultDangerColor;
             dp2.Delay = 7500;
             dp2.DestoryAt = 3000;
-            dp2.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
         }
         [ScriptMethod(
@@ -1068,10 +1074,10 @@ namespace EurekaOrthosCeScripts
             dp2.Owner = @event.SourceId;
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(16, 16);
+            dp2.Radian = 360 * MathF.PI / 180.0f;
             dp2.Color = accessory.Data.DefaultDangerColor;
             dp2.Delay = 14000;
             dp2.DestoryAt = 3000;
-            dp2.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
         }
         [ScriptMethod(
@@ -1096,9 +1102,9 @@ namespace EurekaOrthosCeScripts
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(16, 16);
             dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.Radian = 360 * MathF.PI / 180.0f;
             dp2.Delay = 21000;
             dp2.DestoryAt = 3000;
-            dp2.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
         }
         [ScriptMethod(
@@ -1198,7 +1204,7 @@ namespace EurekaOrthosCeScripts
         [ScriptMethod(
             name: "双拳连击 - 后续 (CompanyOfStone)",
             eventType: EventTypeEnum.ActionEffect,
-            eventCondition: ["ActionId:regex: ^(41828|43152)$"]
+            eventCondition: ["ActionId:regex:^(41828|43152)$"]
         )]
         public void DualfistFlurryAdvance(Event @event, ScriptAccessory accessory)
         {
