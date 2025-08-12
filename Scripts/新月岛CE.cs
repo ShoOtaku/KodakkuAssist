@@ -20,9 +20,9 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.0.9",
+        version: "0.0.10",
         author: "XSZYYS",
-        note: "用于新月岛紧急遭遇战，更新了指令罐。"
+        note: "用于新月岛紧急遭遇战，进化加鲁拉的运动会已完成。"
     )]
     public class 新月岛CE
     {
@@ -485,8 +485,8 @@ namespace EurekaOrthosCeScripts
         )]
         public void RushingRumbleRampage_Icon(Event @event, ScriptAccessory accessory)
         {
-            _activeBirds.Enqueue(@event.SourceId);
-            accessory.Log.Debug($"小鸟ID:{@event.SourceId} 已记录。队列中的小鸟数量：{_activeBirds.Count}");
+            _activeBirds.Enqueue(@event.TargetId);
+            accessory.Log.Debug($"小鸟ID:{@event.TargetId} 已记录。队列中的小鸟数量：{_activeBirds.Count}");
             TryDrawMechanics(accessory);
 
 
@@ -1011,6 +1011,7 @@ namespace EurekaOrthosCeScripts
         )]
         public void VerticalCrosshatch(Event @event, ScriptAccessory accessory)
         {
+            accessory.Log.Debug($"垂直交错 (VerticalCrosshatch) 触发. ActionId: {@event.ActionId}, SourceId: {@event.SourceId}");
             const int frontBackDelay = 0;
             const int leftRightDelay = 2500;
             const int duration = 5000;
@@ -1032,6 +1033,7 @@ namespace EurekaOrthosCeScripts
                 dp.DestoryAt = duration;
                 dp.ScaleMode |= ScaleMode.ByTime;
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+                accessory.Log.Debug($"  绘制扇形: {dp.Name}, Rotation: {dp.Rotation}, Delay: {dp.Delay}ms");
             }
         }
 
@@ -1042,6 +1044,7 @@ namespace EurekaOrthosCeScripts
         )]
         public void HorizontalCrosshatch(Event @event, ScriptAccessory accessory)
         {
+            accessory.Log.Debug($"水平交错 (HorizontalCrosshatch) 触发. ActionId: {@event.ActionId}, SourceId: {@event.SourceId}");
             const int frontBackDelay = 2500;
             const int leftRightDelay = 0;
             const int duration = 5000;
@@ -1063,6 +1066,7 @@ namespace EurekaOrthosCeScripts
                 dp.DestoryAt = duration;
                 dp.ScaleMode |= ScaleMode.ByTime;
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+                accessory.Log.Debug($"  绘制扇形: {dp.Name}, Rotation: {dp.Rotation}, Delay: {dp.Delay}ms");
             }
         }
         /*
@@ -1450,7 +1454,7 @@ namespace EurekaOrthosCeScripts
             var direction = new Vector3(MathF.Sin(caster.Rotation), 0, MathF.Cos(caster.Rotation));
 
             // 定义技能参数
-            const int totalExplosions = 3;      // 总共3次爆炸
+            const int totalExplosions = 9;      // 总共3次爆炸
             const float radius = 6f;            // 爆炸半径
             const float stepDistance = 7f;      // 每次前进距离
             const int firstExplosionTime = 6000;// 第一次爆炸时间 (基于6秒咏唱)
