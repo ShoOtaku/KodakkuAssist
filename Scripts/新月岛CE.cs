@@ -12,6 +12,7 @@ using KodakkuAssist.Module.Draw;
 using KodakkuAssist.Module.GameEvent;
 using KodakkuAssist.Script;
 using Newtonsoft.Json;
+using System.Runtime.Intrinsics.Arm;
 
 namespace EurekaOrthosCeScripts
 {
@@ -19,7 +20,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.0.5",
+        version: "0.0.6",
         author: "XSZYYS",
         note: "用于新月岛紧急遭遇战。"
     )]
@@ -994,7 +995,7 @@ namespace EurekaOrthosCeScripts
             dp.Name = "Unbridled_Sweep_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(60, 60);
-            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.Color = new Vector4(0.957f, 0.140f, 0.140f, 0.8f);
             dp.DestoryAt = 6000;
             dp.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
@@ -1021,7 +1022,7 @@ namespace EurekaOrthosCeScripts
             dp2.Position = @event.TargetPosition;
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(8, 8);
-            dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.Color = new Vector4(0.957f, 0.140f, 0.140f, 0.8f);
             dp2.Radian = 360 * MathF.PI / 180.0f;
             dp2.Delay = 6500;
             dp2.DestoryAt = 3000;
@@ -1048,7 +1049,7 @@ namespace EurekaOrthosCeScripts
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(24, 24);
             dp2.Radian = 360 * MathF.PI / 180.0f;
-            dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.Color = new Vector4(0.957f, 0.140f, 0.140f, 0.8f);
             dp2.Delay = 7500;
             dp2.DestoryAt = 3000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
@@ -1075,7 +1076,7 @@ namespace EurekaOrthosCeScripts
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(16, 16);
             dp2.Radian = 360 * MathF.PI / 180.0f;
-            dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.Color = new Vector4(0.957f, 0.140f, 0.140f, 0.8f);
             dp2.Delay = 14000;
             dp2.DestoryAt = 3000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
@@ -1101,7 +1102,7 @@ namespace EurekaOrthosCeScripts
             dp2.Owner = @event.SourceId;
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(16, 16);
-            dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.Color = new Vector4(0.957f, 0.140f, 0.140f, 0.8f);
             dp2.Radian = 360 * MathF.PI / 180.0f;
             dp2.Delay = 21000;
             dp2.DestoryAt = 3000;
@@ -1118,7 +1119,7 @@ namespace EurekaOrthosCeScripts
             dp.Name = "Unbridled_Fury_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(13, 13);
-            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.Color = new Vector4(0.957f, 0.140f, 0.140f, 0.8f);
             dp.DestoryAt = 6000;
             dp.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
