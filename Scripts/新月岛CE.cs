@@ -19,7 +19,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252], //等国服更新
-        version: "0.0.2",
+        version: "0.0.3",
         author: "XSZYYS",
         note: "用于新月岛紧急遭遇战。"
     )]
@@ -474,7 +474,7 @@ namespace EurekaOrthosCeScripts
         [ScriptMethod(
             name: "冲锋-小鸟记录 (Noise Complaint)",
             eventType: EventTypeEnum.TargetIcon,
-            eventCondition: ["Id:578"],
+            eventCondition: ["Id:0242"],
             userControl: false
         )]
         public void RushingRumbleRampage_Icon(Event @event, ScriptAccessory accessory)
