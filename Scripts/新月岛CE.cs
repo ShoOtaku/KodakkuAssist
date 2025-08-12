@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
+using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Threading.Tasks;
+using Dalamud.Interface.ManagedFontAtlas;
 using ECommons;
 using KodakkuAssist.Data;
 using KodakkuAssist.Module.Draw;
@@ -16,12 +18,12 @@ namespace EurekaOrthosCeScripts
     [ScriptType(
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
-        territorys: [9999], //等国服更新
+        territorys: [1252], //等国服更新
         version: "0.0.1",
         author: "XSZYYS",
         note: "用于新月岛紧急遭遇战。"
     )]
-    public class NewMoonIslandCeScript
+    public class 新月岛CE
     {
         /// <summary>
         /// 脚本初始化
@@ -34,7 +36,18 @@ namespace EurekaOrthosCeScripts
         private ulong _bossId = 0;
         private ulong _birdserkRushTargetId = 0;
         private ulong _rushingRumbleRampageTargetId = 0;
-        private readonly int[] _rampageDelays = { 5200, 3200 }; 
+        private readonly int[] _rampageDelays = { 5200, 3200 };
+        private readonly List<FlurryLine> _flurryLines = new();
+        private class FlurryLine
+        {
+            public string ID { get; init; }
+            public Vector3 NextExplosionPosition { get; set; }
+            public Vector3 Direction { get; init; }
+            public int ExplosionsLeft { get; set; }
+            public float Radius { get; init; } = 6f;
+            public float StepDistance { get; init; } = 7f;
+            public int DelayMs { get; init; } = 1000;
+        }
         public void Init(ScriptAccessory accessory)
         {
             accessory.Log.Debug("新月岛CE脚本已加载。");
@@ -62,7 +75,7 @@ namespace EurekaOrthosCeScripts
             dp.Scale = new Vector2(4, 70);
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 5000;
-            dp.ScaleMode |= ScaleMode.ByTime; 
+            dp.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
         }
@@ -81,7 +94,7 @@ namespace EurekaOrthosCeScripts
             dp.Scale = new Vector2(8);
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 5000;
-            dp.ScaleMode |= ScaleMode.ByTime; 
+            dp.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
 
@@ -98,7 +111,7 @@ namespace EurekaOrthosCeScripts
             dp.Scale = new Vector2(16);
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 7000;
-            dp.ScaleMode |= ScaleMode.ByTime; 
+            dp.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
@@ -113,12 +126,12 @@ namespace EurekaOrthosCeScripts
             var dp = accessory.Data.GetDefaultDrawProperties();
             dp.Name = "BlackRegiment_ChocoCyclone_Danger_Zone";
             dp.Owner = @event.SourceId;
-            dp.Scale = new Vector2(30);
-            dp.InnerScale = new Vector2(8);
+            dp.Scale = new Vector2(30, 30);
+            dp.InnerScale = new Vector2(8, 8);
             dp.Radian = MathF.PI * 2;
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 7000;
-            dp.ScaleMode |= ScaleMode.ByTime; 
+            dp.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
         }
@@ -162,7 +175,7 @@ namespace EurekaOrthosCeScripts
 
                 dp.Delay = explosionTime - warningDuration;
                 dp.DestoryAt = warningDuration + lingerDuration;
-                dp.ScaleMode |= ScaleMode.ByTime; 
+                dp.ScaleMode |= ScaleMode.ByTime;
 
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
             }
@@ -183,7 +196,7 @@ namespace EurekaOrthosCeScripts
             dp.Radian = 60 * MathF.PI / 180.0f;
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 5000;
-            dp.ScaleMode |= ScaleMode.ByTime; 
+            dp.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
         }
@@ -202,7 +215,7 @@ namespace EurekaOrthosCeScripts
             dp.Scale = new Vector2(26);
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 8000;
-            dp.ScaleMode |= ScaleMode.ByTime; 
+            dp.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
@@ -223,7 +236,7 @@ namespace EurekaOrthosCeScripts
             dp.Radian = 90 * MathF.PI / 180.0f;
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 8000;
-            dp.ScaleMode |= ScaleMode.ByTime; 
+            dp.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
         }
@@ -241,11 +254,11 @@ namespace EurekaOrthosCeScripts
                 var dp = accessory.Data.GetDefaultDrawProperties();
                 dp.Name = $"FromTimesBygone_Steelstrike_Danger_Zone_{i}";
                 dp.Owner = @event.SourceId;
-                dp.Scale = new Vector2(10, 100); 
-                dp.Rotation = i * (MathF.PI / 4); 
+                dp.Scale = new Vector2(10, 100);
+                dp.Rotation = i * (MathF.PI / 4);
                 dp.Color = accessory.Data.DefaultDangerColor;
                 dp.DestoryAt = 8000;
-                dp.ScaleMode |= ScaleMode.ByTime; 
+                dp.ScaleMode |= ScaleMode.ByTime;
 
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp);
             }
@@ -262,12 +275,12 @@ namespace EurekaOrthosCeScripts
             var pos = JsonConvert.DeserializeObject<Vector3>(@event["EffectPosition"]);
 
             dp.Name = $"FromTimesBygone_ArcaneOrb_Danger_Zone_{pos.X}_{pos.Z}";
-            dp.Position = pos; 
-            dp.Scale = new Vector2(6); 
+            dp.Position = pos;
+            dp.Scale = new Vector2(6);
             dp.Color = accessory.Data.DefaultDangerColor;
-            dp.Delay = 3200;     
-            dp.DestoryAt = 5000; 
-            dp.ScaleMode |= ScaleMode.ByTime; 
+            dp.Delay = 3200;
+            dp.DestoryAt = 5000;
+            dp.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
@@ -286,7 +299,7 @@ namespace EurekaOrthosCeScripts
 
             switch (tetherId)
             {
-                case 303: 
+                case 303:
                     {
                         var dp = accessory.Data.GetDefaultDrawProperties();
                         dp.Name = $"ExtremePrejudice_Circle_{@event.TargetId}";
@@ -298,13 +311,13 @@ namespace EurekaOrthosCeScripts
                         accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
                         break;
                     }
-                case 304: 
+                case 304:
                     {
                         // 绘制第一条直线
                         var dp1 = accessory.Data.GetDefaultDrawProperties();
                         dp1.Name = $"ExtremePrejudice_Cross1_{@event.TargetId}";
                         dp1.Owner = @event.TargetId;
-                        dp1.Scale = new Vector2(10, 80); 
+                        dp1.Scale = new Vector2(10, 80);
                         dp1.Color = accessory.Data.DefaultDangerColor;
                         dp1.DestoryAt = 6100;
                         dp1.ScaleMode |= ScaleMode.ByTime;
@@ -314,15 +327,15 @@ namespace EurekaOrthosCeScripts
                         var dp2 = accessory.Data.GetDefaultDrawProperties();
                         dp2.Name = $"ExtremePrejudice_Cross2_{@event.TargetId}";
                         dp2.Owner = @event.TargetId;
-                        dp2.Scale = new Vector2(10, 80); 
-                        dp2.Rotation = MathF.PI / 2; 
+                        dp2.Scale = new Vector2(10, 80);
+                        dp2.Rotation = MathF.PI / 2;
                         dp2.Color = accessory.Data.DefaultDangerColor;
                         dp2.DestoryAt = 6100;
                         dp2.ScaleMode |= ScaleMode.ByTime;
                         accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
                         break;
                     }
-                case 306: 
+                case 306:
                     {
                         var dp = accessory.Data.GetDefaultDrawProperties();
                         dp.Name = $"ExtremePrejudice_Circle_{@event.SourceId}";
@@ -471,7 +484,7 @@ namespace EurekaOrthosCeScripts
 
 
         }
-        
+
         [ScriptMethod(
             name: "RushingRumble (Noise Complaint)",
             eventType: EventTypeEnum.StartCasting,
@@ -558,10 +571,10 @@ namespace EurekaOrthosCeScripts
             dpCharge.Name = $"NoiseComplaint_BirdserkRush_Charge_{@event.SourceId}";
             dpCharge.Owner = @event.SourceId;
             dpCharge.TargetObject = _birdserkRushTargetId;
-            dpCharge.Scale = new Vector2(8, 100); 
+            dpCharge.Scale = new Vector2(8, 100);
             dpCharge.ScaleMode |= ScaleMode.YByDistance | ScaleMode.ByTime;
             dpCharge.Color = accessory.Data.DefaultDangerColor;
-            dpCharge.DestoryAt = 6300; 
+            dpCharge.DestoryAt = 6300;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
 
             // 绘制最终的扇形AOE
@@ -569,10 +582,10 @@ namespace EurekaOrthosCeScripts
             dpCone.Name = $"NoiseComplaint_BirdserkRush_Cone_{@event.SourceId}";
             dpCone.Owner = @event.SourceId;
             dpCone.TargetObject = _birdserkRushTargetId;
-            dpCone.Scale = new Vector2(60); 
-            dpCone.Radian = 120 * MathF.PI / 180.0f; 
+            dpCone.Scale = new Vector2(60);
+            dpCone.Radian = 120 * MathF.PI / 180.0f;
             dpCone.Color = accessory.Data.DefaultDangerColor;
-            dpCone.DestoryAt = 11000; 
+            dpCone.DestoryAt = 11000;
             dpCone.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
 
@@ -594,7 +607,7 @@ namespace EurekaOrthosCeScripts
         private async Task StartRampageSequenceAsync(Event @event, ScriptAccessory accessory)
         {
             accessory.Log.Debug("Rushing Rumble Rampage (41177) sequence initiated.");
-            
+
             // Find and store the boss's ID
             var boss = accessory.Data.Objects.SearchById(@event.SourceId);
             if (boss == null)
@@ -642,7 +655,7 @@ namespace EurekaOrthosCeScripts
             dpCharge.Name = $"NoiseComplaint_Rampage_Charge";
             dpCharge.Position = chargeStartPos;
             dpCharge.TargetPosition = destination;
-            dpCharge.Scale = new Vector2(8, 100); 
+            dpCharge.Scale = new Vector2(8, 100);
             dpCharge.Color = accessory.Data.DefaultDangerColor;
             dpCharge.DestoryAt = 6300;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
@@ -678,7 +691,7 @@ namespace EurekaOrthosCeScripts
                 dpCone.Delay = 0;
                 dpCone.DestoryAt = 10500;
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
-                
+
             }
             if (chargeIndex < _rampageDelays.Length)
             {
@@ -693,7 +706,7 @@ namespace EurekaOrthosCeScripts
             eventType: EventTypeEnum.ActionEffect,
             eventCondition: ["ActionId:regex:^(41178|41180|41179|42984)$"],
             userControl: false
-)]
+        )]
         public void RemoveRush(Event @event, ScriptAccessory accessory)
         {
             switch (@event.ActionId)
@@ -715,6 +728,500 @@ namespace EurekaOrthosCeScripts
                     }
                     break;
             }
+        }
+        #endregion
+
+        #region CrawlingDeath
+        [ScriptMethod(
+            name: "爪痕 (CrawlingDeath)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex: ^(41315|41316|41317)$"]
+        )]
+
+        public void LethalNails(Event @event, ScriptAccessory accessory)
+        {
+            var nailId = @event.ActionId;
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = $"CrawlingDeath_LethalNails_{nailId}";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(7, 60);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            switch (nailId)
+            {
+                case 41315: // 第一种类型
+                    dp.DestoryAt = 2000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+                    break;
+                case 41316: // 第二种类型
+                    dp.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+                    break;
+                case 41317: // 第三种类型
+                    dp.Delay = 2000;
+                    dp.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+                    break;
+            }
+        }
+
+        [ScriptMethod(
+            name: "纵横交错 (CrawlingDeath)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex: ^(41323|41324)$"]
+        )]
+        public void Crosshatch(Event @event, ScriptAccessory accessory)
+        {
+            bool isVertical = @event.ActionId == 41323;
+
+            int frontBackDelay = isVertical ? 0 : 2500;
+            int leftRightDelay = isVertical ? 2500 : 0;
+            const int duration = 5000;
+            float[] rotations = { 0, MathF.PI, MathF.PI / 2, -MathF.PI / 2 };
+            int[] delays = { frontBackDelay, frontBackDelay, leftRightDelay, leftRightDelay };
+            string[] names = { "Front", "Back", "Right", "Left" };
+
+            for (int i = 0; i < 4; i++)
+            {
+                var dp = accessory.Data.GetDefaultDrawProperties();
+                dp.Name = $"CrawlingDeath_Crosshatch_{names[i]}_{@event.SourceId}";
+                dp.Owner = @event.SourceId;
+                dp.Scale = new Vector2(50);
+                dp.Radian = 90 * MathF.PI / 180.0f;
+                dp.Rotation = rotations[i];
+                dp.Color = accessory.Data.DefaultDangerColor;
+                dp.Delay = delays[i];
+                dp.DestoryAt = duration;
+                dp.ScaleMode |= ScaleMode.ByTime;
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+            }
+        }
+        /*
+        [ScriptMethod(
+            name: "SkulkingOrders (CrawlingDeath)(未完成）",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId: regex: ^(41326|41329)$"]
+        )]
+        public void SkulkingOrders(Event @event, ScriptAccessory accessory)
+        {
+            
+        }
+        */
+
+        #endregion
+
+        #region TrialByClaw
+        [ScriptMethod(
+            name: "PrismaticWing（钢铁月环）(TrialByClaw)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId: regex: ^(42766|42767|42768|42769)$"]
+        )]
+        public void PrismaticWing(Event @event, ScriptAccessory accessory)
+        {
+            var AID = @event.ActionId;
+            switch (AID)
+            {
+                case 42766: // 钢铁
+                    {
+                        var dp = accessory.Data.GetDefaultDrawProperties();
+                        dp.Name = $"TrialByClaw_PrismaticWing_{AID}";
+                        dp.Owner = @event.SourceId;
+                        dp.Scale = new Vector2(22, 22);
+                        dp.Color = accessory.Data.DefaultDangerColor;
+                        dp.DestoryAt = 7000;
+                        dp.ScaleMode |= ScaleMode.ByTime;
+                        accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+                        break;
+                    }
+                case 42768:
+                    {
+                        var dp = accessory.Data.GetDefaultDrawProperties();
+                        dp.Name = $"TrialByClaw_PrismaticWing_{AID}";
+                        dp.Owner = @event.SourceId;
+                        dp.Scale = new Vector2(22, 22);
+                        dp.Color = accessory.Data.DefaultDangerColor;
+                        dp.DestoryAt = 4500;
+                        dp.ScaleMode |= ScaleMode.ByTime;
+                        accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+                        break;
+                    }
+                case 42767: // 月环
+                    {
+                        var dp = accessory.Data.GetDefaultDrawProperties();
+                        dp.Name = $"TrialByClaw_PrismaticWing_{AID}";
+                        dp.Owner = @event.SourceId;
+                        dp.Scale = new Vector2(31, 31);
+                        dp.InnerScale = new Vector2(5, 5);
+                        dp.Color = accessory.Data.DefaultDangerColor;
+                        dp.DestoryAt = 7000;
+                        dp.ScaleMode |= ScaleMode.ByTime;
+                        accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                        break;
+                    }
+                case 42769: // 月环
+                    {
+                        var dp = accessory.Data.GetDefaultDrawProperties();
+                        dp.Name = $"TrialByClaw_PrismaticWing_{AID}";
+                        dp.Owner = @event.SourceId;
+                        dp.Scale = new Vector2(31, 31);
+                        dp.InnerScale = new Vector2(5, 5);
+                        dp.Color = accessory.Data.DefaultDangerColor;
+                        dp.DestoryAt = 4500;
+                        dp.ScaleMode |= ScaleMode.ByTime;
+                        accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                        break;
+                    }
+            }
+        }
+        [ScriptMethod(
+            name: "结晶能量/混沌 (TrialByClaw)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex: ^(42728|42729|42730|42731|42732|42733|42734|42735|41758|41759|41760|41761)$"]
+        )]
+        public void CrystallizedEnergyAndChaos(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = $"CrawlingDeath_Crystallized_{@event.ActionId}";
+            dp.Owner = @event.SourceId;
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.ScaleMode |= ScaleMode.ByTime;
+
+            switch (@event.ActionId)
+            {
+
+                case 42728:
+                    dp.Scale = new Vector2(7, 7);
+                    dp.Delay = 3000;
+                    dp.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+                    break;
+                case 42729:
+                    dp.Scale = new Vector2(13, 13);
+                    dp.InnerScale = new Vector2(7, 7);
+                    dp.Delay = 3000;
+                    dp.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                    break;
+                case 42730:
+                    dp.Scale = new Vector2(19, 19);
+                    dp.InnerScale = new Vector2(13, 13);
+                    dp.Delay = 3000;
+                    dp.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                    break;
+                case 42731:
+                    dp.Scale = new Vector2(25, 25);
+                    dp.InnerScale = new Vector2(19, 19);
+                    dp.Delay = 3000;
+                    dp.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                    break;
+
+
+                case 42732:
+                    dp.Scale = new Vector2(7, 7);
+                    dp.Delay = 6000;
+                    dp.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+                    break;
+                case 42733:
+                    dp.Scale = new Vector2(13, 13);
+                    dp.InnerScale = new Vector2(7, 7);
+                    dp.Delay = 6000;
+                    dp.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                    break;
+                case 42734:
+                    dp.Scale = new Vector2(19, 19);
+                    dp.InnerScale = new Vector2(13, 13);
+                    dp.Delay = 6000;
+                    dp.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                    break;
+                case 42735:
+                    dp.Scale = new Vector2(25, 25);
+                    dp.InnerScale = new Vector2(19, 19);
+                    dp.Delay = 6000;
+                    dp.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                    break;
+
+
+                case 41758:
+                    dp.Scale = new Vector2(7, 7);
+                    dp.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+                    break;
+                case 41759:
+                    dp.Scale = new Vector2(13, 13);
+                    dp.InnerScale = new Vector2(7, 7);
+                    dp.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                    break;
+                case 41760:
+                    dp.Scale = new Vector2(19, 19);
+                    dp.InnerScale = new Vector2(13, 13);
+                    dp.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                    break;
+                case 41761:
+                    dp.Scale = new Vector2(25, 25);
+                    dp.InnerScale = new Vector2(19, 19);
+                    dp.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                    break;
+            }
+        }
+
+        #endregion
+
+        #region Unbridled
+        [ScriptMethod(
+           name: "严厉扫荡 (Unbridled)",
+           eventType: EventTypeEnum.StartCasting,
+           eventCondition: ["ActionId:42691"]
+       )]
+
+        public void ScathingSweep(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "Unbridled_Sweep_Danger_Zone";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(60, 60);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 6000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+        }
+
+        [ScriptMethod(
+            name: "狂怒1(Unbridled)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:37323"]
+        )]
+        public void UnbridledRage1(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "Unbridled_Rage1_Danger_Zone";
+            dp.Position = @event.TargetPosition;
+            dp.Scale = new Vector2(8, 8);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 8000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+
+            var dp2 = accessory.Data.GetDefaultDrawProperties();
+            dp2.Name = "Unbridled_BedrockUplift1_Danger_Zone";
+            dp2.Position = @event.TargetPosition;
+            dp2.Scale = new Vector2(60, 60);
+            dp2.InnerScale = new Vector2(8, 8);
+            dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.Delay = 6500;
+            dp2.DestoryAt = 3000;
+            dp2.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
+        }
+        [ScriptMethod(
+            name: "狂怒2(Unbridled)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:30872"]
+        )]
+        public void UnbridledRage2(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "Unbridled_Rage2_Danger_Zone";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(24, 24);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 9000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+            var dp2 = accessory.Data.GetDefaultDrawProperties();
+            dp2.Name = "Unbridled_BedrockUplift2_Danger_Zone";
+            dp2.Owner = @event.SourceId;
+            dp2.Scale = new Vector2(60, 60);
+            dp2.InnerScale = new Vector2(24, 24);
+            dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.Delay = 7500;
+            dp2.DestoryAt = 3000;
+            dp2.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
+        }
+        [ScriptMethod(
+            name: "狂怒3(Unbridled)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:30873"]
+        )]
+        public void UnbridledRage3(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "Unbridled_Rage3_Danger_Zone";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(16, 16);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.Delay = 9000;
+            dp.DestoryAt = 6500;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+            var dp2 = accessory.Data.GetDefaultDrawProperties();
+            dp2.Name = "Unbridled_BedrockUplift3_Danger_Zone";
+            dp2.Owner = @event.SourceId;
+            dp2.Scale = new Vector2(60, 60);
+            dp2.InnerScale = new Vector2(16, 16);
+            dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.Delay = 14000;
+            dp2.DestoryAt = 3000;
+            dp2.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
+        }
+        [ScriptMethod(
+            name: "狂怒4(Unbridled)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:30874"]
+        )]
+        public void UnbridledRage4(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "Unbridled_Rage4_Danger_Zone";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(8, 8);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.Delay = 12000;
+            dp.DestoryAt = 6500;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+            var dp2 = accessory.Data.GetDefaultDrawProperties();
+            dp2.Name = "Unbridled_BedrockUplift4_Danger_Zone";
+            dp2.Owner = @event.SourceId;
+            dp2.Scale = new Vector2(60, 60);
+            dp2.InnerScale = new Vector2(16, 16);
+            dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.Delay = 21000;
+            dp2.DestoryAt = 3000;
+            dp2.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
+        }
+        [ScriptMethod(
+            name: "激烈爆发(Unbridled)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:37804"]
+        )]
+        public void UnbridledFury(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "Unbridled_Fury_Danger_Zone";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(13, 13);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 6000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+        }
+        #endregion
+        #region CalamityBound
+        [ScriptMethod(
+            name: "爆炸 (CalamityBound)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41357"]
+        )]
+        public void Explosion(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "CalamityBound_Explosion_Danger_Zone";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(22, 22);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 5000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+        }
+        [ScriptMethod(
+            name: "潮汐吐息(CalamityBound)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41360"]
+        )]
+        public void TidalBreath(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "CalamityBound_TidalBreath_Danger_Zone";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(40);
+            dp.Radian = 180 * MathF.PI / 180.0f;
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 7000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+        }
+        #endregion
+        #region CompanyOfStone
+        private const uint DualfistFlurryFirstId = 41828;
+        private const uint DualfistFlurryRepeatId = 43152;
+        [ScriptMethod(
+            name: "双拳连击 - 起始 (CompanyOfStone)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41828"]
+        )]
+        public void DoubleFistStart(Event @event, ScriptAccessory accessory)
+        {
+            var caster = accessory.Data.Objects.SearchById(@event.SourceId);
+            if (caster == null)
+            {
+                accessory.Log.Error($"无法找到双拳连击的施法者: {@event.SourceId}");
+                return;
+            }
+            var targetPos = JsonConvert.DeserializeObject<Vector3>(@event["EffectPosition"]);
+            var snappedPos = new Vector3(
+                MathF.Round(targetPos.X * 2f) * 0.5f,
+                targetPos.Y,
+                MathF.Round(targetPos.Z * 2f) * 0.5f
+            );
+            var direction = new Vector3(MathF.Sin(caster.Rotation), 0, MathF.Cos(caster.Rotation));
+            var line = new FlurryLine
+            {
+                ID = $"Flurry_{caster.EntityId}_{_flurryLines.Count}",
+                NextExplosionPosition = snappedPos,
+                Direction = direction,
+                ExplosionsLeft = 3
+            };
+            _flurryLines.Add(line);
+
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = $"{line.ID}_{line.ExplosionsLeft}";
+            dp.Position = line.NextExplosionPosition;
+            dp.Scale = new Vector2(line.Radius);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.Delay = 10000;
+            dp.DestoryAt = line.DelayMs;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+        }
+        [ScriptMethod(
+            name: "双拳连击 - 后续 (CompanyOfStone)",
+            eventType: EventTypeEnum.ActionEffect,
+            eventCondition: ["ActionId:regex: ^(41828|43152)$"]
+        )]
+        public void DualfistFlurryAdvance(Event @event, ScriptAccessory accessory)
+        {
+            var explosionPos = JsonConvert.DeserializeObject<Vector3>(@event["SourcePosition"]);
+            var line = _flurryLines.FirstOrDefault(l => Vector3.Distance(l.NextExplosionPosition, explosionPos) < 1.0f);
+            if (line == null) return;
+            line.ExplosionsLeft--;
+            if (line.ExplosionsLeft <= 0)
+            {
+                _flurryLines.Remove(line);
+                return;
+            }
+            line.NextExplosionPosition += line.Direction * line.StepDistance;
+
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = $"{line.ID}_{line.ExplosionsLeft}";
+            dp.Position = line.NextExplosionPosition;
+            dp.Scale = new Vector2(line.Radius);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.Delay = line.DelayMs;
+            dp.DestoryAt = line.DelayMs;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
         #endregion
     }
