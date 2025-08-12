@@ -20,7 +20,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.0.6",
+        version: "0.0.7",
         author: "XSZYYS",
         note: "用于新月岛紧急遭遇战。"
     )]
@@ -765,17 +765,47 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "纵横交错 (CrawlingDeath)",
+            name: "垂直交错 (CrawlingDeath)",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:regex:^(41323|41324)$"]
+            eventCondition: ["ActionId:41323"]
         )]
-        public void Crosshatch(Event @event, ScriptAccessory accessory)
+        public void VerticalCrosshatch(Event @event, ScriptAccessory accessory)
         {
-            bool isVertical = @event.ActionId == 41323;
-
-            int frontBackDelay = isVertical ? 0 : 2500;
-            int leftRightDelay = isVertical ? 2500 : 0;
+            const int frontBackDelay = 0;
+            const int leftRightDelay = 2500;
             const int duration = 5000;
+
+            float[] rotations = { 0, MathF.PI, MathF.PI / 2, -MathF.PI / 2 };
+            int[] delays = { frontBackDelay, frontBackDelay, leftRightDelay, leftRightDelay };
+            string[] names = { "Front", "Back", "Right", "Left" };
+
+            for (int i = 0; i < 4; i++)
+            {
+                var dp = accessory.Data.GetDefaultDrawProperties();
+                dp.Name = $"CrawlingDeath_Crosshatch_{names[i]}_{@event.SourceId}";
+                dp.Owner = @event.SourceId;
+                dp.Scale = new Vector2(50);
+                dp.Radian = 90 * MathF.PI / 180.0f;
+                dp.Rotation = rotations[i];
+                dp.Color = accessory.Data.DefaultDangerColor;
+                dp.Delay = delays[i];
+                dp.DestoryAt = duration;
+                dp.ScaleMode |= ScaleMode.ByTime;
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+            }
+        }
+
+        [ScriptMethod(
+            name: "水平交错 (CrawlingDeath)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41324"]
+        )]
+        public void HorizontalCrosshatch(Event @event, ScriptAccessory accessory)
+        {
+            const int frontBackDelay = 2500;
+            const int leftRightDelay = 0;
+            const int duration = 5000;
+
             float[] rotations = { 0, MathF.PI, MathF.PI / 2, -MathF.PI / 2 };
             int[] delays = { frontBackDelay, frontBackDelay, leftRightDelay, leftRightDelay };
             string[] names = { "Front", "Back", "Right", "Left" };
