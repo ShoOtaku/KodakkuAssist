@@ -19,7 +19,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252], //等国服更新
-        version: "0.0.1",
+        version: "0.0.2",
         author: "XSZYYS",
         note: "用于新月岛紧急遭遇战。"
     )]
