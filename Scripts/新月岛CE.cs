@@ -20,7 +20,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.0.7",
+        version: "0.0.8",
         author: "XSZYYS",
         note: "用于新月岛紧急遭遇战。"
     )]
@@ -39,6 +39,8 @@ namespace EurekaOrthosCeScripts
         private ulong _rushingRumbleRampageTargetId = 0;
         private readonly int[] _rampageDelays = { 5200, 3200 };
         private readonly List<FlurryLine> _flurryLines = new();
+        private int _activeMechanicId; // 41175 for Rumble, 41176 for Birdserk, 41177 for Rampage
+        private bool _isRampageSequenceRunning;
         private class FlurryLine
         {
             public string ID { get; init; }
@@ -469,6 +471,7 @@ namespace EurekaOrthosCeScripts
         {
             // Extra == "0x350" is Cardinal, "0x351" is Intercardinal
             _lightningIsCardinal = @event["Param"] == "848";
+            TryDrawMechanics(accessory);
         }
         [ScriptMethod(
             name: "冲锋-小鸟记录 (Noise Complaint)",
@@ -480,6 +483,7 @@ namespace EurekaOrthosCeScripts
         {
             _activeBirds.Enqueue(@event.SourceId);
             accessory.Log.Debug($"小鸟ID:{@event.SourceId} 已记录。队列中的小鸟数量：{_activeBirds.Count}");
+            TryDrawMechanics(accessory);
 
 
         }
@@ -489,6 +493,15 @@ namespace EurekaOrthosCeScripts
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41175"]
         )]
+        public void OnRushingRumbleStart(Event @event, ScriptAccessory accessory)
+        {
+            // 只记录技能ID和BossID，不立即绘制
+            _activeMechanicId = 41175;
+            _bossId = @event.SourceId;
+            // 尝试触发绘制，以防小鸟和方向信息已经先到了
+            TryDrawMechanics(accessory);
+        }
+        /*
         public void DrawRushingRumbleIfReady(Event @event, ScriptAccessory accessory)
         {
             if (_lightningIsCardinal == null || _activeBirds.Count == 0)
@@ -554,12 +567,20 @@ namespace EurekaOrthosCeScripts
             _activeBirds.Clear();
             _lightningIsCardinal = null;
         }
+        */
 
         [ScriptMethod(
             name: "狂鸟冲锋 (Noise Complaint)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41176"]
         )]
+        public void OnBirdserkRushStart(Event @event, ScriptAccessory accessory)
+        {
+            _activeMechanicId = 41176;
+            _bossId = @event.SourceId;
+            TryDrawMechanics(accessory);
+        }
+        /*
         public void BirdserkRush(Event @event, ScriptAccessory accessory)
         {
             var bird = accessory.Data.Objects.SearchById(_activeBirds.Dequeue());
@@ -591,13 +612,227 @@ namespace EurekaOrthosCeScripts
             // 重置小鸟ID，为下一次机制做准备
             _activeBirds.Clear();
         }
-
+        */
         [ScriptMethod(
             name: "Rushing Rumble Rampage (Noise Complaint)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41177"]
         )]
+        public void OnRampageStart(Event @event, ScriptAccessory accessory)
+        {
+            _activeMechanicId = 41177;
+            _bossId = @event.SourceId;
+            TryDrawMechanics(accessory);
+        }
+        private void TryDrawMechanics(ScriptAccessory accessory)
+        {
+            // 如果没有激活的技能，直接返回
+            if (_activeMechanicId == 0) return;
 
+            // 根据激活的技能ID，检查其特定条件
+            switch (_activeMechanicId)
+            {
+                // 单次冲锋：需要方向和小鸟
+                case 41175 when _lightningIsCardinal != null && _activeBirds.Count > 0:
+                    DrawRushingRumble(accessory);
+                    ResetState(); // 执行后重置状态
+                    break;
+
+                // 狂鸟冲锋：只需要小鸟
+                case 41176 when _activeBirds.Count > 0:
+                    DrawBirdserkRush(accessory);
+                    ResetState();
+                    break;
+
+                // 连续冲锋：需要方向和小鸟，且序列尚未开始
+                case 41177 when _lightningIsCardinal != null && _activeBirds.Count > 0 && !_isRampageSequenceRunning:
+                    _isRampageSequenceRunning = true; // 标记序列已开始，防止重复启动
+                    _ = StartRampageSequenceAsync(accessory); // 异步启动序列
+                    break;
+            }
+        }
+        private void ResetState()
+        {
+            _lightningIsCardinal = null;
+            _activeBirds.Clear();
+            _bossId = 0;
+            _activeMechanicId = 0;
+            _isRampageSequenceRunning = false;
+        }
+        private void DrawRushingRumble(ScriptAccessory accessory)
+        {
+            var bird = accessory.Data.Objects.SearchById(_activeBirds.Dequeue());
+            var boss = accessory.Data.Objects.SearchById(_bossId);
+            if (bird == null || boss == null) return;
+
+            var destination = bird.Position - boss.Position;
+
+            // 1. 直线冲锋
+            var dpRumble = accessory.Data.GetDefaultDrawProperties();
+            dpRumble.Name = $"NoiseComplaint_Rumble_{bird.EntityId}";
+            dpRumble.Owner = _bossId;
+            dpRumble.TargetPosition = destination;
+            dpRumble.Scale = new Vector2(8, 100);
+            dpRumble.ScaleMode |= ScaleMode.YByDistance | ScaleMode.ByTime;
+            dpRumble.Color = accessory.Data.DefaultDangerColor;
+            dpRumble.DestoryAt = 6300;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpRumble);
+
+            // 2. 落地大圈
+            var dpCircle = accessory.Data.GetDefaultDrawProperties();
+            dpCircle.Name = $"NoiseComplaint_Rush_Circle_{bird.EntityId}";
+            dpCircle.Position = destination;
+            dpCircle.Scale = new Vector2(30);
+            dpCircle.Color = accessory.Data.DefaultDangerColor;
+            dpCircle.Delay = 0;
+            dpCircle.DestoryAt = 9400;
+            dpCircle.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
+
+            // 3. 四连扇形
+            var dirToBoss = boss.Position - destination;
+            var initialAngle = MathF.Atan2(dirToBoss.X, dirToBoss.Z);
+            if (_lightningIsCardinal == false) // 如果是斜点
+            {
+                initialAngle += 45 * MathF.PI / 180.0f;
+            }
+
+            for (int i = 0; i < 4; i++)
+            {
+                var dpCone = accessory.Data.GetDefaultDrawProperties();
+                dpCone.Name = $"NoiseComplaint_Cone_{bird.EntityId}_{i}";
+                dpCone.Position = destination;
+                dpCone.Scale = new Vector2(70);
+                dpCone.Radian = 45 * MathF.PI / 180.0f;
+                dpCone.Rotation = initialAngle + (i * 90 * MathF.PI / 180.0f);
+                dpCone.Color = accessory.Data.DefaultDangerColor;
+                dpCone.Delay = 5400;
+                dpCone.DestoryAt = 5000;
+                dpCone.ScaleMode |= ScaleMode.ByTime;
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
+            }
+        }
+
+        private void DrawBirdserkRush(ScriptAccessory accessory)
+        {
+            var bird = accessory.Data.Objects.SearchById(_activeBirds.Dequeue());
+            if (bird == null) return;
+
+            // 绘制冲锋路径
+            var dpCharge = accessory.Data.GetDefaultDrawProperties();
+            dpCharge.Name = $"NoiseComplaint_BirdserkRush_Charge_{_bossId}";
+            dpCharge.Owner = _bossId;
+            dpCharge.TargetObject = bird.EntityId;
+            dpCharge.Scale = new Vector2(8, 100);
+            dpCharge.ScaleMode |= ScaleMode.YByDistance | ScaleMode.ByTime;
+            dpCharge.Color = accessory.Data.DefaultDangerColor;
+            dpCharge.DestoryAt = 6300;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
+
+            // 绘制最终的扇形AOE
+            var dpCone = accessory.Data.GetDefaultDrawProperties();
+            dpCone.Name = $"NoiseComplaint_BirdserkRush_Cone_{_bossId}";
+            dpCone.Owner = _bossId;
+            dpCone.TargetObject = bird.EntityId;
+            dpCone.Scale = new Vector2(60);
+            dpCone.Radian = 120 * MathF.PI / 180.0f;
+            dpCone.Color = accessory.Data.DefaultDangerColor;
+            dpCone.DestoryAt = 11000;
+            dpCone.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
+        }
+
+        private async Task StartRampageSequenceAsync(ScriptAccessory accessory)
+        {
+            accessory.Log.Debug("Rushing Rumble Rampage (41177) sequence initiated.");
+            var boss = accessory.Data.Objects.SearchById(_bossId);
+            if (boss == null)
+            {
+                accessory.Log.Error("Could not find boss for Rushing Rumble Rampage.");
+                ResetState();
+                return;
+            }
+
+            await ProcessNextRampageCharge(accessory, boss.Position, 0);
+
+            // 整个序列结束后，重置状态
+            ResetState();
+        }
+
+        private async Task ProcessNextRampageCharge(ScriptAccessory accessory, Vector3 chargeStartPos, int chargeIndex)
+        {
+            if (_activeBirds.Count == 0)
+            {
+                accessory.Log.Debug("Rampage sequence finished or no more birds in queue.");
+                return;
+            }
+
+            var birdId = _activeBirds.Dequeue();
+            var bird = accessory.Data.Objects.SearchById(birdId);
+            if (bird == null)
+            {
+                accessory.Log.Error($"Could not find bird {birdId} for Rampage charge {chargeIndex}. Skipping.");
+                // 继续处理下一只鸟
+                if (chargeIndex < _rampageDelays.Length)
+                {
+                    await ProcessNextRampageCharge(accessory, chargeStartPos, chargeIndex + 1);
+                }
+                return;
+            }
+
+            var destination = bird.Position;
+
+            // 1. 直线冲锋
+            var dpCharge = accessory.Data.GetDefaultDrawProperties();
+            dpCharge.Name = $"NoiseComplaint_Rampage_Charge_{chargeIndex}";
+            dpCharge.Position = chargeStartPos;
+            dpCharge.TargetPosition = destination;
+            dpCharge.Scale = new Vector2(8, 100);
+            dpCharge.ScaleMode |= ScaleMode.YByDistance;
+            dpCharge.Color = accessory.Data.DefaultDangerColor;
+            dpCharge.DestoryAt = 6300;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
+
+            // 2. 落地大圈
+            var dpCircle = accessory.Data.GetDefaultDrawProperties();
+            dpCircle.Name = $"NoiseComplaint_Rampage_Circle_{chargeIndex}";
+            dpCircle.Position = destination;
+            dpCircle.Scale = new Vector2(30);
+            dpCircle.Color = accessory.Data.DefaultDangerColor;
+            dpCircle.DestoryAt = 9400;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
+
+            // 3. 四连扇形
+            var chargeDirectionVector = destination - chargeStartPos;
+            var initialAngle = MathF.Atan2(chargeDirectionVector.X, chargeDirectionVector.Z);
+            if (_lightningIsCardinal == false) // 如果是斜点
+            {
+                initialAngle += 45 * MathF.PI / 180.0f;
+            }
+
+            for (int i = 0; i < 4; i++)
+            {
+                var dpCone = accessory.Data.GetDefaultDrawProperties();
+                dpCone.Name = $"NoiseComplaint_Rampage_Cone_{chargeIndex}_{i}";
+                dpCone.Position = destination;
+                dpCone.Scale = new Vector2(70);
+                dpCone.Radian = 45 * MathF.PI / 180.0f;
+                dpCone.Rotation = initialAngle + (i * 90 * MathF.PI / 180.0f);
+                dpCone.Color = accessory.Data.DefaultDangerColor;
+                dpCone.Delay = 5400;
+                dpCone.DestoryAt = 5000;
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
+            }
+
+            // 如果还有下一次冲锋，则等待并递归调用
+            if (chargeIndex < _rampageDelays.Length)
+            {
+                int delay = _rampageDelays[chargeIndex];
+                await Task.Delay(delay);
+                await ProcessNextRampageCharge(accessory, destination, chargeIndex + 1);
+            }
+        }
+        /*
         public void HandleRushingRumbleRampage(Event @event, ScriptAccessory accessory)
         {
             _ = StartRampageSequenceAsync(@event, accessory);
@@ -699,6 +934,7 @@ namespace EurekaOrthosCeScripts
                 await ProcessNextRampageCharge(accessory, destination, chargeIndex + 1);
             }
         }
+        */
 
         [ScriptMethod(
             name: "绘图移除 (Noise Complaint)",
