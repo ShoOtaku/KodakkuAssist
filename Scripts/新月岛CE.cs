@@ -20,7 +20,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.0.19",
+        version: "0.0.21",
         author: "XSZYYS",
         note: "新月岛部分CE绘制已完成：\r\n死亡爪（地板出现小怪未绘制，其余均绘制）\r\n神秘土偶（全部画完）\r\n黑色连队（全部画完）\r\n水晶龙（全部画完）\r\n狂战士（全部画完）\r\n指令罐（全部画完）\r\n回廊恶魔（全部画完）\r\n未测试：\r\n进化加鲁拉（运动会未测试）\r\n鬼火苗（有问题，待修复）\r\n石质骑士团（转转手未写，地火未测试）\r\n复原狮\r\n鲨鱼\r\n未写：\r\n金钱龟\r\n跃立狮\r\n夺心魔"
     )]
@@ -574,81 +574,10 @@ namespace EurekaOrthosCeScripts
         {
             _activeMechanicId = 41175;
             _bossId = @event.SourceId;
-            var boss = accessory.Data.Objects.SearchById(_bossId);
-            if (boss != null)
-            {
-                _chargeStartPosition = boss.Position; // 记录冲锋起始位置
-                accessory.Log.Debug($"单次冲锋启动，记录起始位置: {_chargeStartPosition}");
-            }
             TryDrawMechanics(accessory);
         }
-        /*
-        public void DrawRushingRumbleIfReady(Event @event, ScriptAccessory accessory)
-        {
-            if (_lightningIsCardinal == null || _activeBirds.Count == 0)
-                return;
 
-            var bird = accessory.Data.Objects.SearchById(_activeBirds.Dequeue());
-            if (bird == null) return;
 
-            var boss = accessory.Data.Objects.SearchById(@event.SourceId);
-            if (boss == null) return;
-            _bossId = boss.EntityId;
-
-            //var arenaCenter = _noiseComplaintArenaCenter ?? new Vector3(461f, 0, -363f); //进岛后根据实际情况修改该场地中心
-            var birdPos = bird.Position;
-            var destination = birdPos - boss.Position;
-
-            // 1. 直线冲锋
-            var dpRumble = accessory.Data.GetDefaultDrawProperties();
-            dpRumble.Name = $"NoiseComplaint_Rumble_{bird.EntityId}";
-            dpRumble.Owner = _bossId;
-            dpRumble.TargetPosition = destination;
-            dpRumble.Scale = new Vector2(8, 100);
-            dpRumble.ScaleMode |= ScaleMode.YByDistance | ScaleMode.ByTime;
-            dpRumble.Color = accessory.Data.DefaultDangerColor;
-            dpRumble.DestoryAt = 6300;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpRumble);
-
-            // 2. 落地大圈
-            var dpCircle = accessory.Data.GetDefaultDrawProperties();
-            dpCircle.Name = $"NoiseComplaint_Rush_Circle_{bird.EntityId}";
-            dpCircle.Position = destination;
-            dpCircle.Scale = new Vector2(30);
-            dpCircle.Color = accessory.Data.DefaultDangerColor;
-            dpCircle.Delay = 0;
-            dpCircle.DestoryAt = 9400;
-            dpCircle.ScaleMode |= ScaleMode.ByTime;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
-
-            // 3. 四连扇形
-            var dirToBoss = boss.Position - destination;
-            var initialAngle = MathF.Atan2(dirToBoss.X, dirToBoss.Z);
-            if (_lightningIsCardinal == false) // 如果是斜点
-            {
-                initialAngle += 45 * MathF.PI / 180.0f;
-            }
-
-            for (int i = 0; i < 4; i++)
-            {
-                var dpCone = accessory.Data.GetDefaultDrawProperties();
-                dpCone.Name = $"NoiseComplaint_Cone_{bird.EntityId}_{i}";
-                dpCone.Position = destination;
-                dpCone.Scale = new Vector2(70);
-                dpCone.Radian = 45 * MathF.PI / 180.0f;
-                dpCone.Rotation = initialAngle + (i * 90 * MathF.PI / 180.0f);
-                dpCone.Color = accessory.Data.DefaultDangerColor;
-                dpCone.Delay = 5400;
-                dpCone.DestoryAt = 5000;
-                dpCone.ScaleMode |= ScaleMode.ByTime;
-                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
-            }
-
-            // 清理本次处理的状态
-            _activeBirds.Clear();
-            _lightningIsCardinal = null;
-        }
-        */
 
         [ScriptMethod(
             name: "狂鸟冲锋 (进化加鲁拉)",
@@ -661,39 +590,7 @@ namespace EurekaOrthosCeScripts
             _bossId = @event.SourceId;
             TryDrawMechanics(accessory);
         }
-        /*
-        public void BirdserkRush(Event @event, ScriptAccessory accessory)
-        {
-            var bird = accessory.Data.Objects.SearchById(_activeBirds.Dequeue());
-            if (bird == null) return;
-            _birdserkRushTargetId = bird.EntityId;
-            // 绘制冲锋路径
-            var dpCharge = accessory.Data.GetDefaultDrawProperties();
-            dpCharge.Name = $"NoiseComplaint_BirdserkRush_Charge_{@event.SourceId}";
-            dpCharge.Owner = @event.SourceId;
-            dpCharge.TargetObject = _birdserkRushTargetId;
-            dpCharge.Scale = new Vector2(8, 100);
-            dpCharge.ScaleMode |= ScaleMode.YByDistance | ScaleMode.ByTime;
-            dpCharge.Color = accessory.Data.DefaultDangerColor;
-            dpCharge.DestoryAt = 6300;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
 
-            // 绘制最终的扇形AOE
-            var dpCone = accessory.Data.GetDefaultDrawProperties();
-            dpCone.Name = $"NoiseComplaint_BirdserkRush_Cone_{@event.SourceId}";
-            dpCone.Owner = @event.SourceId;
-            dpCone.TargetObject = _birdserkRushTargetId;
-            dpCone.Scale = new Vector2(60);
-            dpCone.Radian = 120 * MathF.PI / 180.0f;
-            dpCone.Color = accessory.Data.DefaultDangerColor;
-            dpCone.DestoryAt = 11000;
-            dpCone.ScaleMode |= ScaleMode.ByTime;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
-
-            // 重置小鸟ID，为下一次机制做准备
-            _activeBirds.Clear();
-        }
-        */
         [ScriptMethod(
             name: "Rushing Rumble Rampage (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
@@ -703,38 +600,54 @@ namespace EurekaOrthosCeScripts
         {
             _activeMechanicId = 41177;
             _bossId = @event.SourceId;
-            _isRampageSequenceRunning = true;
-            _rampageChargeIndex = 0;
-
-            var boss = accessory.Data.Objects.SearchById(_bossId);
-            if (boss != null)
-            {
-                _rampageNextChargeStartPos = boss.Position;
-                accessory.Log.Debug($"连续冲锋初始位置已设置为Boss位置: {_rampageNextChargeStartPos}");
-            }
-            else
-            {
-                accessory.Log.Error("序列开始时未能找到“Rushing Rumble Rampage”的Boss。正在重置状态。");
-                ResetState();
-            }
+            TryDrawMechanics(accessory);
         }
         private void TryDrawMechanics(ScriptAccessory accessory)
         {
-            // 如果连续冲锋正在进行或没有激活的机制，则不执行任何操作。
-            if (_isRampageSequenceRunning || _activeMechanicId == 0) return;
+            // 如果一个连续冲锋已经开始（即不是第一次冲锋），则由图标事件处理，这里直接返回
+            if (_isRampageSequenceRunning) return;
+            // 如果没有激活的机制ID，也直接返回
+            if (_activeMechanicId == 0) return;
 
             switch (_activeMechanicId)
             {
-                // 单次冲锋：需要方向和一只小鸟。
+                // RushingRumble (单次冲锋): 需要方向和小鸟
                 case 41175 when _lightningIsCardinal != null && _activeBirds.Count > 0:
+                    accessory.Log.Debug("条件满足，绘制 RushingRumble。");
                     DrawRushingRumble(accessory);
                     ResetState();
                     break;
 
-                // 狂鸟冲锋：只需要一只小鸟。
+                // BirdserkRush (狂鸟冲锋): 只需要小鸟
                 case 41176 when _activeBirds.Count > 0:
+                    accessory.Log.Debug("条件满足，绘制 BirdserkRush。");
                     DrawBirdserkRush(accessory);
                     ResetState();
+                    break;
+
+                // Rushing Rumble Rampage (连续冲锋) 的启动: 需要方向和小鸟
+                case 41177 when _lightningIsCardinal != null && _activeBirds.Count > 0:
+                    accessory.Log.Debug("条件满足，启动 Rushing Rumble Rampage 序列。");
+                    var boss = accessory.Data.Objects.SearchById(_bossId);
+                    if (boss == null) { ResetState(); return; }
+
+                    // 设置连续冲锋状态
+                    _isRampageSequenceRunning = true;
+                    _rampageChargeIndex = 0;
+                    _rampageNextChargeStartPos = boss.Position;
+
+                    // 绘制第一次冲锋
+                    if (_activeBirds.TryDequeue(out var birdId))
+                    {
+                        var bird = accessory.Data.Objects.SearchById(birdId);
+                        if (bird != null)
+                        {
+                            DrawRampageCharge(accessory, _rampageNextChargeStartPos, bird, _rampageChargeIndex);
+                            _rampageNextChargeStartPos = bird.Position;
+                            _rampageChargeIndex++;
+                        }
+                    }
+                    // 注意：此处不调用ResetState()，因为序列才刚刚开始
                     break;
             }
         }
@@ -748,6 +661,70 @@ namespace EurekaOrthosCeScripts
             _rampageChargeIndex = 0;
             _chargeStartPosition = Vector3.Zero;
         }
+        private Vector3 GetArenaEdgePosition(Vector3 destination)
+        {
+            const float arenaRadius = 23f;
+            if (_noiseComplaintArenaCenter == null) return destination;
+
+            var vectorFromCenter = destination - _noiseComplaintArenaCenter.Value;
+            if (vectorFromCenter.LengthSquared() <= arenaRadius * arenaRadius)
+            {
+                return destination;
+            }
+            else
+            {
+                var direction = Vector3.Normalize(vectorFromCenter);
+                return _noiseComplaintArenaCenter.Value + direction * arenaRadius;
+            }
+        }
+
+        private Vector3 GetLineArenaIntersection(Vector3 start, Vector3 end)
+        {
+            const float arenaRadius = 23f;
+            if (_noiseComplaintArenaCenter == null) return GetArenaEdgePosition(end); // 如果中心未知，则退回旧方法
+
+            Vector2 center = new Vector2(_noiseComplaintArenaCenter.Value.X, _noiseComplaintArenaCenter.Value.Z);
+            Vector2 p1 = new Vector2(start.X, start.Z);
+            Vector2 p2 = new Vector2(end.X, end.Z);
+
+            if (Vector2.DistanceSquared(p2, center) <= arenaRadius * arenaRadius)
+            {
+                // 如果终点已经在场地内，直接返回终点
+                return end;
+            }
+
+            // 计算直线与圆的交点
+            Vector2 d = p2 - p1;
+            Vector2 f = p1 - center;
+
+            float a = Vector2.Dot(d, d);
+            float b = 2 * Vector2.Dot(f, d);
+            float c = Vector2.Dot(f, f) - arenaRadius * arenaRadius;
+
+            float discriminant = b * b - 4 * a * c;
+
+            if (discriminant < 0)
+            {
+                // 没有交点（理论上不应发生，因为起点在内，终点在外）
+                return GetArenaEdgePosition(end); // Failsafe
+            }
+            else
+            {
+                discriminant = MathF.Sqrt(discriminant);
+                float t1 = (-b - discriminant) / (2 * a);
+                // 我们需要的是线段路径上的第一个交点，t值应在[0, 1]之间
+                if (t1 >= 0 && t1 <= 1)
+                {
+                    Vector2 intersection2D = p1 + t1 * d;
+                    return new Vector3(intersection2D.X, start.Y, intersection2D.Y);
+                }
+                // 如果t1不在范围内，说明整个线段都在圆内或圆外，或者相切
+                // 对于我们的情况（起点在内，终点在外），t1必然在[0,1]内
+                return GetArenaEdgePosition(end); // Failsafe
+            }
+        }
+
+
         private void DrawRushingRumble(ScriptAccessory accessory)
         {
             if (!_activeBirds.TryDequeue(out var birdId)) return;
@@ -755,8 +732,8 @@ namespace EurekaOrthosCeScripts
             var boss = accessory.Data.Objects.SearchById(_bossId);
             if (bird == null || boss == null) return;
 
-            var destination = bird.Position;
-
+            var birdPos = bird.Position;
+            var destination = GetArenaEdgePosition(birdPos);
             // 1. 从Boss到小鸟的直线冲锋
             var dpRumble = accessory.Data.GetDefaultDrawProperties();
             dpRumble.Name = $"NoiseComplaint_Rumble_{bird.EntityId}";
@@ -767,6 +744,7 @@ namespace EurekaOrthosCeScripts
             dpRumble.Color = accessory.Data.DefaultDangerColor;
             dpRumble.DestoryAt = 6300;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpRumble);
+            accessory.Log.Debug("绘制冲锋-直线");
 
             // 2. 落地大圈
             var dpCircle = accessory.Data.GetDefaultDrawProperties();
@@ -776,6 +754,7 @@ namespace EurekaOrthosCeScripts
             dpCircle.Color = accessory.Data.DefaultDangerColor;
             dpCircle.DestoryAt = 9400;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
+            accessory.Log.Debug("绘制冲锋-钢铁");
 
             // 3. 四连扇形
             var dirToBoss = boss.Position - destination;
@@ -784,7 +763,7 @@ namespace EurekaOrthosCeScripts
             {
                 initialAngle += 45 * MathF.PI / 180.0f;
             }
-
+            accessory.Log.Debug("绘制冲锋-扇形");
             for (int i = 0; i < 4; i++)
             {
                 var dpCone = accessory.Data.GetDefaultDrawProperties();
@@ -816,6 +795,7 @@ namespace EurekaOrthosCeScripts
             dpCharge.Color = accessory.Data.DefaultDangerColor;
             dpCharge.DestoryAt = 6300;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
+            accessory.Log.Debug("绘制冲锋-直线");
 
             // 从Boss朝向小鸟的大范围扇形顺劈
             var dpCone = accessory.Data.GetDefaultDrawProperties();
@@ -837,7 +817,18 @@ namespace EurekaOrthosCeScripts
                 return;
             }
 
-            var destination = bird.Position;
+            var birdPos = bird.Position;
+            Vector3 destination;
+
+            if(chargeIndex == 0)
+            {
+                destination = GetArenaEdgePosition(birdPos);
+            }
+            else
+            {
+                destination = GetLineArenaIntersection(chargeStartPos, birdPos);
+            }
+
 
             // 1. 直线冲锋
             var dpCharge = accessory.Data.GetDefaultDrawProperties();
@@ -849,6 +840,7 @@ namespace EurekaOrthosCeScripts
             dpCharge.Color = accessory.Data.DefaultDangerColor;
             dpCharge.DestoryAt = 6300;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
+            accessory.Log.Debug("绘制连续冲锋-直线");
 
             // 2. 目标点的大圆形AOE
             var dpCircle = accessory.Data.GetDefaultDrawProperties();
@@ -858,6 +850,7 @@ namespace EurekaOrthosCeScripts
             dpCircle.Color = accessory.Data.DefaultDangerColor;
             dpCircle.DestoryAt = 9400;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
+            accessory.Log.Debug("绘制连续冲锋-钢铁");
 
             // 3. 从目标点发出的四个扇形AOE
             var chargeDirectionVector = destination - chargeStartPos;
@@ -866,7 +859,7 @@ namespace EurekaOrthosCeScripts
             {
                 initialAngle += 45 * MathF.PI / 180.0f;
             }
-
+            accessory.Log.Debug("绘制连续冲锋-扇形");
             for (int i = 0; i < 4; i++)
             {
                 var dpCone = accessory.Data.GetDefaultDrawProperties();
@@ -881,201 +874,7 @@ namespace EurekaOrthosCeScripts
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
             }
         }
-        /*
-        private async Task StartRampageSequenceAsync(ScriptAccessory accessory)
-        {
-            accessory.Log.Debug("Rushing Rumble Rampage (41177) sequence initiated.");
-            var boss = accessory.Data.Objects.SearchById(_bossId);
-            if (boss == null)
-            {
-                accessory.Log.Error("Could not find boss for Rushing Rumble Rampage.");
-                ResetState();
-                return;
-            }
 
-            await ProcessNextRampageCharge(accessory, boss.Position, 0);
-
-            // 整个序列结束后，重置状态
-            ResetState();
-        }
-
-        private async Task ProcessNextRampageCharge(ScriptAccessory accessory, Vector3 chargeStartPos, int chargeIndex)
-        {
-            if (_activeBirds.Count == 0)
-            {
-                accessory.Log.Debug("Rampage sequence finished or no more birds in queue.");
-                return;
-            }
-
-            var birdId = _activeBirds.Dequeue();
-            var bird = accessory.Data.Objects.SearchById(birdId);
-            if (bird == null)
-            {
-                accessory.Log.Error($"Could not find bird {birdId} for Rampage charge {chargeIndex}. Skipping.");
-                // 继续处理下一只鸟
-                if (chargeIndex < _rampageDelays.Length)
-                {
-                    await ProcessNextRampageCharge(accessory, chargeStartPos, chargeIndex + 1);
-                }
-                return;
-            }
-
-            var destination = bird.Position;
-
-            // 1. 直线冲锋
-            var dpCharge = accessory.Data.GetDefaultDrawProperties();
-            dpCharge.Name = $"NoiseComplaint_Rampage_Charge_{chargeIndex}";
-            dpCharge.Position = chargeStartPos;
-            dpCharge.TargetPosition = destination;
-            dpCharge.Scale = new Vector2(8, 100);
-            dpCharge.ScaleMode |= ScaleMode.YByDistance;
-            dpCharge.Color = accessory.Data.DefaultDangerColor;
-            dpCharge.DestoryAt = 6300;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
-
-            // 2. 落地大圈
-            var dpCircle = accessory.Data.GetDefaultDrawProperties();
-            dpCircle.Name = $"NoiseComplaint_Rampage_Circle_{chargeIndex}";
-            dpCircle.Position = destination;
-            dpCircle.Scale = new Vector2(30);
-            dpCircle.Color = accessory.Data.DefaultDangerColor;
-            dpCircle.DestoryAt = 9400;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
-
-            // 3. 四连扇形
-            var chargeDirectionVector = destination - chargeStartPos;
-            var initialAngle = MathF.Atan2(chargeDirectionVector.X, chargeDirectionVector.Z);
-            if (_lightningIsCardinal == false) // 如果是斜点
-            {
-                initialAngle += 45 * MathF.PI / 180.0f;
-            }
-
-            for (int i = 0; i < 4; i++)
-            {
-                var dpCone = accessory.Data.GetDefaultDrawProperties();
-                dpCone.Name = $"NoiseComplaint_Rampage_Cone_{chargeIndex}_{i}";
-                dpCone.Position = destination;
-                dpCone.Scale = new Vector2(70);
-                dpCone.Radian = 45 * MathF.PI / 180.0f;
-                dpCone.Rotation = initialAngle + (i * 90 * MathF.PI / 180.0f);
-                dpCone.Color = accessory.Data.DefaultDangerColor;
-                dpCone.Delay = 5400;
-                dpCone.DestoryAt = 5000;
-                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
-            }
-
-            // 如果还有下一次冲锋，则等待并递归调用
-            if (chargeIndex < _rampageDelays.Length)
-            {
-                int delay = _rampageDelays[chargeIndex];
-                await Task.Delay(delay);
-                await ProcessNextRampageCharge(accessory, destination, chargeIndex + 1);
-            }
-        }
-        */
-        /*
-        public void HandleRushingRumbleRampage(Event @event, ScriptAccessory accessory)
-        {
-            _ = StartRampageSequenceAsync(@event, accessory);
-        }
-
-        private async Task StartRampageSequenceAsync(Event @event, ScriptAccessory accessory)
-        {
-            accessory.Log.Debug("Rushing Rumble Rampage (41177) sequence initiated.");
-
-            // Find and store the boss's ID
-            var boss = accessory.Data.Objects.SearchById(@event.SourceId);
-            if (boss == null)
-            {
-                accessory.Log.Error("Could not find boss for Rushing Rumble Rampage.");
-                _activeBirds.Clear();
-                _lightningIsCardinal = null;
-                return;
-            }
-            _bossId = boss.EntityId;
-
-            await ProcessNextRampageCharge(accessory, boss.Position, 0);
-
-
-        }
-
-        private async Task ProcessNextRampageCharge(ScriptAccessory accessory, Vector3 chargeStartPos, int chargeIndex)
-
-
-        {
-            if (_activeBirds.Count == 0)
-            {
-                _lightningIsCardinal = null;
-                _bossId = 0;
-                return;
-            }
-
-            var birdId = _activeBirds.Dequeue();
-            var bird = accessory.Data.Objects.SearchById(birdId);
-            var boss = accessory.Data.Objects.SearchById(_bossId);
-            if (bird == null || boss == null)
-            {
-                accessory.Log.Error($"Could not find bird {birdId} for Rushing Rumble Rampage.");
-                _activeBirds.Clear();
-                await ProcessNextRampageCharge(accessory, chargeStartPos, chargeIndex);  //尝试再执行
-                return;
-            }
-
-            var destination = bird.Position;
-            //const int chargeTimeMs = 6300;
-            //const int chargeDelayMs = 3500;
-            //const int delayBetweenChargesMs = 5200;
-
-            var dpCharge = accessory.Data.GetDefaultDrawProperties();
-            dpCharge.Name = $"NoiseComplaint_Rampage_Charge";
-            dpCharge.Position = chargeStartPos;
-            dpCharge.TargetPosition = destination;
-            dpCharge.Scale = new Vector2(8, 100);
-            dpCharge.Color = accessory.Data.DefaultDangerColor;
-            dpCharge.DestoryAt = 6300;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
-
-            // 2. 落地大圈
-            var dpCircle = accessory.Data.GetDefaultDrawProperties();
-            dpCircle.Name = $"NoiseComplaint_Rush_Circle";
-            dpCircle.Position = destination;
-            dpCircle.Scale = new Vector2(30);
-            dpCircle.Color = accessory.Data.DefaultDangerColor;
-            dpCircle.Delay = 0;
-            dpCircle.DestoryAt = 9400;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
-
-            // 3. 四连扇形
-            var chargeDirectionVector = destination - chargeStartPos;
-            //var dirToBoss = boss.Position - destination;
-            var initialAngle = MathF.Atan2(chargeDirectionVector.X, chargeDirectionVector.Z);
-            if (_lightningIsCardinal == false) // 如果是斜点
-            {
-                initialAngle += 45 * MathF.PI / 180.0f;
-            }
-
-            for (int i = 0; i < 4; i++)
-            {
-                var dpCone = accessory.Data.GetDefaultDrawProperties();
-                dpCone.Name = $"NoiseComplaint_Cone_{i}";
-                dpCone.Position = destination;
-                dpCone.Scale = new Vector2(70);
-                dpCone.Radian = 45 * MathF.PI / 180.0f;
-                dpCone.Rotation = initialAngle + (i * 90 * MathF.PI / 180.0f);
-                dpCone.Color = accessory.Data.DefaultDangerColor;
-                dpCone.Delay = 0;
-                dpCone.DestoryAt = 10500;
-                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
-
-            }
-            if (chargeIndex < _rampageDelays.Length)
-            {
-                int delay = _rampageDelays[chargeIndex];
-                await Task.Delay(delay);
-                await ProcessNextRampageCharge(accessory, destination, chargeIndex + 1);
-            }
-        }
-        */
 
         [ScriptMethod(
             name: "绘图移除 (进化加鲁拉)",
@@ -2008,7 +1807,7 @@ namespace EurekaOrthosCeScripts
             // 清空旧的列表，开始新序列
             _tidalGuillotineAoes.Clear();
 
-            var pos = JsonConvert.DeserializeObject<Vector3>(@event["TargetPosition"]);
+            var pos = JsonConvert.DeserializeObject<Vector3>(@event["EffectPosition"]);
             var castTime = 8000;
             var name = $"TidalGuillotine_AOE_0";
 
@@ -2102,7 +1901,7 @@ namespace EurekaOrthosCeScripts
             var rotationDirection = (Vector3.Cross(dir, forwardVector).Y < 0) ? 1.0f : -1.0f;
             var rotationIncrement = rotationDirection * increment;
 
-            var initialCastTime = (int)(JsonConvert.DeserializeObject<float>(@event["CastTime"]) * 1000);
+            var initialCastTime = 5000;
 
             // 预先计算所有AOE的位置和时间
             for (int i = 0; i < maxCasts; i++)
