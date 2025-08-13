@@ -20,7 +20,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.0.17",
+        version: "0.0.19",
         author: "XSZYYS",
         note: "新月岛部分CE绘制已完成：\r\n死亡爪（地板出现小怪未绘制，其余均绘制）\r\n神秘土偶（全部画完）\r\n黑色连队（全部画完）\r\n水晶龙（全部画完）\r\n狂战士（全部画完）\r\n指令罐（全部画完）\r\n回廊恶魔（全部画完）\r\n未测试：\r\n进化加鲁拉（运动会未测试）\r\n鬼火苗（有问题，待修复）\r\n石质骑士团（转转手未写，地火未测试）\r\n复原狮\r\n鲨鱼\r\n未写：\r\n金钱龟\r\n跃立狮\r\n夺心魔"
     )]
@@ -39,7 +39,7 @@ namespace EurekaOrthosCeScripts
         private ulong _rushingRumbleRampageTargetId = 0;
         private readonly int[] _rampageDelays = { 5200, 3200 };
         private readonly List<FlurryLine> _flurryLines = new();
-        private int _activeMechanicId; // 41175 for Rumble, 41176 for Birdserk, 41177 for Rampage
+        private int _activeMechanicId;
         private Vector3 _chargeStartPosition; // 存储冲锋开始时的位置
         // --- “Rushing Rumble Rampage”连续冲锋机制专用状态变量 ---
         private bool _isRampageSequenceRunning = false;
@@ -55,6 +55,19 @@ namespace EurekaOrthosCeScripts
         // 专门存储“风”属性能量球的列表
         private readonly List<IGameObject> _spheresWind = new(6);
         private readonly List<(ulong ActorID, string DrawName)> _surgeAoes = new();
+        // 存储当前场上所有陷阱的列表
+        private readonly List<FireIceTrapInfo> _fireIceTraps = new();
+        // 存储玩家当前携带的元素debuff (Key: 玩家ID, Value: true为火, false为冰)
+        private readonly Dictionary<ulong, bool> _playerElements = new();
+        // 陷阱激活（爆炸）的时间
+        private DateTime _trapActivationTime;
+        private class FireIceTrapInfo
+        {
+            public ulong NpcId { get; init; }
+            public Vector3 Position { get; set; }
+            public bool IsFire { get; init; }
+        }
+
         private class PendingMechanic
         {
             public Vector3 Position { get; set; }
@@ -1644,7 +1657,7 @@ namespace EurekaOrthosCeScripts
             // 定义技能参数
             const int totalExplosions = 9;      
             const float radius = 6f;            
-            const float stepDistance = 6f;      // 每次前进距离
+            const float stepDistance = 7f;      // 每次前进距离
             const int firstExplosionTime = 10000;// 第一次爆炸时间 (基于6秒咏唱)
             const int subsequentInterval = 1000;// 后续爆炸间隔
             const int warningDuration = 2000;   // 警告显示时间
@@ -2047,7 +2060,7 @@ namespace EurekaOrthosCeScripts
         [ScriptMethod(
             name: "旋转月环-触发",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:/*OpenWaterVisualFirst_Shared_AID*/"] // TODO: 替换为内外圈共用的触发技能ID
+            eventCondition: ["ActionId:41687"]
         )]
         public void OnOpenWater(Event @event, ScriptAccessory accessory)
         {
@@ -2205,7 +2218,7 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
         }
         [ScriptMethod(
-            name: "风石光 - 记录能量球",
+            name: "风石光 - 记录能量球（城塞守卫）",
             eventType: EventTypeEnum.AddCombatant,
             eventCondition: ["DataId:18125"],
             userControl: false
@@ -2223,7 +2236,7 @@ namespace EurekaOrthosCeScripts
             }
         }
         [ScriptMethod(
-            name: "风石光 - 能量球属性分类",
+            name: "风石光 - 能量球属性分类（城塞守卫）",
             eventType: EventTypeEnum.StatusAdd,
             eventCondition: ["StatusID:2536"],
             userControl: false
@@ -2257,7 +2270,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "风石光 - 预测并绘制AOE",
+            name: "风石光 - 预测并绘制AOE（城塞守卫）",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(41287|41292|41289|41293)$"]
         )]
@@ -2331,8 +2344,8 @@ namespace EurekaOrthosCeScripts
                         dp.Position = sphere.Position;
                         dp.Scale = new Vector2(15); // AOE半径15
                         dp.Color = accessory.Data.DefaultDangerColor;
-                        dp.Delay = castTimeMs - 2400;
-                        dp.DestoryAt = 7800;
+                        dp.Delay = castTimeMs - 5000;
+                        dp.DestoryAt = 7500;
                         dp.ScaleMode |= ScaleMode.ByTime;
 
                         accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
@@ -2349,7 +2362,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "风石光 - 神圣引爆光球",
+            name: "风石光 - 神圣引爆光球（城塞守卫）",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41284"]
         )]
@@ -2365,7 +2378,6 @@ namespace EurekaOrthosCeScripts
                 lightSpheres = new List<IGameObject>(_spheres);
             }
 
-            // 爆炸时间 = 咏唱时间 (event.CastTime是秒) + 2.4秒额外延迟
             var castTimeMs = 11000;
             var explosionDelay = castTimeMs - 2400;
 
@@ -2380,8 +2392,7 @@ namespace EurekaOrthosCeScripts
                 dp.Position = sphere.Position;
                 dp.Scale = new Vector2(15);
                 dp.Color = accessory.Data.DefaultDangerColor;
-                dp.Delay = explosionDelay;
-                dp.DestoryAt = 7800;
+                dp.DestoryAt = 13500;
                 dp.ScaleMode |= ScaleMode.ByTime;
 
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
@@ -2400,7 +2411,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "风石光 - 清理已爆炸的AOE",
+            name: "风石光 - 清理已爆炸的AOE（城塞守卫）",
             eventType: EventTypeEnum.ActionEffect,
             eventCondition: ["ActionId:regex:^(41296|41295|41294)$"],
             userControl: false
@@ -2429,7 +2440,182 @@ namespace EurekaOrthosCeScripts
             }
         }
         #endregion
+        #region 夺心魔
+        [ScriptMethod(
+            name: "昏暗（夺心魔）",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41170"]
+        )]
+        public void OnDarkIIDraw(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "夺心魔_昏暗_Danger_Zone";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(65);
+            dp.Radian = 90 * MathF.PI / 180.0f;
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 6000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+        }
 
+        private const uint SID_PlayingWithFire = 4211;
+        private const uint SID_PlayingWithIce = 4212;
+        private const uint SID_ImpElement = 2193;
+        private const uint OID_JestingJackanapes = 18102;
+        private const uint AID_SurpriseAttack = 41254;
+
+
+        [ScriptMethod(
+            name: "火冰陷阱 - 记录玩家元素（夺心魔）",
+            eventType: EventTypeEnum.StatusAdd,
+            eventCondition: ["StatusID:regex:^(4211|4212)$"],
+            userControl: false
+        )]
+        public void OnPlayerElementGain(Event @event, ScriptAccessory accessory)
+        {
+            var isFire = @event.StatusId == SID_PlayingWithFire;
+            _playerElements[@event.TargetId] = isFire;
+
+            if (@event.TargetId == accessory.Data.Me)
+            {
+                accessory.Log.Debug($"你获得了 {(isFire ? "火" : "冰")} 元素，重新绘制陷阱提示。");
+                DrawFireIceTraps(accessory);
+            }
+        }
+        [ScriptMethod(
+            name: "火冰陷阱 - 移除玩家元素（夺心魔）",
+            eventType: EventTypeEnum.StatusRemove,
+            eventCondition: ["StatusID:regex:^(4211|4212)$"],
+            userControl: false
+        )]
+        public void OnPlayerElementLose(Event @event, ScriptAccessory accessory)
+        {
+            if (_playerElements.Remove(@event.TargetId))
+            {
+                // 仅当是自己失去debuff时，才更新绘制
+                if (@event.TargetId == accessory.Data.Me)
+                {
+                    accessory.Log.Debug("你的元素已消失，更新陷阱提示。");
+                    DrawFireIceTraps(accessory);
+                }
+            }
+        }
+        [ScriptMethod(
+            name: "火冰陷阱 - 记录陷阱（夺心魔）",
+            eventType: EventTypeEnum.StatusAdd,
+            eventCondition: ["StatusID:2193"]
+        )]
+        public void OnTrapCreated(Event @event, ScriptAccessory accessory)
+        {
+            var npc = accessory.Data.Objects.SearchById(@event.TargetId);
+            // 确认是小丑NPC
+            if (npc == null || npc.DataId != OID_JestingJackanapes) return;
+
+            // 根据status.Extra(Param)判断元素，0x344是火，否则是冰
+            var isFire = @event["Param"] == "836";
+
+            var trap = new FireIceTrapInfo
+            {
+                NpcId = npc.EntityId,
+                Position = npc.Position,
+                IsFire = isFire
+            };
+
+            _fireIceTraps.Add(trap);
+            accessory.Log.Debug($"发现一个新的{(isFire ? "火" : "冰")}陷阱，位于 {trap.Position}");
+            DrawFireIceTraps(accessory);
+        }
+        [ScriptMethod(
+            name: "火冰陷阱 - 更新陷阱位置（夺心魔）",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41254"]
+        )]
+        public void OnTrapMove(Event @event, ScriptAccessory accessory)
+        {
+            // 找到正在咏唱的小丑对应的陷阱
+            var trapToMove = _fireIceTraps.FirstOrDefault(t => t.NpcId == @event.SourceId);
+            if (trapToMove != null)
+            {
+                var newPosition = @event.TargetPosition;
+                accessory.Log.Debug($"陷阱从 {trapToMove.Position} 移动到 {newPosition}");
+                trapToMove.Position = newPosition;
+                DrawFireIceTraps(accessory);
+            }
+        }
+        [ScriptMethod(
+            name: "火冰陷阱 - 机制结束清理（夺心魔）",
+            eventType: EventTypeEnum.ActionEffect,
+            eventCondition: ["ActionId:regex:^(41250|41251)$"],
+            userControl: false
+        )]
+        public void OnTrapExplosion(Event @event, ScriptAccessory accessory)
+        {
+            accessory.Log.Debug("陷阱已爆炸，清理所有绘图和状态。");
+            _fireIceTraps.Clear();
+            _playerElements.Clear();
+            accessory.Method.RemoveDraw("FireIceTrap_.*");
+        }
+        private void DrawFireIceTraps(ScriptAccessory accessory)
+        {
+            // 1. 先清除所有旧的陷阱绘图，防止重叠
+            accessory.Method.RemoveDraw("FireIceTrap_.*");
+
+            // 2. 获取当前玩家的元素状态
+            _playerElements.TryGetValue(accessory.Data.Me, out var playerIsFire);
+            bool playerHasElement = _playerElements.ContainsKey(accessory.Data.Me);
+
+            // 3. 根据场上陷阱（小丑）的数量，动态决定警告的持续时间
+            int trapWarningDurationMs = _fireIceTraps.Count > 2 ? 20000 : 10000; // 大于2只小丑为20秒，否则为10秒
+            accessory.Log.Debug($"当前陷阱数量: {_fireIceTraps.Count}, 警告持续时间设置为: {trapWarningDurationMs}ms");
+
+
+            // 4. 遍历所有已知的陷阱并进行绘制
+            foreach (var trap in _fireIceTraps)
+            {
+                // 如果玩家没有元素debuff，所有陷阱都显示为小圈（基础提示）
+                if (!playerHasElement)
+                {
+                    var dp = accessory.Data.GetDefaultDrawProperties();
+                    dp.Name = $"FireIceTrap_Small_{trap.NpcId}";
+                    dp.Position = trap.Position;
+                    dp.Scale = new Vector2(8); // 小圈半径8
+                    dp.Color = accessory.Data.DefaultDangerColor;
+                    dp.DestoryAt = trapWarningDurationMs; // 使用动态计算的时长
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+                    continue; // 继续处理下一个陷阱
+                }
+
+                // 如果玩家有元素debuff，则进行特殊绘制
+                // 判断当前陷阱的元素是否与玩家相同
+                bool isSameElement = (playerIsFire == trap.IsFire);
+
+                if (isSameElement)
+                {
+                    // 元素相同：画一个巨大的危险月环，提示玩家“不要来这里”
+                    var dp = accessory.Data.GetDefaultDrawProperties();
+                    dp.Name = $"FireIceTrap_Big_Danger_{trap.NpcId}";
+                    dp.Position = trap.Position;
+                    dp.Scale = new Vector2(38); // 大圈外半径38
+                    dp.InnerScale = new Vector2(8); // 内半径8，形成月环
+                    dp.Radian = MathF.PI * 2;
+                    dp.Color = new Vector4(1.0f, 0.2f, 0.2f, 0.6f);
+                    dp.DestoryAt = trapWarningDurationMs;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                }
+                else
+                {
+                    var dp = accessory.Data.GetDefaultDrawProperties();
+                    dp.Name = $"FireIceTrap_Small_Safe_{trap.NpcId}";
+                    dp.Position = trap.Position;
+                    dp.Scale = new Vector2(8);
+                    dp.Color = new Vector4(0.2f, 1.0f, 0.2f, 0.8f); 
+                    dp.DestoryAt = trapWarningDurationMs;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+                }
+            }
+        }
+        #endregion
 
 
 
