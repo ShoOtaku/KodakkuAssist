@@ -20,9 +20,9 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.0.21",
+        version: "0.0.22",
         author: "XSZYYS",
-        note: "新月岛部分CE绘制已完成：\r\n死亡爪（地板出现小怪未绘制，其余均绘制）\r\n神秘土偶（全部画完）\r\n黑色连队（全部画完）\r\n水晶龙（全部画完）\r\n狂战士（全部画完）\r\n指令罐（全部画完）\r\n回廊恶魔（全部画完）\r\n未测试：\r\n进化加鲁拉（运动会未测试）\r\n鬼火苗（有问题，待修复）\r\n石质骑士团（转转手未写，地火未测试）\r\n复原狮\r\n鲨鱼\r\n未写：\r\n金钱龟\r\n跃立狮\r\n夺心魔"
+        note: "新月岛CE绘制\r\n已完成：\r\n死亡爪（地板出现小怪未绘制，其余均绘制）\r\n神秘土偶（全部画完）\r\n黑色连队（全部画完）\r\n水晶龙（全部画完）\r\n狂战士（全部画完）\r\n指令罐（全部画完）\r\n回廊恶魔（全部画完）\r\n鬼火苗（全部画完）\r\n\r\n未测试：\r\n进化加鲁拉（冲锋努力修复中）\r\n石质骑士团（转转手未写，地火未测试）\r\n夺心魔（未测试）\r\n复原狮（某一种情况的扇形+风土球没有绘制）\r\n鲨鱼（地火待修复）\r\n跃立狮（未测试）\r\n\r\n未写：\r\n金钱龟"
     )]
     public class 新月岛CE
     {
@@ -61,6 +61,7 @@ namespace EurekaOrthosCeScripts
         private readonly Dictionary<ulong, bool> _playerElements = new();
         // 陷阱激活（爆炸）的时间
         private DateTime _trapActivationTime;
+        private static readonly Vector3 OnTheHuntAreaCenter = new Vector3(636f, 108f, -54f); // 跃立狮子区域中心位置
         private class FireIceTrapInfo
         {
             public ulong NpcId { get; init; }
@@ -1947,17 +1948,19 @@ namespace EurekaOrthosCeScripts
                 }
 
                 // 计算从现在到爆炸的剩余时间作为延迟
-                var remainingTime = aoe.Delay - (int)(DateTime.Now - _openWaterCastStartTime).TotalMilliseconds;
+                var timeSinceCastStarted = (DateTime.Now - _openWaterCastStartTime).TotalMilliseconds;
+                var remainingTime = aoe.Delay - (int)timeSinceCastStarted;
                 if (remainingTime < 0) remainingTime = 0;
 
-                dp.Delay = remainingTime;
-                dp.DestoryAt = 2000; // 显示2秒
+                dp.Delay = 0;
+                dp.DestoryAt = remainingTime;
                 dp.ScaleMode |= ScaleMode.ByTime;
 
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
                 index++;
             }
         }
+/*
         [ScriptMethod(
             name: "旋转月环-AOE爆炸",
             eventType: EventTypeEnum.ActionEffect,
@@ -1988,7 +1991,7 @@ namespace EurekaOrthosCeScripts
             }
         }
 
-
+*/
         #endregion
         #region 城塞守卫
         private const uint AID_AncientAeroIII_5s = 41287;  // 古代疾风III (5s咏唱)
@@ -2415,10 +2418,147 @@ namespace EurekaOrthosCeScripts
             }
         }
         #endregion
+        #region 跃立狮OnTheHuntAreaCenter
+
+        [ScriptMethod(
+            name: "恐怖闪光（跃立狮）",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41411"]
+        )]
+        public void 恐怖闪光Draw(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "跃立狮_恐怖闪光_Danger_Zone";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(60);
+            dp.Radian = 60 * MathF.PI / 180.0f;
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 6000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+            accessory.Log.Debug("绘制跃立狮的恐怖闪光AOE");
+        }
+        [ScriptMethod(
+            name:"Decompress(跃立狮)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41407"]
+        )]
+        public void OnDecompressDraw(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "跃立狮_Decompress_Danger_Zone";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(12);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 5000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+            accessory.Log.Debug("绘制跃立狮的Decompress AOE");
+        }
+        [ScriptMethod(
+            name: "以太射线 (跃立狮)",
+            eventType: EventTypeEnum.Tether,
+            eventCondition: ["Id:0138"]
+        )]
+        public void OnAetherialRayTether(Event @event, ScriptAccessory accessory)
+        {
+
+            var target = accessory.Data.Objects.SearchById(@event.TargetId);
+            if (target == null)
+            {
+                accessory.Log.Error($"找不到连线目标: {@event.TargetId}");
+                return;
+            }
+
+            // 计算从中心指向目标的向量
+            var directionVector = target.Position - OnTheHuntAreaCenter;
+
+            // 将向量转换为角度，并加上固定的200度旋转
+            var angle = MathF.Atan2(directionVector.X, directionVector.Z);
+            var finalRotation = angle + (200 * MathF.PI / 180.0f);
+
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = $"CrystalDragon_AetherialRay_{target.EntityId}";
+            dp.Position = OnTheHuntAreaCenter; // AOE在场地中心
+            dp.Scale = new Vector2(6, 56); // 宽度6，长度28*2=56 (因为是中心出发的直线)
+            dp.Rotation = finalRotation;
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 5200; // 5.2秒后消失
+            dp.ScaleMode |= ScaleMode.ByTime;
+
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp);
+            accessory.Log.Debug($"绘制以太射线, 目标: {target.Name}, 旋转角度: {finalRotation}");
+        }
+        [ScriptMethod(
+            name: "明亮脉冲 (跃立狮)",
+            eventType: EventTypeEnum.StatusAdd,
+            eventCondition: ["StatusID:2193"]
+        )]
+        public void OnBrightPulseStatus(Event @event, ScriptAccessory accessory)
+        {
+            var roundel = accessory.Data.Objects.SearchById(@event.TargetId);
+            if (roundel == null || roundel.DataId != 18142) return;
 
 
+            // 1. 计算从中心到光球的方向向量
+            var dir = roundel.Position - OnTheHuntAreaCenter;
 
+            // 2. 判断光球在内圈还是外圈，决定基础旋转角度
+            // 半径15的平方是225
+            var angleDegrees = dir.LengthSquared() < 225f ? 280f : 150f;
 
+            // 3. 判断光球的朝向，决定旋转是顺时针还是逆时针
+            // 获取光球的正前方向量
+            var forwardVector = new Vector3(MathF.Sin(roundel.Rotation), 0, MathF.Cos(roundel.Rotation));
+            // 计算方向向量的垂直向量 (OrthoR)
+            var orthoR = new Vector3(dir.Z, 0, -dir.X);
+            // 点积判断方向
+            if (Vector3.Dot(orthoR, forwardVector) > 0f)
+            {
+                angleDegrees = -angleDegrees; // 反向旋转
+            }
 
+            // 4. 计算最终AOE位置
+            var angleRadians = angleDegrees * MathF.PI / 180.0f;
+            var rotatedDir = new Vector3(
+                dir.X * MathF.Cos(angleRadians) - dir.Z * MathF.Sin(angleRadians),
+                dir.Y,
+                dir.X * MathF.Sin(angleRadians) + dir.Z * MathF.Cos(angleRadians)
+            );
+            var aoePosition = OnTheHuntAreaCenter + rotatedDir;
+
+            // 5. 绘制AOE
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = $"CrystalDragon_BrightPulse_{roundel.EntityId}";
+            dp.Position = aoePosition;
+            dp.Scale = new Vector2(13); // 半径13
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 5200; // 5.2秒后消失
+            dp.ScaleMode |= ScaleMode.ByTime;
+
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+            accessory.Log.Debug($"绘制明亮脉冲, 光球ID: {roundel.EntityId}, 最终位置: {aoePosition}");
+        }
+
+        [ScriptMethod(
+            name: "绘图移除 (跃立狮)",
+            eventType: EventTypeEnum.ActionEffect,
+            eventCondition: ["ActionId:regex:^(41402|41403)$"],
+            userControl: false
+        )]
+        public void RemoveCrystalDragonAoes(Event @event, ScriptAccessory accessory)
+        {
+            if (@event.ActionId == 41402) // AetherialRay
+            {
+                accessory.Method.RemoveDraw("CrystalDragon_AetherialRay_.*");
+                accessory.Log.Debug("清理以太射线绘图。");
+            }
+            else if (@event.ActionId == 41403) // BrightPulse
+            {
+                accessory.Method.RemoveDraw($"CrystalDragon_BrightPulse_{@event.SourceId}");
+                accessory.Log.Debug($"清理明亮脉冲绘图: {@event.SourceId}");
+            }
+        }
+        #endregion
     }
 }
