@@ -20,9 +20,9 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.0.16",
+        version: "0.0.17",
         author: "XSZYYS",
-        note: "新月岛部分CE绘制已完成：\r\n死亡爪（地板出现小怪未绘制，其余均绘制）\r\n神秘土偶（全部画完）\r\n黑色连队（全部画完）\r\n水晶龙（全部画完）\r\n狂战士（全部画完）\r\n指令罐（全部画完）\r\n回廊恶魔（全部画完）\r\n未测试：\r\n进化加鲁拉（运动会未测试）\r\n鬼火苗（有问题，待修复）\r\n石质骑士团（转转手未写，地火未测试）\r\n未写：\r\n金钱龟\r\n复原狮\r\n跃立狮\r\n鲨鱼\r\n夺心魔"
+        note: "新月岛部分CE绘制已完成：\r\n死亡爪（地板出现小怪未绘制，其余均绘制）\r\n神秘土偶（全部画完）\r\n黑色连队（全部画完）\r\n水晶龙（全部画完）\r\n狂战士（全部画完）\r\n指令罐（全部画完）\r\n回廊恶魔（全部画完）\r\n未测试：\r\n进化加鲁拉（运动会未测试）\r\n鬼火苗（有问题，待修复）\r\n石质骑士团（转转手未写，地火未测试）\r\n复原狮\r\n鲨鱼\r\n未写：\r\n金钱龟\r\n跃立狮\r\n夺心魔"
     )]
     public class 新月岛CE
     {
@@ -46,6 +46,15 @@ namespace EurekaOrthosCeScripts
         private int _rampageChargeIndex = 0;
         private Vector3 _rampageNextChargeStartPos;
         private readonly object _mechanicLock = new();
+        private readonly object _surgeLock = new();
+        private static readonly Vector3 SharkArenaCenter = new(-117f, 1, -850f);
+        // 存储所有能量球的列表
+        private readonly List<IGameObject> _spheres = new(12);
+        // 专门存储“石”属性能量球的列表
+        private readonly List<IGameObject> _spheresStone = new(6);
+        // 专门存储“风”属性能量球的列表
+        private readonly List<IGameObject> _spheresWind = new(6);
+        private readonly List<(ulong ActorID, string DrawName)> _surgeAoes = new();
         private class PendingMechanic
         {
             public Vector3 Position { get; set; }
@@ -53,10 +62,12 @@ namespace EurekaOrthosCeScripts
             public DateTime ActivationTime { get; init; }
         }
 
-        // 脚本状态变量
         private readonly List<PendingMechanic> _pendingMechanics = new(4);
         private bool _isFirstSequence = true;
         private readonly List<(string Name, int Delay)> _tidalGuillotineAoes = new(3);
+        private readonly List<(Vector3 Position, float Radius, int Delay)> _openWaterAoes = new();
+        private int _openWaterCastsDone = 0;
+        private DateTime _openWaterCastStartTime;
         private class FlurryLine
         {
             public string ID { get; init; }
@@ -76,6 +87,10 @@ namespace EurekaOrthosCeScripts
             //_noiseComplaintCenterRecorded = false;
             _lightningIsCardinal = null;
             _activeBirds.Clear();
+            _tidalGuillotineAoes.Clear(); // 初始化时清空潮汐断头台列表
+            _openWaterAoes.Clear(); // 初始化时清空旋转月环列表
+            _openWaterCastsDone = 0;
+            _openWaterCastStartTime = default;
         }
 
         // --- 黑色连队 ---
@@ -188,7 +203,7 @@ namespace EurekaOrthosCeScripts
                 dp.Scale = new Vector2(5);
                 dp.Color = accessory.Data.DefaultDangerColor;
 
-                int explosionTime = firstExplosionTime + (i * subsequentInterval);
+                int explosionTime = firstExplosionTime + ((i + 1) * subsequentInterval);
 
                 dp.Delay = explosionTime - warningDuration;
                 dp.DestoryAt = warningDuration + lingerDuration;
@@ -766,8 +781,8 @@ namespace EurekaOrthosCeScripts
                 dpCone.Radian = 45 * MathF.PI / 180.0f;
                 dpCone.Rotation = initialAngle + (i * 90 * MathF.PI / 180.0f);
                 dpCone.Color = accessory.Data.DefaultDangerColor;
-                dpCone.Delay = 5400;
-                dpCone.DestoryAt = 5000;
+                dpCone.Delay = 0;
+                dpCone.DestoryAt = 104000;
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
             }
         }
@@ -848,8 +863,8 @@ namespace EurekaOrthosCeScripts
                 dpCone.Radian = 45 * MathF.PI / 180.0f;
                 dpCone.Rotation = initialAngle + (i * 90 * MathF.PI / 180.0f);
                 dpCone.Color = accessory.Data.DefaultDangerColor;
-                dpCone.Delay = 5400;
-                dpCone.DestoryAt = 5000;
+                dpCone.Delay = 0;
+                dpCone.DestoryAt = 10400;
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
             }
         }
@@ -1153,9 +1168,9 @@ namespace EurekaOrthosCeScripts
         public void VerticalCrosslonghatch(Event @event, ScriptAccessory accessory)
         {
             accessory.Log.Debug($"垂直交错 (VerticalCrosshatch) 触发. ActionId: {@event.ActionId}, SourceId: {@event.SourceId}");
-            const int frontBackDelay = 2500;
-            const int leftRightDelay = 5000;
-            const int duration = 5000;
+            const int frontBackDelay = 0;
+            const int leftRightDelay = 2500;
+            const int duration = 7500;
 
             float[] rotations = { 0, MathF.PI, MathF.PI / 2, -MathF.PI / 2 };
             int[] delays = { frontBackDelay, frontBackDelay, leftRightDelay, leftRightDelay };
@@ -1218,9 +1233,9 @@ namespace EurekaOrthosCeScripts
         public void HorizontalCrosslonghatch(Event @event, ScriptAccessory accessory)
         {
             accessory.Log.Debug($"水平交错 (HorizontalCrosshatch) 触发. ActionId: {@event.ActionId}, SourceId: {@event.SourceId}");
-            const int frontBackDelay = 5000;
-            const int leftRightDelay = 2500;
-            const int duration = 5000;
+            const int frontBackDelay = 2500;
+            const int leftRightDelay = 0;
+            const int duration = 7500;
 
             float[] rotations = { 0, MathF.PI, MathF.PI / 2, -MathF.PI / 2 };
             int[] delays = { frontBackDelay, frontBackDelay, leftRightDelay, leftRightDelay };
@@ -1442,7 +1457,7 @@ namespace EurekaOrthosCeScripts
             dp.Name = "新月狂战士_Sweep_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(60, 60);
-            dp.Color = new Vector4(0.957f, 0.140f, 0.140f, 0.8f);
+            dp.Color = new Vector4(1f, 0f, 0f, 1f);
             dp.DestoryAt = 6000;
             dp.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
@@ -1469,7 +1484,7 @@ namespace EurekaOrthosCeScripts
             dp2.Position = @event.TargetPosition;
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(8, 8);
-            dp2.Color = new Vector4(0.957f, 0.140f, 0.140f, 0.8f);
+            dp2.Color = new Vector4(1f, 0f, 0f, 1f);
             dp2.Radian = 360 * MathF.PI / 180.0f;
             dp2.Delay = 6500;
             dp2.DestoryAt = 3000;
@@ -1496,7 +1511,7 @@ namespace EurekaOrthosCeScripts
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(24, 24);
             dp2.Radian = 360 * MathF.PI / 180.0f;
-            dp2.Color = new Vector4(0.957f, 0.140f, 0.140f, 0.8f);
+            dp2.Color = new Vector4(1f, 0f, 0f, 1f);
             dp2.Delay = 7500;
             dp2.DestoryAt = 3000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
@@ -1523,7 +1538,7 @@ namespace EurekaOrthosCeScripts
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(16, 16);
             dp2.Radian = 360 * MathF.PI / 180.0f;
-            dp2.Color = new Vector4(0.957f, 0.140f, 0.140f, 0.8f);
+            dp2.Color = new Vector4(1f, 0f, 0f, 1f);
             dp2.Delay = 14000;
             dp2.DestoryAt = 3000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
@@ -1549,7 +1564,7 @@ namespace EurekaOrthosCeScripts
             dp2.Owner = @event.SourceId;
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(16, 16);
-            dp2.Color = new Vector4(0.957f, 0.140f, 0.140f, 0.8f);
+            dp2.Color = new Vector4(1f, 0f, 0f, 1f);
             dp2.Radian = 360 * MathF.PI / 180.0f;
             dp2.Delay = 21000;
             dp2.DestoryAt = 3000;
@@ -1566,7 +1581,7 @@ namespace EurekaOrthosCeScripts
             dp.Name = "新月狂战士_Fury_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(13, 13);
-            dp.Color = new Vector4(0.957f, 0.140f, 0.140f, 0.8f);
+            dp.Color = new Vector4(1f, 0f, 0f, 1f);
             dp.DestoryAt = 6000;
             dp.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
@@ -1661,147 +1676,204 @@ namespace EurekaOrthosCeScripts
         #endregion
         #region 鬼火苗
         [ScriptMethod(
-            name: "预告 - 记录机制（鬼火苗）",
+            name: "分身机制（鬼火苗）",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:regex:^(41377|41374|41379)$"],
-            userControl: false
+            eventCondition: ["ActionId:regex:^(41397|42033|42035)$"]
         )]
-        public void OnTelegraph(Event @event, ScriptAccessory accessory)
+        
+        public void 分身机制Draw(Event @event, ScriptAccessory accessory)
         {
-            var casterPos = JsonConvert.DeserializeObject<Vector3>(@event["SourcePosition"]);
-
-            // 根据当前是第几次机制和已记录的机制数量，来确定延迟时间
-            float delaySeconds = (_pendingMechanics.Count, _isFirstSequence) switch
+            var ActionId = @event.ActionId;
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            var dp2 = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = $"鬼火苗_分身机制_{ActionId}";
+            dp2.Name = $"鬼火苗_分身机制_{ActionId}_2";
+            switch (ActionId)
             {
-                (0, true) => 16.1f,
-                (1, true) => 18.4f,
-                (2, true) => 20.8f,
-                (3, true) => 23.2f,
-                (0, false) => 14.9f,
-                (1, false) => 15.3f,
-                (2, false) => 22.1f,
-                (3, false) => 22.5f,
-                _ => 0
-            };
+                case 41397: // 击退
+                    dp.Scale = new Vector2(1.5f, 20f); // 线条宽度2，末端圆圈半径1
+                    dp.Color = new(0.3f, 1.0f, 0f, 1.5f);
+                    dp.Owner = accessory.Data.Me;
+                    dp.TargetPosition = @event.SourcePosition;
+                    dp.Rotation = MathF.PI;
+                    dp.DestoryAt = 3000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Displacement, dp);
+                    accessory.Log.Debug($"绘制击退: Name={dp.Name}s");
+                    break;
+                case 42033: // 月环
+                    dp.Owner = @event.SourceId;
+                    dp.Scale = new Vector2(50);
+                    dp.InnerScale = new Vector2(7);
+                    dp.Radian = 360 * MathF.PI / 180.0f;
+                    dp.Color = accessory.Data.DefaultDangerColor;
+                    dp.DestoryAt = 3000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                    accessory.Log.Debug($"绘制月环AOE: Name={dp.Name}s");
+                    break;
+                case 42035: // 十字
+                    dp.Owner = @event.SourceId;
+                    dp.Scale = new Vector2(15, 200);
+                    dp.Rotation = 90 * MathF.PI / 180.0f;
+                    dp.Color = accessory.Data.DefaultDangerColor;
+                    dp.DestoryAt = 3000;
+                    dp2.Owner = @event.SourceId;
+                    dp2.Scale = new Vector2(15, 200);
+                    dp2.Color = accessory.Data.DefaultDangerColor;
+                    dp2.DestoryAt = 3000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp);
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
+                    accessory.Log.Debug($"绘制十字AOE: Name={dp.Name}s");
+                    accessory.Log.Debug($"绘制十字AOE: Name={dp2.Name}s");
+                    break;
 
-            if (delaySeconds == 0)
-            {
-                accessory.Log.Error($"无法确定机制延迟时间: Count={_pendingMechanics.Count}, isFirst={_isFirstSequence}");
-                return;
-            }
-
-            var activationTime = DateTime.Now.AddSeconds(delaySeconds);
-
-            var pending = new PendingMechanic
-            {
-                Position = casterPos,
-                ShapeActionId = @event.ActionId,
-                ActivationTime = activationTime
-            };
-
-            _pendingMechanics.Add(pending);
-            accessory.Log.Debug($"记录了新的待处理机制: 类型={pending.ShapeActionId}, 位置={pending.Position}, 激活时间={pending.ActivationTime:HH:mm:ss.fff}");
-
-            // 如果记录了4个，说明第一轮预告结束
-            if (_pendingMechanics.Count == 4)
-            {
-                _isFirstSequence = false;
-                accessory.Log.Debug("第一轮预告记录完毕，切换到第二轮时间轴。");
             }
         }
 
-        [ScriptMethod(
-            name: "激活外壳 - 绘制AOE/击退（鬼火苗）",
-            eventType: EventTypeEnum.ActionEffect,
-            eventCondition: ["ActionId:41371"] // ActivateHusk
-        )]
-        public void OnActivateHusk(Event @event, ScriptAccessory accessory)
-        {
-            var activatorPos = JsonConvert.DeserializeObject<Vector3>(@event["SourcePosition"]);
-            var targetId = @event.TargetId;
-            var husk = accessory.Data.Objects.SearchById(targetId);
-            if (husk == null)
-            {
-                accessory.Log.Error($"找不到被激活的外壳: ID={targetId}");
-                return;
-            }
 
-            var huskPos = husk.Position;
-            accessory.Log.Debug($"外壳被激活: ID={targetId}, 位置={huskPos}");
-            PendingMechanic mech;
-            // 在访问和修改共享列表时使用锁
-            lock (_mechanicLock)
-            {
-                // 通过匹配“激活者”的位置来找到对应的“待处理”机制
-                mech = _pendingMechanics.OrderBy(p => Vector3.Distance(p.Position, activatorPos)).FirstOrDefault();
 
-                // 使用一个小的容差(1.0f)来确认位置匹配
-                if (mech == null || Vector3.Distance(mech.Position, activatorPos) > 1.0f)
+        /*
+                [ScriptMethod(
+                    name: "预告 - 记录机制（鬼火苗）",
+                    eventType: EventTypeEnum.StartCasting,
+                    eventCondition: ["ActionId:regex:^(41377|41374|41379)$"],
+                    userControl: false
+                )]
+                public void OnTelegraph(Event @event, ScriptAccessory accessory)
                 {
-                    accessory.Log.Error($"在位置 {activatorPos} 附近找不到匹配的待处理机制。");
-                    return;
+                    var casterPos = JsonConvert.DeserializeObject<Vector3>(@event["SourcePosition"]);
+
+                    // 根据当前是第几次机制和已记录的机制数量，来确定延迟时间
+                    float delaySeconds = (_pendingMechanics.Count, _isFirstSequence) switch
+                    {
+                        (0, true) => 16.1f,
+                        (1, true) => 18.4f,
+                        (2, true) => 20.8f,
+                        (3, true) => 23.2f,
+                        (0, false) => 14.9f,
+                        (1, false) => 15.3f,
+                        (2, false) => 22.1f,
+                        (3, false) => 22.5f,
+                        _ => 0
+                    };
+
+                    if (delaySeconds == 0)
+                    {
+                        accessory.Log.Error($"无法确定机制延迟时间: Count={_pendingMechanics.Count}, isFirst={_isFirstSequence}");
+                        return;
+                    }
+
+                    var activationTime = DateTime.Now.AddSeconds(delaySeconds);
+
+                    var pending = new PendingMechanic
+                    {
+                        Position = casterPos,
+                        ShapeActionId = @event.ActionId,
+                        ActivationTime = activationTime
+                    };
+
+                    _pendingMechanics.Add(pending);
+                    accessory.Log.Debug($"记录了新的待处理机制: 类型={pending.ShapeActionId}, 位置={pending.Position}, 激活时间={pending.ActivationTime:HH:mm:ss.fff}");
+
+                    // 如果记录了4个，说明第一轮预告结束
+                    if (_pendingMechanics.Count == 4)
+                    {
+                        _isFirstSequence = false;
+                        accessory.Log.Debug("第一轮预告记录完毕，切换到第二轮时间轴。");
+                    }
                 }
 
-                // 从列表中移除已处理的机制
-                _pendingMechanics.Remove(mech);
-                accessory.Log.Debug($"匹配并移除机制: 类型={mech.ShapeActionId}, 原始位置={mech.Position}");
-            }
-
-            // 从列表中移除已处理的机制
-            _pendingMechanics.Remove(mech);
-            accessory.Log.Debug($"匹配并移除机制: 类型={mech.ShapeActionId}, 位置={mech.Position}");
-
-            // 计算从现在到激活时间的剩余毫秒数
-            var remainingTime = (int)(mech.ActivationTime - DateTime.Now).TotalMilliseconds;
-            if (remainingTime < 0) remainingTime = 0;
-
-            switch (mech.ShapeActionId)
-            {
-                // 绘制十字AOE
-                case 41377:
+                [ScriptMethod(
+                    name: "激活外壳 - 绘制AOE/击退（鬼火苗）",
+                    eventType: EventTypeEnum.ActionEffect,
+                    eventCondition: ["ActionId:41371"] // ActivateHusk
+                )]
+                public void OnActivateHusk(Event @event, ScriptAccessory accessory)
+                {
+                    var activatorPos = JsonConvert.DeserializeObject<Vector3>(@event["SourcePosition"]);
+                    var targetId = @event.TargetId;
+                    var husk = accessory.Data.Objects.SearchById(targetId);
+                    if (husk == null)
                     {
-                        var baseName = $"鬼火苗_Cross_{husk.EntityId}";
-                        DrawCrossAOE(accessory, baseName, huskPos, husk.Rotation, remainingTime, 5000);
-                        accessory.Log.Debug($"绘制十字AOE: Name={baseName}, Delay={remainingTime}ms");
-                        break;
+                        accessory.Log.Error($"找不到被激活的外壳: ID={targetId}");
+                        return;
                     }
-                // 绘制月环AOE
-                case 41374:
-                    {
-                        var dp = accessory.Data.GetDefaultDrawProperties();
-                        dp.Name = $"鬼火苗_Donut_{husk.EntityId}";
-                        dp.Position = huskPos;
-                        dp.Scale = new Vector2(50);
-                        dp.InnerScale = new Vector2(7);
-                        dp.Radian = 360 * MathF.PI / 180.0f;
-                        dp.Color = accessory.Data.DefaultDangerColor;
-                        dp.Delay = remainingTime;
-                        dp.DestoryAt = 5000;
-                        accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
-                        accessory.Log.Debug($"绘制月环AOE: Name={dp.Name}, Delay={dp.Delay}ms");
-                        break;
-                    }
-                // 绘制击退预测
-                case 41379:
-                    {
-                        var dp = accessory.Data.GetDefaultDrawProperties();
-                        dp.Name = $"鬼火苗_Knockback_{husk.EntityId}";
-                        dp.Owner = accessory.Data.Me; // 从玩家自己开始绘制
-                        dp.TargetPosition = huskPos;  // 击退源是外壳的位置
-                        dp.Rotation = 20f;            // 击退距离为20
-                        dp.Scale = new Vector2(2f, 1f); // 线条宽度2，末端圆圈半径1
-                        dp.Color = new(0.3f, 1.0f, 0f, 1.5f);
-                        dp.Delay = remainingTime;
-                        dp.DestoryAt = 5000; // 持续时间
 
-                        // 发送位移绘制指令
-                        accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Displacement, dp);
-                        accessory.Log.Debug($"绘制击退预测: Name={dp.Name}, From=Me, To={huskPos}, Distance=20, Delay={dp.Delay}ms");
-                        break;
-                    }
-            }
-        }
+                    var huskPos = husk.Position;
+                    accessory.Log.Debug($"外壳被激活: ID={targetId}, 位置={huskPos}");
+                    PendingMechanic mech;
+                    // 在访问和修改共享列表时使用锁
+                    lock (_mechanicLock)
+                    {
+                        // 通过匹配“激活者”的位置来找到对应的“待处理”机制
+                        mech = _pendingMechanics.OrderBy(p => Vector3.Distance(p.Position, activatorPos)).FirstOrDefault();
 
+                        // 使用一个小的容差(1.0f)来确认位置匹配
+                        if (mech == null || Vector3.Distance(mech.Position, activatorPos) > 1.0f)
+                        {
+                            accessory.Log.Error($"在位置 {activatorPos} 附近找不到匹配的待处理机制。");
+                            return;
+                        }
+
+                        // 从列表中移除已处理的机制
+                        _pendingMechanics.Remove(mech);
+                        accessory.Log.Debug($"匹配并移除机制: 类型={mech.ShapeActionId}, 原始位置={mech.Position}");
+                    }
+
+                    // 从列表中移除已处理的机制
+                    _pendingMechanics.Remove(mech);
+                    accessory.Log.Debug($"匹配并移除机制: 类型={mech.ShapeActionId}, 位置={mech.Position}");
+
+                    // 计算从现在到激活时间的剩余毫秒数
+                    var remainingTime = (int)(mech.ActivationTime - DateTime.Now).TotalMilliseconds;
+                    if (remainingTime < 0) remainingTime = 0;
+
+                    switch (mech.ShapeActionId)
+                    {
+                        // 绘制十字AOE
+                        case 41377:
+                            {
+                                var baseName = $"鬼火苗_Cross_{husk.EntityId}";
+                                DrawCrossAOE(accessory, baseName, huskPos, husk.Rotation, remainingTime, 5000);
+                                accessory.Log.Debug($"绘制十字AOE: Name={baseName}, Delay={remainingTime}ms");
+                                break;
+                            }
+                        // 绘制月环AOE
+                        case 41374:
+                            {
+                                var dp = accessory.Data.GetDefaultDrawProperties();
+                                dp.Name = $"鬼火苗_Donut_{husk.EntityId}";
+                                dp.Position = huskPos;
+                                dp.Scale = new Vector2(50);
+                                dp.InnerScale = new Vector2(7);
+                                dp.Radian = 360 * MathF.PI / 180.0f;
+                                dp.Color = accessory.Data.DefaultDangerColor;
+                                dp.Delay = remainingTime;
+                                dp.DestoryAt = 5000;
+                                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                                accessory.Log.Debug($"绘制月环AOE: Name={dp.Name}, Delay={dp.Delay}ms");
+                                break;
+                            }
+                        // 绘制击退预测
+                        case 41379:
+                            {
+                                var dp = accessory.Data.GetDefaultDrawProperties();
+                                dp.Name = $"鬼火苗_Knockback_{husk.EntityId}";
+                                dp.Owner = accessory.Data.Me; // 从玩家自己开始绘制
+                                dp.TargetPosition = huskPos;  // 击退源是外壳的位置
+                                dp.Rotation = 20f;            // 击退距离为20
+                                dp.Scale = new Vector2(2f, 1f); // 线条宽度2，末端圆圈半径1
+                                dp.Color = new(0.3f, 1.0f, 0f, 1.5f);
+                                dp.Delay = remainingTime;
+                                dp.DestoryAt = 5000; // 持续时间
+
+                                // 发送位移绘制指令
+                                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Displacement, dp);
+                                accessory.Log.Debug($"绘制击退预测: Name={dp.Name}, From=Me, To={huskPos}, Distance=20, Delay={dp.Delay}ms");
+                                break;
+                            }
+                    }
+                }
+        */
         [ScriptMethod(
             name: "Boss直接AOE（鬼火苗）",
             eventType: EventTypeEnum.StartCasting,
@@ -1832,7 +1904,7 @@ namespace EurekaOrthosCeScripts
                 accessory.Log.Debug($"绘制Boss直接月环AOE: {dp.Name}");
             }
         }
-
+/*
         [ScriptMethod(
             name: "移除绘图（鬼火苗）",
             eventType: EventTypeEnum.ActionEffect,
@@ -1867,10 +1939,8 @@ namespace EurekaOrthosCeScripts
                     break;
             }
         }
+*/
 
-        /// <summary>
-        /// 绘制一个由两个Straight组成的十字形AOE
-        /// </summary>
         private void DrawCrossAOE(ScriptAccessory accessory, string baseName, Vector3 position, float rotation, int delay, int duration)
         {
             // 水平部分
@@ -1895,10 +1965,11 @@ namespace EurekaOrthosCeScripts
             dp2.DestoryAt = duration;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
         }
+
         #endregion
-        #region SharkAttack
+        #region 尼姆瓣齿鲨
         [ScriptMethod(
-            name: "Hydrocleave (SharkAttack)",
+            name: "Hydrocleave (尼姆瓣齿鲨)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:43149"]
         )]
@@ -1915,7 +1986,7 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
         }
         [ScriptMethod(
-            name: "潮汐断头台(SharkAttack)",
+            name: "潮汐断头台(尼姆瓣齿鲨)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41723"]
         )]
@@ -1940,10 +2011,10 @@ namespace EurekaOrthosCeScripts
             dp.DestoryAt = castTime + 1000; // 咏唱结束后1秒销毁
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
 
-            accessory.Log.Debug($"记录了第一个潮汐断头台AOE，位置: {pos}，爆炸时间: {castTime}ms");
+            accessory.Log.Debug($"记录了第一个潮汐断头台AOE，位置: {pos}");
         }
         [ScriptMethod(
-            name: "潮汐断头台 - 记录后续AOE(SharkAttack)",
+            name: "潮汐断头台 - 记录后续AOE(尼姆瓣齿鲨)",
             eventType: EventTypeEnum.ActionEffect, 
             eventCondition: ["ActionId:41682"]
         )]
@@ -1951,7 +2022,7 @@ namespace EurekaOrthosCeScripts
         {
             if (_tidalGuillotineAoes.Count >= 3) return; // 最多3个
 
-            var pos = JsonConvert.DeserializeObject<Vector3>(@event["TargetPosition"]);
+            var pos = JsonConvert.DeserializeObject<Vector3>(@event["EffectPosition"]);
             var index = _tidalGuillotineAoes.Count;
             var name = $"TidalGuillotine_AOE_{index}";
 
@@ -1967,14 +2038,402 @@ namespace EurekaOrthosCeScripts
             dp.Position = pos;
             dp.Scale = new Vector2(20);
             dp.Color = accessory.Data.DefaultDangerColor;
-            dp.Delay = delay - 4000;
-            dp.DestoryAt = 4000 + 1000;
-            dp.ScaleMode |= ScaleMode.ByTime;
+            dp.Delay = delay - 5000;
+            dp.DestoryAt = 5000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
 
-            accessory.Log.Debug($"记录了第 {index + 1} 个潮汐断头台AOE，位置: {pos}，爆炸延迟: {delay}ms");
+            accessory.Log.Debug($"记录了第 {index + 1} 个潮汐断头台AOE，位置: {pos}");
+        }
+        [ScriptMethod(
+            name: "旋转月环-触发",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:/*OpenWaterVisualFirst_Shared_AID*/"] // TODO: 替换为内外圈共用的触发技能ID
+        )]
+        public void OnOpenWater(Event @event, ScriptAccessory accessory)
+        {
+            _openWaterCastStartTime = DateTime.Now; // 记录咏唱开始时间
+            var caster = accessory.Data.Objects.SearchById(@event.SourceId);
+            if (caster == null) return;
+
+            var dir = caster.Position - SharkArenaCenter;
+            var isCasterInside = dir.LengthSquared() < 15 * 15; // 半径15为内外圈分界线
+
+            if (isCasterInside)
+            {
+                // 内圈模式
+                // 参数: 总共8次AOE, 每次间隔1.2秒, 每次旋转22.5度, 内圈模式
+                HandleOpenWater(accessory, @event, 35, 1200, 22.5f * MathF.PI / 180.0f, true);
+            }
+            else
+            {
+                // 外圈模式
+                // 参数: 总共12次AOE, 每次间隔0.8秒, 每次旋转12.5度, 外圈模式
+                HandleOpenWater(accessory, @event, 59, 800, 12.5f * MathF.PI / 180.0f, false);
+            }
+        }
+        private void HandleOpenWater(ScriptAccessory accessory, Event @event, int maxCasts, int timeToMoveMs, float increment, bool isInner)
+        {
+            var caster = accessory.Data.Objects.SearchById(@event.SourceId);
+            if (caster == null) return;
+
+            // 清理旧状态
+            _openWaterAoes.Clear();
+            _openWaterCastsDone = 0;
+
+            var dir = caster.Position - SharkArenaCenter;
+
+            // 从caster的旋转值（弧度）计算出其正前方的向量
+            var forwardVector = new Vector3(MathF.Sin(caster.Rotation), 0, MathF.Cos(caster.Rotation));
+
+            // 判断旋转方向（顺时针/逆时针）
+            var rotationDirection = (Vector3.Cross(dir, forwardVector).Y < 0) ? 1.0f : -1.0f;
+            var rotationIncrement = rotationDirection * increment;
+
+            var initialCastTime = (int)(JsonConvert.DeserializeObject<float>(@event["CastTime"]) * 1000);
+
+            // 预先计算所有AOE的位置和时间
+            for (int i = 0; i < maxCasts; i++)
+            {
+                var rotationAngle = rotationIncrement * i;
+                var rotatedDir = new Vector3(
+                    dir.X * MathF.Cos(rotationAngle) - dir.Z * MathF.Sin(rotationAngle),
+                    dir.Y,
+                    dir.X * MathF.Sin(rotationAngle) + dir.Z * MathF.Cos(rotationAngle)
+                );
+                var aoePosition = SharkArenaCenter + rotatedDir;
+                var aoeRadius = isInner ? 4f : 5f;
+                var aoeDelay = initialCastTime + (timeToMoveMs * i);
+                _openWaterAoes.Add((aoePosition, aoeRadius, aoeDelay));
+            }
+
+            accessory.Log.Debug($"旋转月环已启动。模式: {(isInner ? "内圈" : "外圈")}, 数量: {maxCasts}, 旋转方向: {(rotationDirection > 0 ? "顺时针" : "逆时针")}");
+            DrawOpenWaterAoes(accessory);
+        }
+        private void DrawOpenWaterAoes(ScriptAccessory accessory)
+        {
+            // 先移除所有旧的“旋转月环”绘图，以便刷新
+            accessory.Method.RemoveDraw("OpenWater_AOE_.*");
+
+            var aoesToDraw = _openWaterAoes.Skip(_openWaterCastsDone).Take(8); // 最多显示未来的5个圈
+            int index = _openWaterCastsDone;
+
+            foreach (var aoe in aoesToDraw)
+            {
+                var dp = accessory.Data.GetDefaultDrawProperties();
+                dp.Name = $"OpenWater_AOE_{index}";
+                dp.Position = aoe.Position;
+                dp.Scale = new Vector2(aoe.Radius);
+
+                // 高亮下一个要爆炸的圈
+                if (index == _openWaterCastsDone)
+                {
+                    dp.Color = new Vector4(1, 0, 0, 0.8f); // 危险颜色
+                }
+                else
+                {
+                    dp.Color = accessory.Data.DefaultDangerColor; // 普通警告颜色
+                }
+
+                // 计算从现在到爆炸的剩余时间作为延迟
+                var remainingTime = aoe.Delay - (int)(DateTime.Now - _openWaterCastStartTime).TotalMilliseconds;
+                if (remainingTime < 0) remainingTime = 0;
+
+                dp.Delay = remainingTime;
+                dp.DestoryAt = 2000; // 显示2秒
+                dp.ScaleMode |= ScaleMode.ByTime;
+
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+                index++;
+            }
+        }
+        [ScriptMethod(
+            name: "旋转月环-AOE爆炸",
+            eventType: EventTypeEnum.ActionEffect,
+            eventCondition: ["ActionId:43151"],
+            userControl: false
+        )]
+        public void OnOpenWaterCast(Event @event, ScriptAccessory accessory)
+        {
+            // 检查触发伤害的AOE是否与当前机制匹配
+            var casterPos = @event.SourcePosition;
+            var isCasterInside = (casterPos - SharkArenaCenter).LengthSquared() < 15 * 15;
+            if (_openWaterAoes.Count > 0 && (isCasterInside == (_openWaterAoes[0].Radius < 5)))
+            {
+                _openWaterCastsDone++;
+                if (_openWaterCastsDone >= _openWaterAoes.Count)
+                {
+                    // 机制结束，清理
+                    _openWaterAoes.Clear();
+                    _openWaterCastsDone = 0;
+                    accessory.Method.RemoveDraw("OpenWater_AOE_.*");
+                    accessory.Log.Debug("旋转月环机制结束。");
+                }
+                else
+                {
+                    // 刷新显示的AOE
+                    DrawOpenWaterAoes(accessory);
+                }
+            }
         }
 
+
         #endregion
+        #region 城塞守卫
+        private const uint AID_AncientAeroIII_5s = 41287;  // 古代疾风III (5s咏唱)
+        private const uint AID_AncientAeroIII_12s = 41292; // 古代疾风III (12s咏唱)
+        private const uint AID_AncientStoneIII_5s = 41289; // 古代垒石III (5s咏唱)
+        private const uint AID_AncientStoneIII_12s = 41293; // 古代垒石III (12s咏唱)
+        private const uint AID_WindSurge = 41295; // 风之涌流 (AOE爆炸技能)
+        private const uint AID_SandSurge = 41296; // 沙之涌流 (AOE爆炸技能)
+        private const uint AID_AncientHoly1 = 41284;       // 神圣
+        private const uint AID_LightSurge = 41294; // 光之涌流
+
+        [ScriptMethod(
+            name: "圣焰（城塞守卫）",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41297"]
+        )]
+        public void 圣焰Draw(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "城塞守卫_圣焰_Danger_Zone";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(5, 60);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 4000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+        }
+        [ScriptMethod(
+            name: "风石光 - 记录能量球",
+            eventType: EventTypeEnum.AddCombatant,
+            eventCondition: ["DataId:18125"],
+            userControl: false
+        )]
+        public void OnSphereCreated(Event @event, ScriptAccessory accessory)
+        {
+            var sphere = accessory.Data.Objects.SearchById(@event.SourceId);
+            if (sphere != null)
+            {
+                lock (_surgeLock)
+                {
+                    _spheres.Add(sphere);
+                }
+                accessory.Log.Debug($"记录一个新的能量球: {sphere.Name}, ID: {sphere.EntityId}");
+            }
+        }
+        [ScriptMethod(
+            name: "风石光 - 能量球属性分类",
+            eventType: EventTypeEnum.StatusAdd,
+            eventCondition: ["StatusID:2536"],
+            userControl: false
+        )]
+        public void OnSphereStatusGain(Event @event, ScriptAccessory accessory)
+        {
+            var sphere = accessory.Data.Objects.SearchById(@event.TargetId);
+            if (sphere == null) return;
+
+            // status.Extra (Param) 用于区分风(0x224)或石(0x225)
+            // 请将 "876" 和 "877" 替换为真实的 Param 值
+            var statusParam = @event["Param"];
+
+            lock (_surgeLock)
+            {
+                if (!_spheres.Contains(sphere)) return; // 在锁内检查
+
+                if (statusParam == "548") // 假设 "876" 对应风属性 (0x224)
+                {
+                    _spheresWind.Add(sphere);
+                    _spheres.Remove(sphere);
+                    accessory.Log.Debug($"能量球 {sphere.EntityId} 被分类为 [风]");
+                }
+                else if (statusParam == "549") // 假设 "877" 对应石属性 (0x225)
+                {
+                    _spheresStone.Add(sphere);
+                    _spheres.Remove(sphere);
+                    accessory.Log.Debug($"能量球 {sphere.EntityId} 被分类为 [石]");
+                }
+            }
+        }
+
+        [ScriptMethod(
+            name: "风石光 - 预测并绘制AOE",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex:^(41287|41292|41289|41293)$"]
+        )]
+        public void OnAncientSpellCast(Event @event, ScriptAccessory accessory)
+        {
+            var caster = accessory.Data.Objects.SearchById(@event.SourceId);
+            if (caster == null) return;
+
+            // 根据ActionId判断技能类型（风/石）和咏唱时间
+            List<IGameObject> originalSphereList;
+            int castTimeMs;
+
+            switch (@event.ActionId)
+            {
+                case AID_AncientAeroIII_5s:
+                    originalSphereList = _spheresWind;
+                    castTimeMs = 5000;
+                    break;
+                case AID_AncientAeroIII_12s:
+                    originalSphereList = _spheresWind;
+                    castTimeMs = 12000;
+                    break;
+                case AID_AncientStoneIII_5s:
+                    originalSphereList = _spheresStone;
+                    castTimeMs = 5000;
+                    break;
+                case AID_AncientStoneIII_12s:
+                    originalSphereList = _spheresStone;
+                    castTimeMs = 12000;
+                    break;
+                default:
+                    return; // 不应该发生
+            }
+
+            accessory.Log.Debug($"检测到BOSS咏唱 {@event.ActionId} (咏唱时间: {castTimeMs}ms), 开始检测范围内的能量球。");
+
+            // 在锁内创建列表副本以进行安全的迭代
+            List<IGameObject> spheresToCheck;
+            lock (_surgeLock)
+            {
+                if (originalSphereList.Count == 0) return;
+                spheresToCheck = new List<IGameObject>(originalSphereList);
+            }
+
+            // 定义一个前方的锥形判定区 (40码长, 60度角)
+            var coneAngle = 60 * MathF.PI / 180.0f;
+            var coneLength = 40f;
+
+            // 遍历副本，避免在迭代时修改集合
+            foreach (var sphere in spheresToCheck)
+            {
+                // --- 锥形范围检测逻辑 ---
+                var vectorToSphere = sphere.Position - caster.Position;
+                var distance = vectorToSphere.Length();
+
+                if (distance > 0 && distance < coneLength)
+                {
+                    var casterForward = new Vector3(MathF.Sin(caster.Rotation), 0, MathF.Cos(caster.Rotation));
+                    var dotProduct = Vector3.Dot(Vector3.Normalize(vectorToSphere), Vector3.Normalize(casterForward));
+                    var angleToSphere = MathF.Acos(Math.Clamp(dotProduct, -1.0f, 1.0f));
+
+                    if (Math.Abs(angleToSphere) < coneAngle / 2)
+                    {
+                        // 球在锥形范围内，绘制AOE
+                        accessory.Log.Debug($"能量球 {sphere.EntityId} 在攻击范围内，准备绘制AOE。");
+
+                        var dp = accessory.Data.GetDefaultDrawProperties();
+                        var drawName = $"Surge_AOE_{sphere.EntityId}";
+
+                        dp.Name = drawName;
+                        dp.Position = sphere.Position;
+                        dp.Scale = new Vector2(15); // AOE半径15
+                        dp.Color = accessory.Data.DefaultDangerColor;
+                        dp.Delay = castTimeMs - 2400;
+                        dp.DestoryAt = 7800;
+                        dp.ScaleMode |= ScaleMode.ByTime;
+
+                        accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+
+                        // 在锁内修改原始列表
+                        lock (_surgeLock)
+                        {
+                            _surgeAoes.Add((sphere.EntityId, drawName));
+                            originalSphereList.Remove(sphere);
+                        }
+                    }
+                }
+            }
+        }
+
+        [ScriptMethod(
+            name: "风石光 - 神圣引爆光球",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41284"]
+        )]
+        public void OnAncientHolyCast(Event @event, ScriptAccessory accessory)
+        {
+            accessory.Log.Debug($"检测到BOSS咏唱神圣 ({@event.ActionId}), 引爆所有剩余光球。");
+
+            List<IGameObject> lightSpheres;
+            lock (_surgeLock)
+            {
+                if (_spheres.Count == 0) return;
+                // 剩余在 _spheres 列表中的就是光球
+                lightSpheres = new List<IGameObject>(_spheres);
+            }
+
+            // 爆炸时间 = 咏唱时间 (event.CastTime是秒) + 2.4秒额外延迟
+            var castTimeMs = 11000;
+            var explosionDelay = castTimeMs - 2400;
+
+            foreach (var sphere in lightSpheres)
+            {
+                accessory.Log.Debug($"光球 {sphere.EntityId} 将在 {explosionDelay}ms 后爆炸。");
+
+                var dp = accessory.Data.GetDefaultDrawProperties();
+                var drawName = $"Surge_AOE_Light_{sphere.EntityId}";
+
+                dp.Name = drawName;
+                dp.Position = sphere.Position;
+                dp.Scale = new Vector2(15);
+                dp.Color = accessory.Data.DefaultDangerColor;
+                dp.Delay = explosionDelay;
+                dp.DestoryAt = 7800;
+                dp.ScaleMode |= ScaleMode.ByTime;
+
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+
+                lock (_surgeLock)
+                {
+                    _surgeAoes.Add((sphere.EntityId, drawName));
+                }
+            }
+
+            // 所有光球都被消耗
+            lock (_surgeLock)
+            {
+                _spheres.Clear();
+            }
+        }
+
+        [ScriptMethod(
+            name: "风石光 - 清理已爆炸的AOE",
+            eventType: EventTypeEnum.ActionEffect,
+            eventCondition: ["ActionId:regex:^(41296|41295|41294)$"],
+            userControl: false
+        )]
+        public void OnSurgeExplosion(Event @event, ScriptAccessory accessory)
+        {
+            var explodingSphereId = @event.SourceId;
+
+            // 查找并移除与爆炸能量球匹配的绘图
+            var aoeToRemove = _surgeAoes.FirstOrDefault(aoe => aoe.ActorID == explodingSphereId);
+            if (aoeToRemove != default)
+            {
+                accessory.Method.RemoveDraw(aoeToRemove.DrawName);
+                _surgeAoes.Remove(aoeToRemove);
+                accessory.Log.Debug($"清理AOE绘制: {aoeToRemove.DrawName}");
+            }
+        }
+        public void ResetWindStoneLightSurgeState()
+        {
+            lock (_surgeLock)
+            {
+                _surgeAoes.Clear();
+                _spheres.Clear();
+                _spheresStone.Clear();
+                _spheresWind.Clear();
+            }
+        }
+        #endregion
+
+
+
+
+
+
     }
 }
