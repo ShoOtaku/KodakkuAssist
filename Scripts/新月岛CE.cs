@@ -20,9 +20,9 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.1.0",
+        version: "0.1.1",
         author: "XSZYYS",
-        note: "新月岛CE绘制\r\n已完成：\r\n死亡爪(地板出现小怪未绘制，其余均绘制)\r\n神秘土偶(全部画完)\r\n黑色连队(全部画完)\r\n水晶龙(全部画完)\r\n狂战士(全部画完)\r\n指令罐(全部画完)\r\n回廊恶魔(全部画完)\r\n鬼火苗(全部画完)\r\n\r\n未测试：\r\n进化加鲁拉(冲锋努力修复中)\r\n石质骑士团(转转手未写，地火未测试)\r\n夺心魔(未测试)\r\n复原狮(某一种情况的扇形+风土球没有绘制)\r\n鲨鱼(地火待修复)\r\n跃立狮(未测试)\r\n金钱龟"
+        note: "新月岛CE绘制已完成"
     )]
     public class 新月岛CE
     {
@@ -1726,8 +1726,8 @@ namespace EurekaOrthosCeScripts
             else
             {
                 maxCasts = 59;
-                intervalMs = 800;
-                rotationIncrementRad = 12.5f * MathF.PI / 180.0f;
+                intervalMs = 750;
+                rotationIncrementRad = 12.06f * MathF.PI / 180.0f;
                 aoeRadius = 4f;
             }
 
@@ -2151,7 +2151,6 @@ namespace EurekaOrthosCeScripts
         public void OnTrapCreated(Event @event, ScriptAccessory accessory)
         {
             var npc = accessory.Data.Objects.SearchById(@event.TargetId);
-            // 确认是小丑NPC
             if (npc == null || npc.DataId != OID_JestingJackanapes) return;
 
             // 根据status.Extra(Param)判断元素，0x344是火，否则是冰
@@ -2221,7 +2220,7 @@ namespace EurekaOrthosCeScripts
             _playerElements.TryGetValue(accessory.Data.Me, out var playerIsFire);
             bool playerHasElement = _playerElements.ContainsKey(accessory.Data.Me);
 
-            // 3. 根据场上陷阱(小丑)的数量，动态决定警告的持续时间
+            // 3. 根据场上陷阱的数量，动态决定警告的持续时间
             int trapWarningDurationMs = _fireIceTraps.Count > 2 ? 20000 : 10000; // 大于2只小丑为20秒，否则为10秒
             if (trapsCopy.Count > 0)
             {
