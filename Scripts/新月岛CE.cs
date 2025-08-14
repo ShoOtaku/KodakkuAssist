@@ -20,7 +20,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.0.22",
+        version: "0.0.23",
         author: "XSZYYS",
         note: "新月岛CE绘制\r\n已完成：\r\n死亡爪（地板出现小怪未绘制，其余均绘制）\r\n神秘土偶（全部画完）\r\n黑色连队（全部画完）\r\n水晶龙（全部画完）\r\n狂战士（全部画完）\r\n指令罐（全部画完）\r\n回廊恶魔（全部画完）\r\n鬼火苗（全部画完）\r\n\r\n未测试：\r\n进化加鲁拉（冲锋努力修复中）\r\n石质骑士团（转转手未写，地火未测试）\r\n夺心魔（未测试）\r\n复原狮（某一种情况的扇形+风土球没有绘制）\r\n鲨鱼（地火待修复）\r\n跃立狮（未测试）\r\n\r\n未写：\r\n金钱龟"
     )]
@@ -62,6 +62,7 @@ namespace EurekaOrthosCeScripts
         // 陷阱激活（爆炸）的时间
         private DateTime _trapActivationTime;
         private static readonly Vector3 OnTheHuntAreaCenter = new Vector3(636f, 108f, -54f); // 跃立狮子区域中心位置
+        private readonly object _trapLock = new();
         private class FireIceTrapInfo
         {
             public ulong NpcId { get; init; }
@@ -381,7 +382,7 @@ namespace EurekaOrthosCeScripts
             dp2.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
         }
-
+/*
         [ScriptMethod(
             name: "指令 - 圆形 (目标) (指令罐)",
             eventType: EventTypeEnum.Tether,
@@ -399,7 +400,7 @@ namespace EurekaOrthosCeScripts
             dp.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
-
+*/
 
         [ScriptMethod(
             name: "指令-绘图移除",
@@ -740,8 +741,7 @@ namespace EurekaOrthosCeScripts
             dpRumble.Name = $"NoiseComplaint_Rumble_{bird.EntityId}";
             dpRumble.Owner = _bossId;
             dpRumble.TargetPosition = destination;
-            dpRumble.Scale = new Vector2(8, 100);
-            dpRumble.ScaleMode |= ScaleMode.YByDistance;
+            dpRumble.Scale = new Vector2(8, 30);
             dpRumble.Color = accessory.Data.DefaultDangerColor;
             dpRumble.DestoryAt = 6300;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpRumble);
@@ -791,8 +791,7 @@ namespace EurekaOrthosCeScripts
             dpCharge.Name = $"NoiseComplaint_BirdserkRush_Charge_{_bossId}";
             dpCharge.Owner = _bossId;
             dpCharge.TargetObject = bird.EntityId;
-            dpCharge.Scale = new Vector2(8, 100);
-            dpCharge.ScaleMode |= ScaleMode.YByDistance;
+            dpCharge.Scale = new Vector2(8, 30);
             dpCharge.Color = accessory.Data.DefaultDangerColor;
             dpCharge.DestoryAt = 6300;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
@@ -836,8 +835,7 @@ namespace EurekaOrthosCeScripts
             dpCharge.Name = $"NoiseComplaint_Rampage_Charge_{chargeIndex}";
             dpCharge.Position = chargeStartPos;
             dpCharge.TargetPosition = destination;
-            dpCharge.Scale = new Vector2(8, 100);
-            dpCharge.ScaleMode |= ScaleMode.YByDistance;
+            dpCharge.Scale = new Vector2(8, 60);
             dpCharge.Color = accessory.Data.DefaultDangerColor;
             dpCharge.DestoryAt = 6300;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
@@ -876,7 +874,7 @@ namespace EurekaOrthosCeScripts
             }
         }
 
-
+/*
         [ScriptMethod(
             name: "绘图移除 (进化加鲁拉)",
             eventType: EventTypeEnum.ActionEffect,
@@ -905,6 +903,7 @@ namespace EurekaOrthosCeScripts
                     break;
             }
         }
+*/
         #endregion
 
         #region 死亡爪
@@ -2260,6 +2259,38 @@ namespace EurekaOrthosCeScripts
             dp.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
         }
+        [ScriptMethod(
+            name: "触手（夺心魔）",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex:^(41257|41314|41256)$"]
+        )]
+        public void 触手Draw(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "夺心魔_触手_Danger_Zone";
+            dp.Owner = @event.SourceId;
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.ScaleMode |= ScaleMode.ByTime;
+            switch (@event.ActionId)
+            {
+                case 41257:
+                    dp.Scale = new Vector2(20, 60);
+                    dp.DestoryAt = 11000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+                    break;
+                case 41314:
+                    dp.Scale = new Vector2(10, 60);
+                    dp.DestoryAt = 7000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+                    break;
+                case 41256:
+                    dp.Scale = new Vector2(10, 60);
+                    dp.DestoryAt = 11000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+                    break;
+            }
+        }
+
 
         private const uint SID_PlayingWithFire = 4211;
         private const uint SID_PlayingWithIce = 4212;
@@ -2277,8 +2308,10 @@ namespace EurekaOrthosCeScripts
         public void OnPlayerElementGain(Event @event, ScriptAccessory accessory)
         {
             var isFire = @event.StatusId == SID_PlayingWithFire;
-            _playerElements[@event.TargetId] = isFire;
-
+            lock (_trapLock)
+            {
+                _playerElements[@event.TargetId] = isFire;
+            }
             if (@event.TargetId == accessory.Data.Me)
             {
                 accessory.Log.Debug($"你获得了 {(isFire ? "火" : "冰")} 元素，重新绘制陷阱提示。");
@@ -2293,14 +2326,19 @@ namespace EurekaOrthosCeScripts
         )]
         public void OnPlayerElementLose(Event @event, ScriptAccessory accessory)
         {
-            if (_playerElements.Remove(@event.TargetId))
+            bool needsRedraw = false;
+            lock (_trapLock)
             {
-                // 仅当是自己失去debuff时，才更新绘制
-                if (@event.TargetId == accessory.Data.Me)
+                if (_playerElements.Remove(@event.TargetId))
                 {
-                    accessory.Log.Debug("你的元素已消失，更新陷阱提示。");
-                    DrawFireIceTraps(accessory);
+                    needsRedraw = @event.TargetId == accessory.Data.Me;
                 }
+            }
+
+            if (needsRedraw)
+            {
+                accessory.Log.Debug("你的元素已消失，更新陷阱提示。");
+                DrawFireIceTraps(accessory);
             }
         }
         [ScriptMethod(
@@ -2324,7 +2362,10 @@ namespace EurekaOrthosCeScripts
                 IsFire = isFire
             };
 
-            _fireIceTraps.Add(trap);
+            lock (_trapLock)
+            {
+                _fireIceTraps.Add(trap);
+            }
             accessory.Log.Debug($"发现一个新的{(isFire ? "火" : "冰")}陷阱，位于 {trap.Position}");
             DrawFireIceTraps(accessory);
         }
@@ -2335,15 +2376,17 @@ namespace EurekaOrthosCeScripts
         )]
         public void OnTrapMove(Event @event, ScriptAccessory accessory)
         {
-            // 找到正在咏唱的小丑对应的陷阱
-            var trapToMove = _fireIceTraps.FirstOrDefault(t => t.NpcId == @event.SourceId);
-            if (trapToMove != null)
+            lock (_trapLock)
             {
-                var newPosition = @event.TargetPosition;
-                accessory.Log.Debug($"陷阱从 {trapToMove.Position} 移动到 {newPosition}");
-                trapToMove.Position = newPosition;
-                DrawFireIceTraps(accessory);
+                var trapToMove = _fireIceTraps.FirstOrDefault(t => t.NpcId == @event.SourceId);
+                if (trapToMove != null)
+                {
+                    var newPosition = @event.TargetPosition;
+                    accessory.Log.Debug($"陷阱从 {trapToMove.Position} 移动到 {newPosition}");
+                    trapToMove.Position = newPosition;
+                }
             }
+            DrawFireIceTraps(accessory);
         }
         [ScriptMethod(
             name: "火冰陷阱 - 机制结束清理（夺心魔）",
@@ -2354,22 +2397,34 @@ namespace EurekaOrthosCeScripts
         public void OnTrapExplosion(Event @event, ScriptAccessory accessory)
         {
             accessory.Log.Debug("陷阱已爆炸，清理所有绘图和状态。");
-            _fireIceTraps.Clear();
-            _playerElements.Clear();
+            lock (_trapLock)
+            {
+                _fireIceTraps.Clear();
+                _playerElements.Clear();
+            }
             accessory.Method.RemoveDraw("FireIceTrap_.*");
         }
         private void DrawFireIceTraps(ScriptAccessory accessory)
         {
             // 1. 先清除所有旧的陷阱绘图，防止重叠
             accessory.Method.RemoveDraw("FireIceTrap_.*");
-
+            List<FireIceTrapInfo> trapsCopy;
+            Dictionary<ulong, bool> playerElementsCopy;
+            lock (_trapLock)
+            {
+                trapsCopy = new List<FireIceTrapInfo>(_fireIceTraps);
+                playerElementsCopy = new Dictionary<ulong, bool>(_playerElements);
+            }
             // 2. 获取当前玩家的元素状态
             _playerElements.TryGetValue(accessory.Data.Me, out var playerIsFire);
             bool playerHasElement = _playerElements.ContainsKey(accessory.Data.Me);
 
             // 3. 根据场上陷阱（小丑）的数量，动态决定警告的持续时间
             int trapWarningDurationMs = _fireIceTraps.Count > 2 ? 20000 : 10000; // 大于2只小丑为20秒，否则为10秒
-            accessory.Log.Debug($"当前陷阱数量: {_fireIceTraps.Count}, 警告持续时间设置为: {trapWarningDurationMs}ms");
+            if (trapsCopy.Count > 0)
+            {
+                accessory.Log.Debug($"当前陷阱数量: {trapsCopy.Count}, 警告持续时间设置为: {trapWarningDurationMs}ms");
+            }
 
 
             // 4. 遍历所有已知的陷阱并进行绘制
@@ -2399,11 +2454,9 @@ namespace EurekaOrthosCeScripts
                     dp.Name = $"FireIceTrap_Big_Danger_{trap.NpcId}";
                     dp.Position = trap.Position;
                     dp.Scale = new Vector2(38); // 大圈外半径38
-                    dp.InnerScale = new Vector2(8); // 内半径8，形成月环
-                    dp.Radian = MathF.PI * 2;
                     dp.Color = new Vector4(1.0f, 0.2f, 0.2f, 0.6f);
                     dp.DestoryAt = trapWarningDurationMs;
-                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
                 }
                 else
                 {
@@ -2431,7 +2484,7 @@ namespace EurekaOrthosCeScripts
             dp.Name = "跃立狮_恐怖闪光_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(60);
-            dp.Radian = 60 * MathF.PI / 180.0f;
+            dp.Radian = 90 * MathF.PI / 180.0f;
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 6000;
             dp.ScaleMode |= ScaleMode.ByTime;
@@ -2480,10 +2533,10 @@ namespace EurekaOrthosCeScripts
             var dp = accessory.Data.GetDefaultDrawProperties();
             dp.Name = $"CrystalDragon_AetherialRay_{target.EntityId}";
             dp.Position = OnTheHuntAreaCenter; // AOE在场地中心
-            dp.Scale = new Vector2(6, 56); // 宽度6，长度28*2=56 (因为是中心出发的直线)
+            dp.Scale = new Vector2(10, 56); // 宽度10，长度28*2=56 (因为是中心出发的直线)
             dp.Rotation = finalRotation;
             dp.Color = accessory.Data.DefaultDangerColor;
-            dp.DestoryAt = 5200; // 5.2秒后消失
+            dp.DestoryAt = 5200;
             dp.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp);
