@@ -20,50 +20,48 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.0.25",
+        version: "0.0.27",
         author: "XSZYYS",
-        note: "新月岛CE绘制\r\n已完成：\r\n死亡爪（地板出现小怪未绘制，其余均绘制）\r\n神秘土偶（全部画完）\r\n黑色连队（全部画完）\r\n水晶龙（全部画完）\r\n狂战士（全部画完）\r\n指令罐（全部画完）\r\n回廊恶魔（全部画完）\r\n鬼火苗（全部画完）\r\n\r\n未测试：\r\n进化加鲁拉（冲锋努力修复中）\r\n石质骑士团（转转手未写，地火未测试）\r\n夺心魔（未测试）\r\n复原狮（某一种情况的扇形+风土球没有绘制）\r\n鲨鱼（地火待修复）\r\n跃立狮（未测试）\r\n\r\n未写：\r\n金钱龟"
+        note: "新月岛CE绘制\r\n已完成：\r\n死亡爪(地板出现小怪未绘制，其余均绘制)\r\n神秘土偶(全部画完)\r\n黑色连队(全部画完)\r\n水晶龙(全部画完)\r\n狂战士(全部画完)\r\n指令罐(全部画完)\r\n回廊恶魔(全部画完)\r\n鬼火苗(全部画完)\r\n\r\n未测试：\r\n进化加鲁拉(冲锋努力修复中)\r\n石质骑士团(转转手未写，地火未测试)\r\n夺心魔(未测试)\r\n复原狮(某一种情况的扇形+风土球没有绘制)\r\n鲨鱼(地火待修复)\r\n跃立狮(未测试)\r\n金钱龟"
     )]
     public class 新月岛CE
     {
-        /// <summary>
-        /// 脚本初始化
-        /// </summary>
-        // --- 进化加鲁拉 状态变量 ---
-        private Vector3? _noiseComplaintArenaCenter;
-        private bool _noiseComplaintCenterRecorded = false;
-        private bool? _lightningIsCardinal;
-        private readonly Queue<ulong> _activeBirds = new();
-        private ulong _bossId = 0;
-        private ulong _birdserkRushTargetId = 0;
-        private ulong _rushingRumbleRampageTargetId = 0;
-        private readonly int[] _rampageDelays = { 5200, 3200 };
+        // =================================================================================
+        // ============================= 字段和状态变量定义 =============================
+        // =================================================================================
 
-        private int _activeMechanicId;
-        private Vector3 _chargeStartPosition; // 存储冲锋开始时的位置
-        // --- “Rushing Rumble Rampage”连续冲锋机制专用状态变量 ---
-        private bool _isRampageSequenceRunning = false;
-        private int _rampageChargeIndex = 0;
-        private Vector3 _rampageNextChargeStartPos;
-        private readonly object _mechanicLock = new();
-        private readonly object _surgeLock = new();
-        private static readonly Vector3 SharkArenaCenter = new(-117f, 1, -850f);
-        // 存储所有能量球的列表
-        private readonly List<IGameObject> _spheres = new(12);
-        // 专门存储“石”属性能量球的列表
-        private readonly List<IGameObject> _spheresStone = new(6);
-        // 专门存储“风”属性能量球的列表
-        private readonly List<IGameObject> _spheresWind = new(6);
-        private readonly List<(ulong ActorID, string DrawName)> _surgeAoes = new();
-        private bool _isHolyCasting = false;
-        // 存储当前场上所有陷阱的列表
-        private readonly List<FireIceTrapInfo> _fireIceTraps = new();
-        // 存储玩家当前携带的元素debuff (Key: 玩家ID, Value: true为火, false为冰)
-        private readonly Dictionary<ulong, bool> _playerElements = new();
-        // 陷阱激活（爆炸）的时间
-        private DateTime _trapActivationTime;
-        private static readonly Vector3 OnTheHuntAreaCenter = new Vector3(636f, 108f, -54f); // 跃立狮子区域中心位置
-        private readonly object _trapLock = new();
+        // -------------------- 机制通用锁对象 --------------------
+        private readonly object _mechanicLock = new(); // 通用机制处理锁，防止多线程冲突
+        private readonly object _surgeLock = new();    // 城塞守卫能量球机制专用锁
+        private readonly object _trapLock = new();     // 夺心魔陷阱机制专用锁
+
+        // ==================== 进化加鲁拉 ====================
+        private ulong _bossId; // Boss的实体ID
+        private Vector3? _noiseComplaintArenaCenter; // 场地中心点
+        private bool _noiseComplaintCenterRecorded; // 是否已记录场地中心
+        private bool? _lightningIsCardinal; // 记录雷电方向：true为基本方向(东西南北)，false为斜角方向(东南/东北/西南/西北)
+        private readonly Queue<ulong> _activeBirds = new(); // 存储被点名小鸟ID的队列
+        private int _activeMechanicId; // 当前正在处理的冲锋机制ID
+
+        // --- “连续突进跺地”  专用状态变量 ---
+        private bool _isRampageSequenceRunning; // 连续冲锋序列是否正在进行
+        private int _rampageChargeIndex; // 连续冲锋的当前次数索引
+        private Vector3 _rampageNextChargeStartPos; // 下一次连续冲锋的起始位置
+
+        // ==================== 城塞守卫  ====================
+        private readonly List<IGameObject> _spheres = new(12);       // 存储所有未分类能量球的列表
+        private readonly List<IGameObject> _spheresStone = new(6);   // 专门存储“石”属性能量球的列表
+        private readonly List<IGameObject> _spheresWind = new(6);    // 专门存储“风”属性能量球的列表
+        private readonly List<(ulong ActorID, string DrawName)> _surgeAoes = new(); // 存储已绘制的能量球AOE，用于后续移除
+        private bool _isHolyCasting; // Boss是否正在咏唱神圣(Holy)
+
+        // ==================== 夺心魔  ====================
+        private readonly List<FireIceTrapInfo> _fireIceTraps = new(); // 存储当前场上所有火冰陷阱的信息
+        private readonly Dictionary<ulong, bool> _playerElements = new(); // 存储玩家当前携带的元素debuff (Key: 玩家ID, Value: true为火, false为冰)
+
+        /// <summary>
+        /// 夺心魔火冰陷阱的信息载体
+        /// </summary>
         private class FireIceTrapInfo
         {
             public ulong NpcId { get; init; }
@@ -71,36 +69,49 @@ namespace EurekaOrthosCeScripts
             public bool IsFire { get; init; }
         }
 
-        private class PendingMechanic
-        {
-            public Vector3 Position { get; set; }
-            public uint ShapeActionId { get; init; } // 用来区分是十字、月环还是击退
-            public DateTime ActivationTime { get; init; }
-        }
+        // ==================== 尼姆瓣齿鲨 ====================
+        private static readonly Vector3 SharkArenaCenter = new(-117f, 1, -850f); // 鲨鱼战斗场地中心
+        private readonly List<(string Name, int Delay)> _tidalGuillotineAoes = new(3); // 存储“怒潮断头台”系列AOE信息
 
-        private readonly List<PendingMechanic> _pendingMechanics = new(4);
-        private bool _isFirstSequence = true;
-        private readonly List<(string Name, int Delay)> _tidalGuillotineAoes = new(3);
-        private readonly List<(Vector3 Position, float Radius, int Delay)> _openWaterAoes = new();
+        // ==================== 跃立狮 ====================
+        private static readonly Vector3 OnTheHuntAreaCenter = new Vector3(636f, 108f, -54f); // 跃立狮战斗场地中心
+
+        // =================================================================================
+        // ================================= 脚本主体 =================================
+        // =================================================================================
 
 
         public void Init(ScriptAccessory accessory)
         {
             accessory.Log.Debug("新月岛CE脚本已加载。");
-            accessory.Method.RemoveDraw(".*"); // 清理旧的绘图
-            // 初始化进化加鲁拉机制的状态
-            //_noiseComplaintArenaCenter = null;
-            //_noiseComplaintCenterRecorded = false;
+            accessory.Method.RemoveDraw(".*"); // 清理所有旧的绘图
+
+            // 初始化所有机制的状态变量
             _lightningIsCardinal = null;
             _activeBirds.Clear();
-            _tidalGuillotineAoes.Clear(); // 初始化时清空潮汐断头台列表
+            _tidalGuillotineAoes.Clear();
+
+            // 重置进化加鲁拉机制状态
+            _noiseComplaintCenterRecorded = false;
+            _noiseComplaintArenaCenter = null;
+            ResetState();
+
+            // 重置城塞守卫机制状态
+            ResetWindStoneLightSurgeState();
+
+            // 重置夺心魔机制状态
+            lock (_trapLock)
+            {
+                _fireIceTraps.Clear();
+                _playerElements.Clear();
+            }
         }
 
         // --- 黑色连队 ---
 
 
         [ScriptMethod(
-            name: "陆行鸟冲 (黑色连队)",
+            name: "陆行鸟攻击(黑色连队)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41163"]
         )]
@@ -119,7 +130,7 @@ namespace EurekaOrthosCeScripts
 
 
         [ScriptMethod(
-            name: "陆行鸟乱羽 (黑色连队)",
+            name: "尾羽 (黑色连队)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41164"]
         )]
@@ -154,7 +165,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "陆行鸟气旋 (黑色连队)",
+            name: "陆行鸟旋风 (黑色连队)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41148"]
         )]
@@ -172,7 +183,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "陆行鸟屠杀 (黑色连队)",
+            name: "陆行鸟杀戮 (黑色连队)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41151"]
         )]
@@ -217,7 +228,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "神秘热量 (神秘土偶)",
+            name: "魔射线 (神秘土偶)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41137"]
         )]
@@ -277,7 +288,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "钢铁之击 (神秘土偶)",
+            name: "飞剑强袭 (神秘土偶)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41131"]
         )]
@@ -430,7 +441,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "雷圈 (进化加鲁拉)",
+            name: "圆状放雷 (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41186"]
         )]
@@ -447,7 +458,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "核爆 (进化加鲁拉)",
+            name: "大落雷 (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41187"]
         )]
@@ -464,7 +475,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "雷光十字 (进化加鲁拉)",
+            name: "扇状放雷 (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41184"]
         )]
@@ -482,7 +493,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "猛挥 (进化加鲁拉)",
+            name: "掀地 (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(43262|41180)$"]
         )]
@@ -534,7 +545,7 @@ namespace EurekaOrthosCeScripts
                 // 绘制这一段的连续冲锋，起点是上一次的落点
                 DrawRampageCharge(accessory, _rampageNextChargeStartPos, bird, _rampageChargeIndex);
 
-                // 如果所有冲锋都已完成（通常是3次），则重置状态。
+                // 如果所有冲锋都已完成(通常是3次)，则重置状态。
                 if (_rampageChargeIndex >= 3)
                 {
                     accessory.Log.Debug("连续冲锋序列完成。");
@@ -551,7 +562,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "RushingRumble (进化加鲁拉)",
+            name: "突进跺地 (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41175"]
         )]
@@ -565,7 +576,7 @@ namespace EurekaOrthosCeScripts
 
 
         [ScriptMethod(
-            name: "狂鸟冲锋 (进化加鲁拉)",
+            name: "突进掀地 (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41176"]
         )]
@@ -577,7 +588,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "Rushing Rumble Rampage (进化加鲁拉)",
+            name: "连续突进跺地 (进化加鲁拉)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41177"]
         )]
@@ -589,7 +600,7 @@ namespace EurekaOrthosCeScripts
         }
         private void TryDrawMechanics(ScriptAccessory accessory)
         {
-            // 如果一个连续冲锋已经开始（即不是第一次冲锋），则由图标事件处理，这里直接返回
+            // 如果一个连续冲锋已经开始(即不是第一次冲锋)，则由图标事件处理，这里直接返回
             if (_isRampageSequenceRunning) return;
             // 如果没有激活的机制ID，也直接返回
             if (_activeMechanicId == 0) return;
@@ -642,7 +653,6 @@ namespace EurekaOrthosCeScripts
             _activeMechanicId = 0;
             _isRampageSequenceRunning = false;
             _rampageChargeIndex = 0;
-            _chargeStartPosition = Vector3.Zero;
         }
         private Vector3 GetArenaEdgePosition(Vector3 destination)
         {
@@ -920,7 +930,7 @@ namespace EurekaOrthosCeScripts
 
         #region 死亡爪
         [ScriptMethod(
-            name: "爪痕 (死亡爪)",
+            name: "死亡甲 (死亡爪)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(41315|41316|41317)$"]
         )]
@@ -953,7 +963,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "垂直交错 (死亡爪)",
+            name: "纵向双重抓 (死亡爪)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41323"]
         )]
@@ -985,7 +995,7 @@ namespace EurekaOrthosCeScripts
             }
         }
         [ScriptMethod(
-            name: "垂直交错长 (死亡爪)",
+            name: "纵向双重抓长 (死亡爪)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41330"]
         )]
@@ -1018,7 +1028,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "水平交错 (死亡爪)",
+            name: "横向双重抓 (死亡爪)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41324"]
         )]
@@ -1050,7 +1060,7 @@ namespace EurekaOrthosCeScripts
             }
         }
         [ScriptMethod(
-            name: "水平交错长 (死亡爪)",
+            name: "横向双重抓长 (死亡爪)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41331"]
         )]
@@ -1083,7 +1093,7 @@ namespace EurekaOrthosCeScripts
         }
         /*
         [ScriptMethod(
-            name: "SkulkingOrders (死亡爪)(未完成）",
+            name: "SkulkingOrders (死亡爪)(未完成)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId: regex: ^(41326|41329)$"]
         )]
@@ -1097,7 +1107,7 @@ namespace EurekaOrthosCeScripts
 
         #region 水晶龙
         [ScriptMethod(
-            name: "PrismaticWing（钢铁月环）(水晶龙)",
+            name: "水晶之翼(钢铁月环)(水晶龙)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(42766|42767|42768|42769)$"]
         )]
@@ -1159,7 +1169,7 @@ namespace EurekaOrthosCeScripts
             }
         }
         [ScriptMethod(
-            name: "结晶能量/混沌 (水晶龙)",
+            name: "水晶波动/乱流 (水晶龙)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(42728|42729|42730|42731|42732|42733|42734|42735|41758|41759|41760|41761)$"]
         )]
@@ -1270,7 +1280,7 @@ namespace EurekaOrthosCeScripts
 
         #region 新月狂战士
         [ScriptMethod(
-           name: "严厉扫荡 (新月狂战士)",
+           name: "横砍 (新月狂战士)",
            eventType: EventTypeEnum.StartCasting,
            eventCondition: ["ActionId:42691"]
        )]
@@ -1288,7 +1298,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "狂怒1(新月狂战士)",
+            name: "震击怒涛1(新月狂战士)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:37323"]
         )]
@@ -1315,7 +1325,7 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
         }
         [ScriptMethod(
-            name: "狂怒2(新月狂战士)",
+            name: "震击怒涛2(新月狂战士)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:30872"]
         )]
@@ -1341,7 +1351,7 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
         }
         [ScriptMethod(
-            name: "狂怒3(新月狂战士)",
+            name: "震击怒涛3(新月狂战士)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:30873"]
         )]
@@ -1368,7 +1378,7 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
         }
         [ScriptMethod(
-            name: "狂怒4(新月狂战士)",
+            name: "震击怒涛4(新月狂战士)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:30874"]
         )]
@@ -1395,7 +1405,7 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
         }
         [ScriptMethod(
-            name: "激烈爆发(新月狂战士)",
+            name: "气焰(新月狂战士)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:37804"]
         )]
@@ -1429,7 +1439,7 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
         [ScriptMethod(
-            name: "潮汐吐息(回廊恶魔)",
+            name: "怒潮吐息(回廊恶魔)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41360"]
         )]
@@ -1448,7 +1458,7 @@ namespace EurekaOrthosCeScripts
         #endregion
         #region 骑士团
         [ScriptMethod(
-            name: "双拳连击 (骑士团)",
+            name: "重拳崩 (骑士团)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41828"]
         )]
@@ -1500,7 +1510,7 @@ namespace EurekaOrthosCeScripts
         #endregion
         #region 鬼火苗
         [ScriptMethod(
-            name: "分身机制（鬼火苗）",
+            name: "分身机制(鬼火苗)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(41397|42033|42035)$"]
         )]
@@ -1553,7 +1563,7 @@ namespace EurekaOrthosCeScripts
             }
         }
         [ScriptMethod(
-            name: "Boss直接AOE（鬼火苗）",
+            name: "Boss直接AOE(鬼火苗)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(42034|42032)$"]
         )]
@@ -1612,7 +1622,7 @@ namespace EurekaOrthosCeScripts
         #endregion
         #region 尼姆瓣齿鲨
         [ScriptMethod(
-            name: "Hydrocleave (尼姆瓣齿鲨)",
+            name: "深水切割者 (尼姆瓣齿鲨)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:43149"]
         )]
@@ -1629,7 +1639,7 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
         }
         [ScriptMethod(
-            name: "潮汐断头台(尼姆瓣齿鲨)",
+            name: "怒潮断头台(尼姆瓣齿鲨)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41723"]
         )]
@@ -1657,7 +1667,7 @@ namespace EurekaOrthosCeScripts
             accessory.Log.Debug($"记录了第一个潮汐断头台AOE，位置: {pos}");
         }
         [ScriptMethod(
-            name: "潮汐断头台 - 记录后续AOE(尼姆瓣齿鲨)",
+            name: "怒潮断头台 - 记录后续AOE(尼姆瓣齿鲨)",
             eventType: EventTypeEnum.ActionEffect, 
             eventCondition: ["ActionId:41682"]
         )]
@@ -1766,15 +1776,6 @@ namespace EurekaOrthosCeScripts
             accessory.Log.Debug($"旋转月环(重构)已启动。模式: {(isInnerMode ? "内圈" : "外圈")}, 数量: {maxCasts}, 方向: {(rotationDirection > 0 ? "顺时针" : "逆时针")}");
         }
 
-
-
-
-
-
-
-
-
-
         #endregion
         #region 城塞守卫
         private const uint AID_AncientAeroIII_5s = 41287;  // 古代疾风III (5s咏唱)
@@ -1787,7 +1788,7 @@ namespace EurekaOrthosCeScripts
         private const uint AID_LightSurge = 41294; // 光之涌流
 
         [ScriptMethod(
-            name: "圣焰（城塞守卫）",
+            name: "圣焰(城塞守卫)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41297"]
         )]
@@ -1803,7 +1804,7 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
         }
         [ScriptMethod(
-            name: "风石光 - 记录能量球（城塞守卫）",
+            name: "风石光 - 记录能量球(城塞守卫)",
             eventType: EventTypeEnum.AddCombatant,
             eventCondition: ["DataId:18125"],
             userControl: false
@@ -1821,7 +1822,7 @@ namespace EurekaOrthosCeScripts
             }
         }
         [ScriptMethod(
-            name: "风石光 - 能量球属性分类（城塞守卫）",
+            name: "风石光 - 能量球属性分类(城塞守卫)",
             eventType: EventTypeEnum.StatusAdd,
             eventCondition: ["StatusID:2536"],
             userControl: false
@@ -1854,7 +1855,7 @@ namespace EurekaOrthosCeScripts
         }
 
         [ScriptMethod(
-            name: "风石光 - 预测并绘制AOE（城塞守卫）",
+            name: "风石光 - 预测并绘制AOE(城塞守卫)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(41287|41292|41289|41293)$"]
         )]
@@ -1863,7 +1864,7 @@ namespace EurekaOrthosCeScripts
             var caster = accessory.Data.Objects.SearchById(@event.SourceId);
             if (caster == null) return;
 
-            // 根据ActionId判断技能类型（风/石）和咏唱时间
+            // 根据ActionId判断技能类型(风/石)和咏唱时间
             List<IGameObject> originalSphereList;
             int castTimeMs;
 
@@ -1945,7 +1946,7 @@ namespace EurekaOrthosCeScripts
             }
         }
         [ScriptMethod(
-            name: "风石光 - 标记神圣咏唱开始（城塞守卫）",
+            name: "风石光 - 标记神圣咏唱开始(城塞守卫)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41284"],
             userControl: false
@@ -1956,7 +1957,7 @@ namespace EurekaOrthosCeScripts
             _isHolyCasting = true;
         }
         [ScriptMethod(
-            name: "风石光 - 神圣咏唱完成并引爆光球（城塞守卫）",
+            name: "风石光 - 神圣咏唱完成并引爆光球(城塞守卫)",
             eventType: EventTypeEnum.ActionEffect,
             eventCondition: ["ActionId:41284"]
         )]
@@ -2012,7 +2013,7 @@ namespace EurekaOrthosCeScripts
 
 
         [ScriptMethod(
-            name: "风石光 - 清理已爆炸的AOE（城塞守卫）",
+            name: "风石光 - 清理已爆炸的AOE(城塞守卫)",
             eventType: EventTypeEnum.ActionEffect,
             eventCondition: ["ActionId:regex:^(41296|41295|41294)$"],
             userControl: false
@@ -2044,7 +2045,7 @@ namespace EurekaOrthosCeScripts
         #endregion
         #region 夺心魔
         [ScriptMethod(
-            name: "昏暗（夺心魔）",
+            name: "昏暗(夺心魔)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41170"]
         )]
@@ -2061,7 +2062,7 @@ namespace EurekaOrthosCeScripts
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
         }
         [ScriptMethod(
-            name: "触手（夺心魔）",
+            name: "触手(夺心魔)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(41257|41314|41256)$"]
         )]
@@ -2101,7 +2102,7 @@ namespace EurekaOrthosCeScripts
 
 
         [ScriptMethod(
-            name: "火冰陷阱 - 记录玩家元素（夺心魔）",
+            name: "火冰陷阱 - 记录玩家元素(夺心魔)",
             eventType: EventTypeEnum.StatusAdd,
             eventCondition: ["StatusID:regex:^(4211|4212)$"],
             userControl: false
@@ -2120,7 +2121,7 @@ namespace EurekaOrthosCeScripts
             }
         }
         [ScriptMethod(
-            name: "火冰陷阱 - 移除玩家元素（夺心魔）",
+            name: "火冰陷阱 - 移除玩家元素(夺心魔)",
             eventType: EventTypeEnum.StatusRemove,
             eventCondition: ["StatusID:regex:^(4211|4212)$"],
             userControl: false
@@ -2143,7 +2144,7 @@ namespace EurekaOrthosCeScripts
             }
         }
         [ScriptMethod(
-            name: "火冰陷阱 - 记录陷阱（夺心魔）",
+            name: "火冰陷阱 - 记录陷阱(夺心魔)",
             eventType: EventTypeEnum.StatusAdd,
             eventCondition: ["StatusID:2193"]
         )]
@@ -2171,7 +2172,7 @@ namespace EurekaOrthosCeScripts
             DrawFireIceTraps(accessory);
         }
         [ScriptMethod(
-            name: "火冰陷阱 - 更新陷阱位置（夺心魔）",
+            name: "火冰陷阱 - 更新陷阱位置(夺心魔)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41254"]
         )]
@@ -2190,7 +2191,7 @@ namespace EurekaOrthosCeScripts
             DrawFireIceTraps(accessory);
         }
         [ScriptMethod(
-            name: "火冰陷阱 - 机制结束清理（夺心魔）",
+            name: "火冰陷阱 - 机制结束清理(夺心魔)",
             eventType: EventTypeEnum.ActionEffect,
             eventCondition: ["ActionId:regex:^(41250|41251)$"],
             userControl: false
@@ -2220,7 +2221,7 @@ namespace EurekaOrthosCeScripts
             _playerElements.TryGetValue(accessory.Data.Me, out var playerIsFire);
             bool playerHasElement = _playerElements.ContainsKey(accessory.Data.Me);
 
-            // 3. 根据场上陷阱（小丑）的数量，动态决定警告的持续时间
+            // 3. 根据场上陷阱(小丑)的数量，动态决定警告的持续时间
             int trapWarningDurationMs = _fireIceTraps.Count > 2 ? 20000 : 10000; // 大于2只小丑为20秒，否则为10秒
             if (trapsCopy.Count > 0)
             {
@@ -2231,7 +2232,7 @@ namespace EurekaOrthosCeScripts
             // 4. 遍历所有已知的陷阱并进行绘制
             foreach (var trap in _fireIceTraps)
             {
-                // 如果玩家没有元素debuff，所有陷阱都显示为小圈（基础提示）
+                // 如果玩家没有元素debuff，所有陷阱都显示为小圈(基础提示)
                 if (!playerHasElement)
                 {
                     var dp = accessory.Data.GetDefaultDrawProperties();
@@ -2274,7 +2275,7 @@ namespace EurekaOrthosCeScripts
         #region 跃立狮OnTheHuntAreaCenter
 
         [ScriptMethod(
-            name: "恐怖闪光（跃立狮）",
+            name: "裂魄惊芒爪(跃立狮)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41411"]
         )]
@@ -2292,7 +2293,7 @@ namespace EurekaOrthosCeScripts
             accessory.Log.Debug("绘制跃立狮的恐怖闪光AOE");
         }
         [ScriptMethod(
-            name:"Decompress(跃立狮)",
+            name: "压缩爆炸(跃立狮)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41407"]
         )]
@@ -2333,13 +2334,13 @@ namespace EurekaOrthosCeScripts
             var dp = accessory.Data.GetDefaultDrawProperties();
             dp.Name = $"CrystalDragon_AetherialRay_{target.EntityId}";
             dp.Position = OnTheHuntAreaCenter; // AOE在场地中心
-            dp.Scale = new Vector2(10, 56); // 宽度10，长度28*2=56 (因为是中心出发的直线)
+            dp.Scale = new Vector2(10, 28); // 宽度10
             dp.Rotation = finalRotation;
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 5200;
             dp.ScaleMode |= ScaleMode.ByTime;
 
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp);
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
             accessory.Log.Debug($"绘制以太射线, 目标: {target.Name}, 旋转角度: {finalRotation}");
         }
         [ScriptMethod(
@@ -2415,12 +2416,45 @@ namespace EurekaOrthosCeScripts
         #endregion
 
         #region 金钱龟
-
-
-
-
-
-
+        [ScriptMethod(
+            name: "古币爆风(金钱龟)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41522"]
+        )]
+        public void OnCostOfLivingKB(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "CostOfLivingKBDraw";
+            dp.Owner = accessory.Data.Me;
+            dp.Scale = new Vector2(1.5f, 30f);
+            dp.Rotation = 180f * MathF.PI / 180f;
+            dp.Color = new(0.3f, 1.0f, 0f, 1.5f);
+            dp.TargetPosition = @event.SourcePosition;
+            dp.DestoryAt = 7000;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Displacement, dp);
+            accessory.Log.Debug($"绘制击退: Name={dp.Name}s");
+        }
+        [ScriptMethod(
+            name: "强制移动(金钱龟)",
+            eventType: EventTypeEnum.StatusAdd,
+            eventCondition: ["ActionId:4343"]
+        )]
+        public void OnForcedMovement(Event @event, ScriptAccessory accessory)
+        {
+            if (@event.TargetId != accessory.Data.Me)
+            {
+                accessory.Log.Debug("强制移动事件不是针对玩家，忽略。");
+                return;
+            }
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "ForcedMovementDraw";
+            dp.Owner = accessory.Data.Me;
+            dp.Scale = new Vector2(1.5f, 35f);
+            dp.Color = new(0.3f, 1.0f, 0f, 1.5f);
+            dp.DestoryAt = 7000;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Displacement, dp);
+            accessory.Log.Debug($"绘制强制移动: Name={dp.Name}");
+        }
         #endregion
     }
 }
