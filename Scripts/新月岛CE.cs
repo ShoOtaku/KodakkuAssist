@@ -20,7 +20,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.0.28",
+        version: "0.1.0",
         author: "XSZYYS",
         note: "新月岛CE绘制\r\n已完成：\r\n死亡爪(地板出现小怪未绘制，其余均绘制)\r\n神秘土偶(全部画完)\r\n黑色连队(全部画完)\r\n水晶龙(全部画完)\r\n狂战士(全部画完)\r\n指令罐(全部画完)\r\n回廊恶魔(全部画完)\r\n鬼火苗(全部画完)\r\n\r\n未测试：\r\n进化加鲁拉(冲锋努力修复中)\r\n石质骑士团(转转手未写，地火未测试)\r\n夺心魔(未测试)\r\n复原狮(某一种情况的扇形+风土球没有绘制)\r\n鲨鱼(地火待修复)\r\n跃立狮(未测试)\r\n金钱龟"
     )]
@@ -1728,7 +1728,7 @@ namespace EurekaOrthosCeScripts
                 maxCasts = 59;
                 intervalMs = 800;
                 rotationIncrementRad = 12.5f * MathF.PI / 180.0f;
-                aoeRadius = 5;
+                aoeRadius = 4f;
             }
 
             // --- 2. 计算旋转方向 ---
@@ -1767,7 +1767,7 @@ namespace EurekaOrthosCeScripts
                 int appearanceTime = explosionTime - 5000;
 
                 dp.Delay = (appearanceTime > 0) ? appearanceTime : 0; // 预警圈出现时间
-                dp.DestoryAt = 5000 + 500; // 预警圈总持续时间
+                dp.DestoryAt = 5000; // 预警圈总持续时间
                 dp.ScaleMode |= ScaleMode.ByTime;
 
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
@@ -2437,7 +2437,7 @@ namespace EurekaOrthosCeScripts
         [ScriptMethod(
             name: "强制移动(金钱龟)",
             eventType: EventTypeEnum.StatusAdd,
-            eventCondition: ["StatusID:4343"]
+            eventCondition: ["StatusID:4344"]
         )]
         public void OnForcedMovement(Event @event, ScriptAccessory accessory)
         {
