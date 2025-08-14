@@ -2290,7 +2290,7 @@ namespace EurekaOrthosCeScripts
                     dp.Name = $"FireIceTrap_Small_Safe_{trap.NpcId}";
                     dp.Position = trap.Position;
                     dp.Scale = new Vector2(8);
-                    dp.Color = new Vector4(0.2f, 1.0f, 0.2f, 0.8f); 
+                    dp.Color = new Vector4(1.0f, 0.2f, 0.2f, 0.6f); 
                     dp.DestoryAt = trapWarningDurationMs;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
                 }
