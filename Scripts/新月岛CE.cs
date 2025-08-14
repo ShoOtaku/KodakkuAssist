@@ -20,7 +20,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.1.1",
+        version: "0.1.2",
         author: "XSZYYS",
         note: "新月岛CE绘制已完成"
     )]
@@ -518,6 +518,8 @@ namespace EurekaOrthosCeScripts
         )]
         public void RushingRumbleRampage_Status(Event @event, ScriptAccessory accessory)
         {
+            var boss = accessory.Data.Objects.SearchById(@event.TargetId);
+            if (boss == null || boss.DataId != 18078) return;
             // Extra == "0x350" is Cardinal, "0x351" is Intercardinal
             _lightningIsCardinal = @event["Param"] == "848";
             TryDrawMechanics(accessory);
@@ -1726,8 +1728,8 @@ namespace EurekaOrthosCeScripts
             else
             {
                 maxCasts = 59;
-                intervalMs = 750;
-                rotationIncrementRad = 12.06f * MathF.PI / 180.0f;
+                intervalMs = 720;
+                rotationIncrementRad = 12f * MathF.PI / 180.0f;
                 aoeRadius = 4f;
             }
 
@@ -2177,16 +2179,39 @@ namespace EurekaOrthosCeScripts
         )]
         public void OnTrapMove(Event @event, ScriptAccessory accessory)
         {
+            // 在访问共享列表前加锁，保证线程安全
             lock (_trapLock)
             {
-                var trapToMove = _fireIceTraps.FirstOrDefault(t => t.NpcId == @event.SourceId);
-                if (trapToMove != null)
+                // 获取“移动”技能咏唱者的位置
+                var casterPosition = @event.SourcePosition;
+
+                // 通过位置来找到要移动的陷阱。我们检查哪个陷阱的位置和咏唱者位置非常接近。
+                int trapIndex = _fireIceTraps.FindIndex(t => Vector3.Distance(t.Position, casterPosition) < 1.0f);
+
+                if (trapIndex != -1)
                 {
-                    var newPosition = @event.TargetPosition;
-                    accessory.Log.Debug($"陷阱从 {trapToMove.Position} 移动到 {newPosition}");
-                    trapToMove.Position = newPosition;
+                    // 获取旧陷阱的数据
+                    var oldTrap = _fireIceTraps[trapIndex];
+                    var newPosition = @event.EffectPosition; // 陷阱的新位置是技能的目标点
+                    accessory.Log.Debug($"陷阱从 {oldTrap.Position} 移动到 {newPosition} (通过位置匹配)");
+
+                    // 创建一个包含新位置的全新陷阱对象
+                    var updatedTrap = new FireIceTrapInfo
+                    {
+                        NpcId = oldTrap.NpcId,
+                        Position = newPosition, // 使用新的位置
+                        IsFire = oldTrap.IsFire
+                    };
+
+                    // 用新对象替换列表中的旧对象，这是最安全的更新方式
+                    _fireIceTraps[trapIndex] = updatedTrap;
+                }
+                else
+                {
+                    accessory.Log.Debug($"在位置 {casterPosition} 附近未能匹配到任何已知陷阱。");
                 }
             }
+            // 修改完成后再重绘
             DrawFireIceTraps(accessory);
         }
         [ScriptMethod(
@@ -2222,14 +2247,15 @@ namespace EurekaOrthosCeScripts
 
             // 3. 根据场上陷阱的数量，动态决定警告的持续时间
             int trapWarningDurationMs = _fireIceTraps.Count > 2 ? 20000 : 10000; // 大于2只小丑为20秒，否则为10秒
-            if (trapsCopy.Count > 0)
+            if (trapsCopy.Any())
             {
                 accessory.Log.Debug($"当前陷阱数量: {trapsCopy.Count}, 警告持续时间设置为: {trapWarningDurationMs}ms");
             }
 
 
+
             // 4. 遍历所有已知的陷阱并进行绘制
-            foreach (var trap in _fireIceTraps)
+            foreach (var trap in trapsCopy)
             {
                 // 如果玩家没有元素debuff，所有陷阱都显示为小圈(基础提示)
                 if (!playerHasElement)
