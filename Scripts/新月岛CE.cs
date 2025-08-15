@@ -22,7 +22,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.1.7",
+        version: "0.1.8",
         author: "XSZYYS",
         note: "新月岛CE绘制已完成"
     )]
@@ -1553,25 +1553,38 @@ namespace EurekaOrthosCeScripts
          )]
         public void SpinningSiege(Event @event, ScriptAccessory accessory)
         {
+            // 获取施法者对象
+            var caster = accessory.Data.Objects.SearchById(@event.SourceId);
+            if (caster == null)
+            {
+                accessory.Log.Error($"旋转攻城：找不到施法者 {@event.SourceId}");
+                return;
+            }
 
+            // 记录施法者的初始朝向
+            float initialRotation = caster.Rotation;
+
+            // 1. 根据技能ID判断旋转方向
+            // 41822 = 顺时针(CW), 41823 = 逆时针(CCW)
             int rotationDirection = (@event.ActionId == 41822) ? 1 : -1;
 
+            // 2. 定义绘图参数
             const float crossLength = 120f;
             const float crossWidth = 6f;
-            const int Duration = 8000;
-            const int rotationInterval = 1700;  
-            const float rotationAngleDegrees = 9f;
+            const int rotationInterval = 1700;  // 旋转间隔 1.7s
+            const float rotationAngleDegrees = 9f; // 每次旋转 9 度
             const float rotationAngleRad = rotationAngleDegrees * MathF.PI / 180.0f;
             const int numberOfSteps = 6;
 
-
+            // 3. 循环创建一系列延迟且旋转的十字AOE
             for (int i = 0; i < numberOfSteps; i++)
             {
                 int delay = 3000 + i * rotationInterval;
-                int lifeSpan = Duration - 3000;
+                int lifeSpan = 5000;
                 if (lifeSpan <= 0) continue;
 
-                float currentRotation = i * rotationDirection * rotationAngleRad;
+                // 基于初始朝向计算当前步骤的旋转角度
+                float currentRotation = initialRotation + (i * rotationDirection * rotationAngleRad);
 
                 // 绘制十字的第一条直线
                 var dp1 = accessory.Data.GetDefaultDrawProperties();
@@ -1587,7 +1600,7 @@ namespace EurekaOrthosCeScripts
                 // 绘制十字的第二条(垂直)直线
                 var dp2 = accessory.Data.GetDefaultDrawProperties();
                 dp2.Name = $"SpinningSiege_{@event.ActionId}_Cross2_{i}";
-                dp1.Position = @event.SourcePosition;
+                dp2.Position = @event.SourcePosition;
                 dp2.Scale = new Vector2(crossWidth, crossLength);
                 dp2.Rotation = currentRotation + (MathF.PI / 2);
                 dp2.Color = accessory.Data.DefaultDangerColor;
