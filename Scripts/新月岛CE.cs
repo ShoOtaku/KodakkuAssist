@@ -20,9 +20,9 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.1.3",
+        version: "0.1.4",
         author: "XSZYYS",
-        note: "新月岛CE绘制已完成，更新了夺心魔冰火机制"
+        note: "新月岛CE绘制已完成，更新了夺心魔冰火机制，骑士团转转手机制"
     )]
     public class 新月岛CE
     {
@@ -381,11 +381,11 @@ namespace EurekaOrthosCeScripts
             dp2.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
         }
-/*
+
         [ScriptMethod(
             name: "指令 - 圆形 (目标) (指令罐)",
             eventType: EventTypeEnum.Tether,
-            eventCondition: ["Id:0131"]
+            eventCondition: ["Id:012E"]
         )]
         public void RockSlideStoneSwell_CircleSource(Event @event, ScriptAccessory accessory)
         {
@@ -399,7 +399,7 @@ namespace EurekaOrthosCeScripts
             dp.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
-*/
+
 
         [ScriptMethod(
             name: "指令-绘图移除",
@@ -1509,6 +1509,58 @@ namespace EurekaOrthosCeScripts
                 currentPos += direction * stepDistance;
             }
         }
+        [ScriptMethod(
+             name: "回旋炮 (骑士团)",
+             eventType: EventTypeEnum.StartCasting,
+             eventCondition: ["ActionId:regex:^(41823|41822)$"]
+         )]
+        public void SpinningSiege(Event @event, ScriptAccessory accessory)
+        {
+
+            int rotationDirection = (@event.ActionId == 41822) ? -1 : 1;
+
+            const float crossLength = 120f;
+            const float crossWidth = 6f;
+            const int Duration = 8000;
+            const int rotationInterval = 1700;  
+            const float rotationAngleDegrees = 9f;
+            const float rotationAngleRad = rotationAngleDegrees * MathF.PI / 180.0f;
+            const int numberOfSteps = 6;
+
+
+            for (int i = 0; i < numberOfSteps; i++)
+            {
+                int delay = 3000 + i * rotationInterval;
+                int lifeSpan = Duration - 3000;
+                if (lifeSpan <= 0) continue;
+
+                float currentRotation = i * rotationDirection * rotationAngleRad;
+
+                // 绘制十字的第一条直线
+                var dp1 = accessory.Data.GetDefaultDrawProperties();
+                dp1.Name = $"SpinningSiege_{@event.ActionId}_Cross1_{i}";
+                dp1.Position = @event.SourcePosition;
+                dp1.Scale = new Vector2(crossWidth, crossLength);
+                dp1.Rotation = currentRotation;
+                dp1.Color = accessory.Data.DefaultDangerColor;
+                dp1.Delay = delay;
+                dp1.DestoryAt = lifeSpan;
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp1);
+
+                // 绘制十字的第二条(垂直)直线
+                var dp2 = accessory.Data.GetDefaultDrawProperties();
+                dp2.Name = $"SpinningSiege_{@event.ActionId}_Cross2_{i}";
+                dp1.Position = @event.SourcePosition;
+                dp2.Scale = new Vector2(crossWidth, crossLength);
+                dp2.Rotation = currentRotation + (MathF.PI / 2);
+                dp2.Color = accessory.Data.DefaultDangerColor;
+                dp2.Delay = delay;
+                dp2.DestoryAt = lifeSpan;
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
+            }
+        }
+
+
         #endregion
         #region 鬼火苗
         [ScriptMethod(
@@ -1728,7 +1780,7 @@ namespace EurekaOrthosCeScripts
             else
             {
                 maxCasts = 59;
-                intervalMs = 720;
+                intervalMs = 700;
                 rotationIncrementRad = 12f * MathF.PI / 180.0f;
                 aoeRadius = 4f;
             }
