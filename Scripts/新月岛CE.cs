@@ -13,6 +13,8 @@ using KodakkuAssist.Module.GameEvent;
 using KodakkuAssist.Script;
 using Newtonsoft.Json;
 using System.Runtime.Intrinsics.Arm;
+using KodakkuAssist.Module.GameEvent.Struct;
+using KodakkuAssist.Module.GameOperate;
 
 namespace EurekaOrthosCeScripts
 {
@@ -20,7 +22,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.1.6",
+        version: "0.1.7",
         author: "XSZYYS",
         note: "新月岛CE绘制已完成"
     )]
@@ -1103,14 +1105,12 @@ namespace EurekaOrthosCeScripts
         {
             // 获取释放机制的单位
             var source = accessory.Data.Objects.SearchById(@event.SourceId);
-
-            // 修改：检查释放单位是否在场地21m范围内
+            // 检查释放单位是否在场地21m范围内
             if (source == null || Vector3.Distance(source.Position, DeathclawArenaCenter) > 21f)
             {
                 accessory.Log.Debug("释放单位不在死亡爪场地范围内，忽略利爪机制。");
-                return; // 如果单位不存在或不在范围内，则不执行后续绘图逻辑
+                return;
             }
-
             var dp = accessory.Data.GetDefaultDrawProperties();
             dp.Name = $"死亡爪_LethalClaw_{@event.SourceId}";
             dp.Owner = @event.SourceId;
@@ -1123,13 +1123,22 @@ namespace EurekaOrthosCeScripts
         }
         /*
         [ScriptMethod(
+            name: "Debug",
+            eventType: EventTypeEnum.ObjectEffect
+        )]
+        public void Debug(Event @event, ScriptAccessory accessory)
+        {
+            accessory.Log.Debug($"Debug Event: {@event["Id1"]},{@event["Id2"]}, SourceId: {@event.SourceId}");
+        }
+
+        [ScriptMethod(
             name: "SkulkingOrders (死亡爪)(未完成)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId: regex: ^(41326|41329)$"]
         )]
         public void SkulkingOrders(Event @event, ScriptAccessory accessory)
         {
-            
+
         }
         */
 
@@ -1545,7 +1554,7 @@ namespace EurekaOrthosCeScripts
         public void SpinningSiege(Event @event, ScriptAccessory accessory)
         {
 
-            int rotationDirection = (@event.ActionId == 41822) ? -1 : 1;
+            int rotationDirection = (@event.ActionId == 41822) ? 1 : -1;
 
             const float crossLength = 120f;
             const float crossWidth = 6f;
