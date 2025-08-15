@@ -20,9 +20,9 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.1.4",
+        version: "0.1.5",
         author: "XSZYYS",
-        note: "新月岛CE绘制已完成，更新了夺心魔冰火机制，骑士团转转手机制"
+        note: "新月岛CE绘制已完成"
     )]
     public class 新月岛CE
     {
@@ -324,7 +324,7 @@ namespace EurekaOrthosCeScripts
             dp.Position = pos;
             dp.Scale = new Vector2(6);
             dp.Color = accessory.Data.DefaultDangerColor;
-            dp.Delay = 3200;
+            dp.Delay = 4200;
             dp.DestoryAt = 5000;
             dp.ScaleMode |= ScaleMode.ByTime;
 
@@ -1093,6 +1093,23 @@ namespace EurekaOrthosCeScripts
                 accessory.Log.Debug($"  绘制扇形: {dp.Name}, Rotation: {dp.Rotation}, Delay: {dp.Delay}ms");
             }
         }
+        [ScriptMethod(
+            name: "利爪(死亡爪)",
+            eventType: EventTypeEnum.ObjectEffect,
+            eventCondition: ["Id1:16", "Id2:32"]
+        )]
+        public void LethalClaw(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = $"死亡爪_LethalClaw_{@event.SourceId}";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(50);
+            dp.Radian = 90 * MathF.PI / 180.0f;
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 10000;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+            accessory.Log.Debug($"绘制死亡爪 利爪 AOE: {@event.SourceId}");
+        }
         /*
         [ScriptMethod(
             name: "SkulkingOrders (死亡爪)(未完成)",
@@ -1780,7 +1797,7 @@ namespace EurekaOrthosCeScripts
             else
             {
                 maxCasts = 59;
-                intervalMs = 700;
+                intervalMs = 690;
                 rotationIncrementRad = 12f * MathF.PI / 180.0f;
                 aoeRadius = 4f;
             }
