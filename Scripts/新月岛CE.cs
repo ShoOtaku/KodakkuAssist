@@ -20,9 +20,9 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.1.2",
+        version: "0.1.3",
         author: "XSZYYS",
-        note: "新月岛CE绘制已完成"
+        note: "新月岛CE绘制已完成，更新了夺心魔冰火机制"
     )]
     public class 新月岛CE
     {
@@ -2115,13 +2115,19 @@ namespace EurekaOrthosCeScripts
             lock (_trapLock)
             {
                 _playerElements[@event.TargetId] = isFire;
+                // 【新增日志】确认玩家状态被成功记录
+                if (@event.TargetId == accessory.Data.Me)
+                {
+                    accessory.Log.Debug($"[状态记录] 成功记录你的元素状态为: {(isFire ? "火" : "冰")}");
+                }
             }
+
             if (@event.TargetId == accessory.Data.Me)
             {
-                accessory.Log.Debug($"你获得了 {(isFire ? "火" : "冰")} 元素，重新绘制陷阱提示。");
                 DrawFireIceTraps(accessory);
             }
         }
+
         [ScriptMethod(
             name: "火冰陷阱 - 移除玩家元素(夺心魔)",
             eventType: EventTypeEnum.StatusRemove,
@@ -2154,7 +2160,7 @@ namespace EurekaOrthosCeScripts
         {
             var npc = accessory.Data.Objects.SearchById(@event.TargetId);
             if (npc == null || npc.DataId != OID_JestingJackanapes) return;
-
+            accessory.Log.Debug($"陷阱NPC {@event.TargetId} 获得元素状态, 收到的Param值为: '{@event["Param"]}'");
             // 根据status.Extra(Param)判断元素，0x344是火，否则是冰
             var isFire = @event["Param"] == "836";
 
@@ -2230,10 +2236,14 @@ namespace EurekaOrthosCeScripts
             }
             accessory.Method.RemoveDraw("FireIceTrap_.*");
         }
-        private void DrawFireIceTraps(ScriptAccessory accessory)
+
+        private async void DrawFireIceTraps(ScriptAccessory accessory)
         {
-            // 1. 先清除所有旧的陷阱绘图，防止重叠
+            // 【关键修正】在重绘前，先移除所有旧的同名绘图
             accessory.Method.RemoveDraw("FireIceTrap_.*");
+
+            // 【关键修正】加入一个短暂的延迟，确保移除指令被处理完毕
+            await Task.Delay(50); // 延迟50毫秒
             List<FireIceTrapInfo> trapsCopy;
             Dictionary<ulong, bool> playerElementsCopy;
             lock (_trapLock)
@@ -2244,7 +2254,15 @@ namespace EurekaOrthosCeScripts
             // 2. 获取当前玩家的元素状态
             _playerElements.TryGetValue(accessory.Data.Me, out var playerIsFire);
             bool playerHasElement = _playerElements.ContainsKey(accessory.Data.Me);
-
+            // 【新增日志】在绘图前，先确认脚本认为你是什么状态
+            if (playerHasElement)
+            {
+                accessory.Log.Debug($"[绘图前检查] 脚本认为你的状态是: {(playerIsFire ? "火" : "冰")}");
+            }
+            else
+            {
+                accessory.Log.Debug("[绘图前检查] 脚本认为你没有元素状态。");
+            }
             // 3. 根据场上陷阱的数量，动态决定警告的持续时间
             int trapWarningDurationMs = _fireIceTraps.Count > 2 ? 20000 : 10000; // 大于2只小丑为20秒，否则为10秒
             if (trapsCopy.Any())
@@ -2273,7 +2291,7 @@ namespace EurekaOrthosCeScripts
                 // 如果玩家有元素debuff，则进行特殊绘制
                 // 判断当前陷阱的元素是否与玩家相同
                 bool isSameElement = (playerIsFire == trap.IsFire);
-
+                accessory.Log.Debug($"[循环判断] 陷阱 {trap.NpcId}: 玩家是火({playerIsFire}), 陷阱是火({trap.IsFire}). --> 元素是否相同: {isSameElement}");
                 if (isSameElement)
                 {
                     var dp = accessory.Data.GetDefaultDrawProperties();
@@ -2296,6 +2314,39 @@ namespace EurekaOrthosCeScripts
                 }
             }
         }
+
+/*
+        /// <summary>
+        /// 【调试模式】核心绘制函数：无论如何都在陷阱位置绘制一个黄色圆圈
+        /// </summary>
+        private void DrawFireIceTraps(ScriptAccessory accessory)
+        {
+            // 1. 清除所有旧的绘图
+            accessory.Method.RemoveDraw("FireIceTrap_.*");
+
+            // 2. 在锁的保护下，创建陷阱列表的本地副本
+            List<FireIceTrapInfo> trapsCopy;
+            lock (_trapLock)
+            {
+                trapsCopy = new List<FireIceTrapInfo>(_fireIceTraps);
+            }
+
+            accessory.Log.Debug($"[调试模式] 准备为 {trapsCopy.Count} 个陷阱绘制测试圆圈。");
+
+            // 3. 遍历副本，为每个陷阱绘制一个醒目的黄色圆圈
+            foreach (var trap in trapsCopy)
+            {
+                accessory.Log.Debug($"[调试模式] 正在为陷阱 {trap.NpcId} 在位置 {trap.Position} 绘制测试圆圈。");
+                var dp = accessory.Data.GetDefaultDrawProperties();
+                dp.Name = $"FireIceTrap_Test_Circle_{trap.NpcId}";
+                dp.Position = trap.Position;
+                dp.Scale = new Vector2(10); // 一个容易看到的尺寸
+                dp.Color = new Vector4(1.0f, 1.0f, 0.0f, 1.0f); // 亮黄色
+                dp.DestoryAt = 15000; // 显示15秒
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+            }
+        }
+        */
         #endregion
         #region 跃立狮OnTheHuntAreaCenter
 
