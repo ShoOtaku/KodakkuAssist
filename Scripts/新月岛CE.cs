@@ -1566,7 +1566,7 @@ namespace EurekaOrthosCeScripts
 
             // 1. 根据技能ID判断旋转方向
             // 41822 = 顺时针(CW), 41823 = 逆时针(CCW)
-            int rotationDirection = (@event.ActionId == 41822) ? 1 : -1;
+            int rotationDirection = (@event.ActionId == 41822) ? -1 : 1;
 
             // 2. 定义绘图参数
             const float crossLength = 120f;
