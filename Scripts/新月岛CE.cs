@@ -20,7 +20,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.1.5",
+        version: "0.1.6",
         author: "XSZYYS",
         note: "新月岛CE绘制已完成"
     )]
@@ -47,7 +47,8 @@ namespace EurekaOrthosCeScripts
         private bool _isRampageSequenceRunning; // 连续冲锋序列是否正在进行
         private int _rampageChargeIndex; // 连续冲锋的当前次数索引
         private Vector3 _rampageNextChargeStartPos; // 下一次连续冲锋的起始位置
-
+        // ==================== 死亡爪 ====================
+        private static readonly Vector3 DeathclawArenaCenter = new(681f, 74f, 534f);
         // ==================== 城塞守卫  ====================
         private readonly List<IGameObject> _spheres = new(12);       // 存储所有未分类能量球的列表
         private readonly List<IGameObject> _spheresStone = new(6);   // 专门存储“石”属性能量球的列表
@@ -389,10 +390,10 @@ namespace EurekaOrthosCeScripts
         )]
         public void RockSlideStoneSwell_CircleSource(Event @event, ScriptAccessory accessory)
         {
-            accessory.Log.Debug($"指令 (Tether 0131) 触发: 绘制圆形AOE, 目标: {@event.TargetId}");
+            accessory.Log.Debug($"指令 (Tether 012E) 触发: 绘制圆形AOE, 目标: {@event.SourceId}");
             var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = $"ExtremePrejudice_Circle_{@event.TargetId}";
-            dp.Owner = @event.TargetId;
+            dp.Name = $"ExtremePrejudice_Circle_{@event.SourceId}";
+            dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(16);
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 6100;
@@ -1100,6 +1101,16 @@ namespace EurekaOrthosCeScripts
         )]
         public void LethalClaw(Event @event, ScriptAccessory accessory)
         {
+            // 获取释放机制的单位
+            var source = accessory.Data.Objects.SearchById(@event.SourceId);
+
+            // 修改：检查释放单位是否在场地21m范围内
+            if (source == null || Vector3.Distance(source.Position, DeathclawArenaCenter) > 21f)
+            {
+                accessory.Log.Debug("释放单位不在死亡爪场地范围内，忽略利爪机制。");
+                return; // 如果单位不存在或不在范围内，则不执行后续绘图逻辑
+            }
+
             var dp = accessory.Data.GetDefaultDrawProperties();
             dp.Name = $"死亡爪_LethalClaw_{@event.SourceId}";
             dp.Owner = @event.SourceId;
