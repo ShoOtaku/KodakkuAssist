@@ -22,7 +22,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.1.8",
+        version: "0.1.9",
         author: "XSZYYS",
         note: "新月岛CE绘制已完成"
     )]
@@ -388,11 +388,11 @@ namespace EurekaOrthosCeScripts
         [ScriptMethod(
             name: "指令 - 圆形 (目标) (指令罐)",
             eventType: EventTypeEnum.Tether,
-            eventCondition: ["Id:012E"]
+            eventCondition: ["Id:0132"]
         )]
         public void RockSlideStoneSwell_CircleSource(Event @event, ScriptAccessory accessory)
         {
-            accessory.Log.Debug($"指令 (Tether 012E) 触发: 绘制圆形AOE, 目标: {@event.SourceId}");
+            accessory.Log.Debug($"指令 (Tether 0132) 触发: 绘制圆形AOE, 目标: {@event.SourceId}");
             var dp = accessory.Data.GetDefaultDrawProperties();
             dp.Name = $"ExtremePrejudice_Circle_{@event.SourceId}";
             dp.Owner = @event.SourceId;
