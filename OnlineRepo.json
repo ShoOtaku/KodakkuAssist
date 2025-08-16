@@ -31,6 +31,17 @@
     "UpdateInfo": ""
   },
   {
+    "Name": "力之塔",
+    "Guid": "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
+    "Version": "0.0.1",
+    "Author": "XSZYYS",
+    "TerritoryIds": [
+      1252
+    ],
+    "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/main/Scripts/力之塔.cs",
+    "UpdateInfo": ""
+  },
+  {
     "Name": "亚历山大零式机神城 律动之章4",
     "Guid": "2113EAA7-0C90-4802-AA48-C9CFF30BFBEA",
     "Version": "0.0.1",
