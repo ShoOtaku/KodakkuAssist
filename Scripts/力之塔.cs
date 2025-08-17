@@ -32,9 +32,9 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.3",
+    version: "0.0.4",
     author: "XSZYYS",
-    note: "测试版，请选择自己小队的分组\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名（分摊自己看半场击退），第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球机制，火球预站位"
+    note: "测试版，请选择自己小队的分组\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球机制，火球"
     )]
 
     public class 力之塔
@@ -84,6 +84,9 @@ namespace KodakkuAssistXSZYYS
         private static readonly Vector3 InitialPosNumberGroup = new(-809.09f, -876.00f, 365.25f);
         private static readonly Vector3 SnowballArenaCenter = new(-800.00f, -876.00f, 360.00f);
         private ulong _tetherSourceId = 0;
+        // --- 火球/地热机制 ---
+        private readonly List<Vector3> _fireballPositions = new();
+
         public void Init(ScriptAccessory accessory)
         {
             accessory.Log.Debug("力之塔脚本已加载。");
@@ -104,6 +107,8 @@ namespace KodakkuAssistXSZYYS
             _letterGroupNextPos = null;
             _numberGroupNextPos = null;
             _tetherSourceId = 0;
+            // 火球/地热
+            _fireballPositions.Clear();
         }
         #region 老一
         [ScriptMethod(
@@ -148,7 +153,15 @@ namespace KodakkuAssistXSZYYS
         )]
         public void AethericBarrierKnockback(Event @event, ScriptAccessory accessory)
         {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "Aetheric_Barrier_Knockback";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(30, 5);
+            dp.Color = accessory.Data.DefaultSafeColor;
+            dp.DestoryAt = 10500;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
             accessory.Method.TextInfo("击退", 5000);
+
         }
 
         [ScriptMethod(
@@ -219,9 +232,35 @@ namespace KodakkuAssistXSZYYS
             dp.Radian = 90f * MathF.PI / 180f;
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 8800;
-            dp.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
         }
+        [ScriptMethod(
+            name: "左/右转向",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex:^(41729|41730)$"]
+        )]
+        public void OnTurnLeftRightDraw(Event @event, ScriptAccessory accessory)
+        {
+            var dp1 = accessory.Data.GetDefaultDrawProperties();
+            var dp2 = accessory.Data.GetDefaultDrawProperties();
+
+            dp1.Name = "TurnLeftRight1_Danger_Zone";
+            dp1.Position = @event.SourcePosition;
+            dp1.Scale = new Vector2(66, 3);
+            dp1.Color = accessory.Data.DefaultDangerColor;
+            dp1.DestoryAt = 8800;
+            dp2.Name = "TurnLeftRight2_Danger_Zone";
+            dp2.Position = @event.SourcePosition;
+            dp2.Scale = new Vector2(66, 3);
+            dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.DestoryAt = 8800;
+            dp2.Rotation = MathF.PI / 2f;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp1);
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
+        }
+
+
+
 
         [ScriptMethod(
             name: "陨石1(指路)",
@@ -800,10 +839,23 @@ namespace KodakkuAssistXSZYYS
         )]
         public void FireballPrePosition(Event @event, ScriptAccessory accessory)
         {
-            var fireball = accessory.Data.Objects.SearchById(@event.SourceId);
-            var player = accessory.Data.MyObject;
-            if (fireball == null || player == null) return;
+            _fireballPositions.Clear(); // 每次机制开始时清空旧位置
+            var fireballs = accessory.Data.Objects.Where(o => o.DataId == 2014637).ToList();
+            if (!fireballs.Any()) return;
 
+            // 为每个火球计算DPS的安全点并记录
+            foreach (var fireball in fireballs)
+            {
+                _fireballPositions.Add(fireball.Position);
+                DrawPrePositionGuides(accessory, fireball);
+            }
+
+
+        }
+        private void DrawPrePositionGuides(ScriptAccessory accessory, IGameObject fireball)
+        {
+            var player = accessory.Data.MyObject;
+            if (player == null) return;
             int myIndex = accessory.Data.PartyList.IndexOf(player.EntityId);
             if (myIndex == -1) return;
 
@@ -812,44 +864,41 @@ namespace KodakkuAssistXSZYYS
 
             if (IsDps(myIndex))
             {
-
                 var safePos = fireballPos + directionToFireball * 6;
                 var dp = accessory.Data.GetDefaultDrawProperties();
                 dp.Name = $"Fireball_DPS_SafeZone_{fireball.EntityId}";
                 dp.Position = safePos;
-                dp.Scale = new Vector2(2);
-                dp.Color = new Vector4(0, 1, 0, 0.8f);
-                dp.DestoryAt = 18000;
+                dp.Scale = new Vector2(1);
+                dp.Color = new Vector4(0, 1, 0, 0.6f); // Green
+                dp.DestoryAt = 35000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp);
             }
             else if (IsHealer(myIndex))
             {
-
                 var perpendicularDir1 = new Vector3(-directionToFireball.Z, 0, directionToFireball.X);
                 var perpendicularDir2 = new Vector3(directionToFireball.Z, 0, -directionToFireball.X);
-
                 var safePos1 = fireballPos + perpendicularDir1 * 6;
                 var safePos2 = fireballPos + perpendicularDir2 * 6;
 
                 var dp1 = accessory.Data.GetDefaultDrawProperties();
                 dp1.Name = $"Fireball_Healer_SafeZone1_{fireball.EntityId}";
                 dp1.Position = safePos1;
-                dp1.Scale = new Vector2(2);
-                dp1.Color = new Vector4(0, 1, 0, 0.8f); 
-                dp1.DestoryAt = 18000;
+                dp1.Scale = new Vector2(1);
+                dp1.Color = new Vector4(0, 1, 0, 0.6f); // Green
+                dp1.DestoryAt = 35000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp1);
-
+                
                 var dp2 = accessory.Data.GetDefaultDrawProperties();
                 dp2.Name = $"Fireball_Healer_SafeZone2_{fireball.EntityId}";
                 dp2.Position = safePos2;
-                dp2.Scale = new Vector2(2);
-                dp2.Color = new Vector4(0, 1, 0, 0.8f); 
-                dp2.DestoryAt = 18000;
+                dp2.Scale = new Vector2(1);
+                dp2.Color = new Vector4(0, 1, 0, 0.6f); // Green
+                dp2.DestoryAt = 35000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp2);
+                
             }
             else if (IsTank(myIndex))
             {
-
                 var directionToCenter = Vector3.Normalize(SnowballArenaCenter - fireballPos);
                 var rotation = MathF.Atan2(directionToCenter.X, directionToCenter.Z);
 
@@ -857,13 +906,64 @@ namespace KodakkuAssistXSZYYS
                 dp.Name = $"Fireball_Tank_SafeZone_{fireball.EntityId}";
                 dp.Owner = fireball.EntityId;
                 dp.Rotation = rotation;
-                dp.Scale = new Vector2(4);
+                dp.Scale = new Vector2(5);
                 dp.Radian = 15 * MathF.PI / 180.0f;
-                dp.Color = new Vector4(0, 1, 0, 0.8f); 
-                dp.DestoryAt = 18000;
+                dp.Color = new Vector4(0, 1, 0, 0.6f); // Green
+                dp.DestoryAt = 35000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Fan, dp);
             }
         }
+        [ScriptMethod(
+            name: "地热破裂 (指路)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:42441"]
+        )]
+        public void GeothermalRupture(Event @event, ScriptAccessory accessory)
+        {
+            if (_fireballPositions.Count == 0)
+            {
+                accessory.Log.Error("地热破裂: 未能获取到火球位置信息。");
+                return;
+            }
+
+            int pathIndex = 0;
+
+            // 为每个记录的DPS位置绘制路径
+            foreach (var fireballPos in _fireballPositions)
+            {
+                var directionToFireball = Vector3.Normalize(fireballPos - SnowballArenaCenter);
+                var startPos = fireballPos + directionToFireball * 6;
+                // 计算路径点
+                var point1 = RotatePoint(startPos, fireballPos, MathF.PI / 2); // 顺时针90度
+                var point2 = RotatePoint(startPos, fireballPos, MathF.PI);   // 顺时针180度
+
+                // 绘制从起点到90度点的路径
+                var dp1 = accessory.Data.GetDefaultDrawProperties();
+                dp1.Name = $"GeothermalRupture_Path1_{pathIndex}";
+                dp1.Position = startPos;
+                dp1.TargetPosition = point1;
+                dp1.Scale = new Vector2(1.5f);
+                dp1.ScaleMode |= ScaleMode.YByDistance;
+                dp1.Color = accessory.Data.DefaultSafeColor;
+                dp1.DestoryAt = 8000;
+                accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp1);
+
+                // 绘制从90度点到180度点的路径
+                var dp2 = accessory.Data.GetDefaultDrawProperties();
+                dp2.Name = $"GeothermalRupture_Path2_{pathIndex}";
+                dp2.Position = point1;
+                dp2.TargetPosition = point2;
+                dp2.Scale = new Vector2(1.5f);
+                dp2.ScaleMode |= ScaleMode.YByDistance;
+                dp2.Color = accessory.Data.DefaultSafeColor;
+                dp2.DestoryAt = 8000;
+                accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp2);
+
+                pathIndex++;
+            }
+        }
+
+
 
 
 
@@ -896,7 +996,24 @@ namespace KodakkuAssistXSZYYS
         {
             return partyIndex is >= 4 and <= 7;
         }
+        private Vector3 RotatePoint(Vector3 point, Vector3 center, float angleRad)
+        {
+            float s = MathF.Sin(angleRad);
+            float c = MathF.Cos(angleRad);
 
+            // Translate point back to origin
+            point.X -= center.X;
+            point.Z -= center.Z;
+
+            // Rotate point
+            float xnew = point.X * c - point.Z * s;
+            float znew = point.X * s + point.Z * c;
+
+            // Translate point back
+            point.X = xnew + center.X;
+            point.Z = znew + center.Z;
+            return point;
+        }
         #endregion
     }
 }
