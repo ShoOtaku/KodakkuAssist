@@ -11,6 +11,7 @@ using KodakkuAssist.Data;
 using KodakkuAssist.Module.Draw;
 using KodakkuAssist.Module.GameEvent;
 using KodakkuAssist.Script;
+using KodakkuAssist.Extensions;
 using Newtonsoft.Json;
 using System.Runtime.Intrinsics.Arm;
 using KodakkuAssist.Module.GameEvent.Struct;
@@ -31,9 +32,9 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.1",
+    version: "0.0.2",
     author: "XSZYYS",
-    note: "测试版，请选择自己小队的分组\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形"
+    note: "测试版，请选择自己小队的分组\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名（分摊自己看半场击退），第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形"
     )]
 
     public class 力之塔
@@ -57,8 +58,14 @@ namespace KodakkuAssistXSZYYS
         private bool _hasCometeorStatus = false;
         private ulong _cometeorTargetId = 0;
         private const uint PortentousCometeorDataId = 2014582;
-
-
+        private const float ArenaCenterZ = 379f; // 定义老一场地中心Z轴坐标
+        private bool? _isCasterInUpperHalf = null;
+        private static readonly Vector3 Pos_A = new(704.49f, -481.01f, 365.38f);
+        private static readonly Vector3 Pos_B = new(699.98f, -481.01f, 355.49f);
+        private static readonly Vector3 Pos_C = new(695.49f, -481.01f, 365.38f);
+        private static readonly Vector3 Pos_One = new(695.49f, -481.01f, 392.60f);
+        private static readonly Vector3 Pos_Two = new(699.98f, -481.01f, 402.49f);
+        private static readonly Vector3 Pos_Three = new(704.49f, -481.01f, 392.60f);
 
         public void Init(ScriptAccessory accessory)
         {
@@ -68,6 +75,7 @@ namespace KodakkuAssistXSZYYS
             // 初始化陨石机制状态
             _hasCometeorStatus = false;
             _cometeorTargetId = 0;
+            _isCasterInUpperHalf = null;
         }
         #region 老一
         [ScriptMethod(
@@ -153,13 +161,13 @@ namespace KodakkuAssistXSZYYS
             dp.Name = $"Group_Position_Guide_{MyTeam}";
             dp.Owner = accessory.Data.Me;
             dp.TargetPosition = targetPosition;
-            dp.Scale = new Vector2(1.5f); // 箭头样式(宽度1.5)
-            dp.ScaleMode |= ScaleMode.YByDistance; // 箭头长度根据距离自动调整
+            dp.Scale = new Vector2(1.5f);
+            dp.ScaleMode |= ScaleMode.YByDistance;
             dp.Color = accessory.Data.DefaultSafeColor;
-            dp.DestoryAt = 10200;
-            dp2.Color = accessory.Data.DefaultSafeColor;
+            dp.DestoryAt = 15000;
+            dp2.Color = new Vector4(0, 1, 0, 0.6f); // 绿色
             dp2.Scale = new Vector2(4);
-            dp2.DestoryAt = 10200;
+            dp2.DestoryAt = 15000;
             dp2.Position = targetPosition;
             accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp);
             accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp2 );
@@ -290,6 +298,179 @@ namespace KodakkuAssistXSZYYS
                 accessory.Log.Debug($"为队伍 {MyTeam} 绘制召唤集合点，指向 {targetPosition}");
             }
         }
+        //position.Z = 379 为分割上下半场
+        [ScriptMethod(
+            name: "浮空塔指路 - 记录半场",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex:^(41713|41711)$"],
+            userControl: false
+        )]
+        public void HalfArenaRecord(Event @event, ScriptAccessory accessory)
+        {
+            var caster = accessory.Data.Objects.SearchById(@event.SourceId);
+            if (caster == null) return;
+
+            _isCasterInUpperHalf = caster.Position.Z > ArenaCenterZ;
+
+            if (Enable_Developer_Mode)
+            {
+                accessory.Log.Debug($"半场记录: 施法者位于 {(_isCasterInUpperHalf.Value ? "上半场" : "下半场")}");
+            }
+        }
+        [ScriptMethod(
+            name: "字母队浮空塔(指路)",
+            eventType: EventTypeEnum.ActionEffect,
+            eventCondition: ["ActionId:41707"]
+        )]
+        public void AbcTeamHalfArenaGuide(Event @event, ScriptAccessory accessory)
+        {
+            // 检查玩家分组是否为A, B, C
+            if (MyTeam != TeamSelection.A && MyTeam != TeamSelection.B && MyTeam != TeamSelection.C)
+                return;
+
+            // 检查是否已记录半场信息
+            if (_isCasterInUpperHalf == null)
+            {
+                if (Enable_Developer_Mode) accessory.Log.Error("字母队指路: 未能获取到之前的半场信息。");
+                return;
+            }
+
+            Vector3 targetPosition = new Vector3();
+
+            // 根据玩家分组和记录的半场位置，选择目标坐标
+            switch (MyTeam)
+            {
+                case TeamSelection.A:
+                    targetPosition = _isCasterInUpperHalf.Value ? Pos_One : Pos_A;
+                    break;
+                case TeamSelection.B:
+                    targetPosition = _isCasterInUpperHalf.Value ? Pos_Two : Pos_B;
+                    break;
+                case TeamSelection.C:
+                    targetPosition = _isCasterInUpperHalf.Value ? Pos_Three : Pos_C;
+                    break;
+            }
+
+            // 绘制指路
+            var dpGuide = accessory.Data.GetDefaultDrawProperties();
+            dpGuide.Name = $"Abc_Team_Guide_Arrow_{MyTeam}";
+            dpGuide.Owner = accessory.Data.Me;
+            dpGuide.TargetPosition = targetPosition;
+            dpGuide.Scale = new Vector2(1.5f);
+            dpGuide.ScaleMode |= ScaleMode.YByDistance;
+            dpGuide.Color = accessory.Data.DefaultSafeColor;
+            dpGuide.DestoryAt = 7000;
+            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
+
+            // 在目标点绘制绿色圆圈
+            var dpCircle = accessory.Data.GetDefaultDrawProperties();
+            dpCircle.Name = $"Abc_Team_Guide_Circle_{MyTeam}";
+            dpCircle.Position = targetPosition;
+            dpCircle.Scale = new Vector2(4);
+            dpCircle.Color = new Vector4(0, 1, 0, 0.6f); // 绿色
+            dpCircle.DestoryAt = 7000;
+            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dpCircle);
+
+            if (Enable_Developer_Mode)
+            {
+                accessory.Log.Debug($"字母队指路: 队伍 {MyTeam}, 指向 {targetPosition}");
+            }
+
+            // 重置状态，为下一次机制做准备
+            _isCasterInUpperHalf = null;
+        }
+        [ScriptMethod(
+            name: "数字队地面塔(指路)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex:^(41713|41711)$"]
+        )]
+        public void NumberTeamHalfArenaGuide(Event @event, ScriptAccessory accessory)
+        {
+            // 检查玩家分组是否为数字队
+            if (MyTeam != TeamSelection.One && MyTeam != TeamSelection.Two && MyTeam != TeamSelection.Three)
+                return;
+
+            var caster = accessory.Data.Objects.SearchById(@event.SourceId);
+            if (caster == null) return;
+
+            // 判断施法者在哪个半场
+            bool isCasterInUpperHalf = caster.Position.Z > ArenaCenterZ;
+
+            Vector3 targetPosition = new Vector3();
+
+            // 根据玩家分组和施法者半场位置，选择目标坐标
+            switch (MyTeam)
+            {
+                case TeamSelection.One:
+                    targetPosition = isCasterInUpperHalf ? Pos_One : Pos_A;
+                    break;
+                case TeamSelection.Two:
+                    targetPosition = isCasterInUpperHalf ? Pos_Two : Pos_B;
+                    break;
+                case TeamSelection.Three:
+                    targetPosition = isCasterInUpperHalf ? Pos_Three : Pos_C;
+                    break;
+            }
+
+            // 绘制指路
+            var dpGuide = accessory.Data.GetDefaultDrawProperties();
+            dpGuide.Name = $"Number_Team_Guide_Arrow_{MyTeam}";
+            dpGuide.Owner = accessory.Data.Me;
+            dpGuide.TargetPosition = targetPosition;
+            dpGuide.Scale = new Vector2(1.5f);
+            dpGuide.ScaleMode |= ScaleMode.YByDistance;
+            dpGuide.Color = accessory.Data.DefaultSafeColor;
+            dpGuide.DestoryAt = 21000;
+            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
+
+            // 在目标点绘制绿色圆圈
+            var dpCircle = accessory.Data.GetDefaultDrawProperties();
+            dpCircle.Name = $"Number_Team_Guide_Circle_{MyTeam}";
+            dpCircle.Position = targetPosition;
+            dpCircle.Scale = new Vector2(4);
+            dpCircle.Color = new Vector4(0, 1, 0, 0.6f); // 绿色
+            dpCircle.DestoryAt = 21000;
+            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dpCircle);
+
+            if (Enable_Developer_Mode)
+            {
+                accessory.Log.Debug($"数字队指路: 队伍 {MyTeam}, 施法者在 {(isCasterInUpperHalf ? "上半场" : "下半场")}, 指向 {targetPosition}");
+            }
+        }
+
+
+        [ScriptMethod(
+            name: "浮空",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41707"]
+        )]
+        public void AbcTeamSafeZone(Event @event, ScriptAccessory accessory)
+        {
+            // 检查玩家分组是否为A, B, C
+            if (MyTeam != TeamSelection.A && MyTeam != TeamSelection.B && MyTeam != TeamSelection.C)
+                return;
+
+            var caster = accessory.Data.Objects.SearchById(@event.SourceId);
+            if (caster == null) return;
+
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "Abc_Safe_Zone";
+            dp.Owner = caster.EntityId;
+            dp.Scale = new Vector2(4);
+            dp.Color = new Vector4(0, 1, 0, 0.6f);
+            dp.DestoryAt = 14000;
+
+            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp);
+
+            if (Enable_Developer_Mode)
+            {
+                accessory.Log.Debug("为字母队绘制安全区。");
+            }
+        }
+
+
+
+
 
         #endregion
 
