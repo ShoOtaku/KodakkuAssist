@@ -992,7 +992,7 @@ namespace KodakkuAssistXSZYYS
                 dp1.Scale = new Vector2(1.5f);
                 dp1.ScaleMode |= ScaleMode.YByDistance;
                 dp1.Color = accessory.Data.DefaultSafeColor;
-                dp1.DestoryAt = 8000;
+                dp1.DestoryAt = 10000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp1);
 
                 // 绘制从90度点到180度点的路径
@@ -1003,7 +1003,7 @@ namespace KodakkuAssistXSZYYS
                 dp2.Scale = new Vector2(1.5f);
                 dp2.ScaleMode |= ScaleMode.YByDistance;
                 dp2.Color = accessory.Data.DefaultSafeColor;
-                dp2.DestoryAt = 8000;
+                dp2.DestoryAt = 10000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp2);
 
                 pathIndex++;
