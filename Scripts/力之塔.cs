@@ -32,7 +32,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.4",
+    version: "0.0.5",
     author: "XSZYYS",
     note: "测试版，请选择自己小队的分组\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球机制，火球"
     )]
@@ -112,6 +112,25 @@ namespace KodakkuAssistXSZYYS
         }
         #region 老一
         [ScriptMethod(
+            name: "初始化老一",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41734"],
+            userControl: false
+        )]
+        public void OnInitializeBoss1Draw(Event @event, ScriptAccessory accessory)
+        {
+            // 初始化老一的状态
+            _hasCometeorStatus = false;
+            _cometeorTargetId = 0;
+            _isCasterInUpperHalf = null;
+            // 清除之前的绘制
+            accessory.Method.RemoveDraw(".*");
+            accessory.Log.Debug("老一初始化完成。");
+        }
+
+
+
+        [ScriptMethod(
             name: "降落",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(41812|43293|41709)$"]
@@ -167,7 +186,8 @@ namespace KodakkuAssistXSZYYS
         [ScriptMethod(
             name: "踩塔(指路)",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:41720"]
+            eventCondition: ["ActionId:41720"],
+            suppress: 1000
         )]
         public void GroupPositionGuide(Event @event, ScriptAccessory accessory)
         {
@@ -387,7 +407,8 @@ namespace KodakkuAssistXSZYYS
         [ScriptMethod(
             name: "字母队浮空塔(指路)",
             eventType: EventTypeEnum.ActionEffect,
-            eventCondition: ["ActionId:41707"]
+            eventCondition: ["ActionId:41707"],
+            suppress: 1000
         )]
         public void AbcTeamHalfArenaGuide(Event @event, ScriptAccessory accessory)
         {
@@ -449,7 +470,8 @@ namespace KodakkuAssistXSZYYS
         [ScriptMethod(
             name: "数字队地面塔(指路)",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:regex:^(41713|41711)$"]
+            eventCondition: ["ActionId:regex:^(41713|41711)$"],
+            suppress: 1000
         )]
         public void NumberTeamHalfArenaGuide(Event @event, ScriptAccessory accessory)
         {
@@ -543,6 +565,31 @@ namespace KodakkuAssistXSZYYS
 
 
         #region 老二
+        [ScriptMethod(
+            name: "初始化老二",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:42492"],
+            userControl: false
+        )]
+        public void OnInitializeBoss2Draw(Event @event, ScriptAccessory accessory)
+        {
+            // 初始化老二的状态
+            _blueCircles.Clear();
+            _redCircles.Clear();
+            _pairsProcessed = 0;
+            // 雪球狂奔
+            _snowballRushCastCount = 0;
+            _letterGroupRushCount = 0;
+            _numberGroupRushCount = 0;
+            _letterGroupNextPos = null;
+            _numberGroupNextPos = null;
+            _tetherSourceId = 0;
+            // 火球/地热
+            _fireballPositions.Clear();
+            accessory.Method.RemoveDraw(".*");
+            accessory.Log.Debug("老二初始化完成。");
+        }
+
         [ScriptMethod(
             name: "斩切",
             eventType: EventTypeEnum.StartCasting,
