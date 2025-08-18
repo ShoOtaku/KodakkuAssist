@@ -32,9 +32,9 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.7",
+    version: "0.0.8",
     author: "XSZYYS",
-    note: "测试版，请选择自己小队的分组\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动"
+    note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动"
     )]
 
     public class 力之塔
@@ -163,10 +163,10 @@ namespace KodakkuAssistXSZYYS
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp);
                     break;
                 case 43293: //降落
-                    dp.Scale = new Vector2(30, 30);
+                    dp.Scale = new Vector2(30, 15);
                     dp.Color = accessory.Data.DefaultDangerColor;
                     dp.DestoryAt = 10500;
-                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp);
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
                     break;
                 case 41709: //降落
                     dp.Scale = new Vector2(18);
@@ -542,7 +542,7 @@ namespace KodakkuAssistXSZYYS
 
 
         [ScriptMethod(
-            name: "浮空",
+            name: "浮空(指路)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41707"]
         )]
@@ -713,7 +713,7 @@ namespace KodakkuAssistXSZYYS
         }
 
         [ScriptMethod(
-            name: "雪球狂奔",
+            name: "雪球狂奔(指路)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:42447"]
         )]
@@ -823,7 +823,7 @@ namespace KodakkuAssistXSZYYS
             }
         }
         [ScriptMethod(
-            name: "凝冰冲击 (雪球后站位)",
+            name: "凝冰冲击 (指路)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:42451"]
         )]
@@ -901,7 +901,7 @@ namespace KodakkuAssistXSZYYS
         //火球塔DataId=2014637
 
         [ScriptMethod(
-            name: "火球预站位",
+            name: "火球预站位(指路)",
             eventType: EventTypeEnum.ObjectChanged,
             eventCondition: ["Operate:Add", "DataId:2014637"]
         )]
@@ -922,7 +922,7 @@ namespace KodakkuAssistXSZYYS
 
 
         [ScriptMethod(
-            name: "火球安全点重绘",
+            name: "火球安全点重绘(指路)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:42434"],
             suppress: 2000
