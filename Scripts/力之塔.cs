@@ -33,7 +33,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.10",
+    version: "0.0.11",
     author: "XSZYYS",
     note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，最后两轮踩塔"
     )]
@@ -1301,7 +1301,31 @@ namespace KodakkuAssistXSZYYS
                         dpCircle.Color = new Vector4(0, 1, 0, 1); // Green
                         dpCircle.DestoryAt = 22000;
                         accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
+                        // 找到后即可退出循环
+                        break;
+                    }
+                }
+            }
+        }
+        [ScriptMethod(
+            name: "踩冰塔 - 效果触发",
+            eventType: EventTypeEnum.ObjectEffect,
+            eventCondition: ["Id1:16", "Id2:32"]
+        )]
+        public void OnIceTowerEffect(Event @event, ScriptAccessory accessory)
+        {
+            var tower = accessory.Data.Objects.SearchById(@event.SourceId);
+            // 检查触发效果的是否为冰塔
+            if (tower == null || tower.DataId != 2014548) return;
 
+            // 获取用户选择的队伍对应的坐标列表
+            if (TowerPositions.TryGetValue(MyTeam, out var teamTowerCoords))
+            {
+                // 检查出现的塔是否是自己队伍的塔
+                foreach (var coord in teamTowerCoords)
+                {
+                    if (Vector3.DistanceSquared(tower.Position, coord) < 1.0f)
+                    {
                         var dpGuide = accessory.Data.GetDefaultDrawProperties();
                         dpGuide.Name = $"IceTower_Guide_{tower.EntityId}";
                         dpGuide.Owner = accessory.Data.Me;
@@ -1309,17 +1333,13 @@ namespace KodakkuAssistXSZYYS
                         dpGuide.Scale = new Vector2(1.5f);
                         dpGuide.ScaleMode |= ScaleMode.YByDistance;
                         dpGuide.Color = accessory.Data.DefaultSafeColor;
-                        dpGuide.Delay = 9000;
-                        dpGuide.DestoryAt = 11000;
+                        dpGuide.DestoryAt = 4000;
                         accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
-
-                        // 找到后即可退出循环
                         break;
                     }
                 }
             }
         }
-
 
 
 
