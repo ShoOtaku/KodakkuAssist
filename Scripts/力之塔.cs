@@ -32,7 +32,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.6",
+    version: "0.0.7",
     author: "XSZYYS",
     note: "测试版，请选择自己小队的分组\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动"
     )]
@@ -86,6 +86,19 @@ namespace KodakkuAssistXSZYYS
         private ulong _tetherSourceId = 0;
         // --- 火球/地热机制 ---
         private readonly List<Vector3> _fireballPositions = new();
+        // 定义两组火球的固定坐标
+        private static readonly List<Vector3> LetterGroupFireballCoords = new()
+        {
+            new Vector3(-817.32f, -876.00f, 350.00f), 
+            new Vector3(-817.32f, -876.00f, 370.00f), 
+            new Vector3(-800.00f, -876.00f, 380.00f)  
+        };
+        private static readonly List<Vector3> NumberGroupFireballCoords = new()
+        {
+            new Vector3(-782.68f, -876.00f, 350.00f), 
+            new Vector3(-800.00f, -876.00f, 340.00f), 
+            new Vector3(-782.68f, -876.00f, 370.00f)  
+        };
 
         public void Init(ScriptAccessory accessory)
         {
@@ -894,39 +907,82 @@ namespace KodakkuAssistXSZYYS
         )]
         public void FireballPrePosition(Event @event, ScriptAccessory accessory)
         {
-            _fireballPositions.Clear(); // 每次机制开始时清空旧位置
+            _fireballPositions.Clear();
             var fireballs = accessory.Data.Objects.Where(o => o.DataId == 2014637).ToList();
             if (!fireballs.Any()) return;
 
-            // 为每个火球计算DPS的安全点并记录
             foreach (var fireball in fireballs)
             {
                 _fireballPositions.Add(fireball.Position);
-                DrawPrePositionGuides(accessory, fireball);
             }
 
-
+            // 根据新记录的位置列表绘制指引
+            ProcessFireballs(accessory);
         }
-        private void DrawPrePositionGuides(ScriptAccessory accessory, IGameObject fireball)
+
+
+        [ScriptMethod(
+            name: "火球安全点重绘",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:42434"],
+            suppress: 2000
+        )]
+        public void RedrawFireballGuides(Event @event, ScriptAccessory accessory)
+        {
+            // 使用第一次事件中储存的位置信息进行重绘
+            if (!_fireballPositions.Any())
+            {
+                accessory.Log.Error("火球重绘: 找不到第一轮的火球坐标。");
+                return;
+            }
+            ProcessFireballs(accessory);
+        }
+        private void ProcessFireballs(ScriptAccessory accessory)
+        {
+            bool isUserInLetterGroup = MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C;
+
+            int fireballIndex = 0;
+            foreach (var fireballPos in _fireballPositions)
+            {
+                bool isLetterFireball = LetterGroupFireballCoords.Any(coord => Vector3.DistanceSquared(fireballPos, coord) < 1.0f);
+                bool isNumberFireball = NumberGroupFireballCoords.Any(coord => Vector3.DistanceSquared(fireballPos, coord) < 1.0f);
+
+                if ((isUserInLetterGroup && isLetterFireball) || (!isUserInLetterGroup && isNumberFireball))
+                {
+                    DrawPrePositionGuides(accessory, fireballPos, fireballIndex);
+                }
+                fireballIndex++;
+            }
+        }
+
+        private void DrawPrePositionGuides(ScriptAccessory accessory, Vector3 fireballPos, int uniqueId)
         {
             var player = accessory.Data.MyObject;
             if (player == null) return;
             int myIndex = accessory.Data.PartyList.IndexOf(player.EntityId);
             if (myIndex == -1) return;
 
-            var fireballPos = fireball.Position;
             var directionToFireball = Vector3.Normalize(fireballPos - SnowballArenaCenter);
 
             if (IsDps(myIndex))
             {
                 var safePos = fireballPos + directionToFireball * 6;
                 var dp = accessory.Data.GetDefaultDrawProperties();
-                dp.Name = $"Fireball_DPS_SafeZone_{fireball.EntityId}";
+                var dp2 = accessory.Data.GetDefaultDrawProperties();
+                dp.Name = $"Fireball_DPS_SafeZone_{uniqueId}";
                 dp.Position = safePos;
                 dp.Scale = new Vector2(1);
                 dp.Color = new Vector4(0, 1, 0, 0.6f); // Green
-                dp.DestoryAt = 35000;
+                dp.DestoryAt = 10000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp);
+                dp2.Name = "Guide_to_safepos";
+                dp2.Scale = new Vector2(1);
+                dp2.Owner = accessory.Data.Me;
+                dp2.Color = new Vector4(0, 1, 0, 0.6f);
+                dp2.ScaleMode |= ScaleMode.YByDistance;
+                dp2.DestoryAt = 10000;
+                dp2.TargetPosition = safePos;
+                accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp2);
             }
             else if (IsHealer(myIndex))
             {
@@ -936,13 +992,22 @@ namespace KodakkuAssistXSZYYS
                 var safePos2 = fireballPos + perpendicularDir2 * 6;
 
                 var dp1 = accessory.Data.GetDefaultDrawProperties();
-                dp1.Name = $"Fireball_Healer_SafeZone1_{fireball.EntityId}";
-                dp1.Position = safePos1;
+                dp1.Name = $"Fireball_Healer_SafeZone1_{uniqueId}";
+                dp1.Position = safePos2;
                 dp1.Scale = new Vector2(1);
                 dp1.Color = new Vector4(0, 1, 0, 0.6f); // Green
-                dp1.DestoryAt = 35000;
+                dp1.DestoryAt = 10000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp1);
-                
+                var dp2 = accessory.Data.GetDefaultDrawProperties();
+                dp2.Name = "Guide_to_safepos";
+                dp2.Scale = new Vector2(1);
+                dp2.Owner = accessory.Data.Me;
+                dp2.Color = new Vector4(0, 1, 0, 0.6f);
+                dp2.DestoryAt = 10000;
+                dp2.ScaleMode |= ScaleMode.YByDistance;
+                dp2.TargetPosition = safePos2;
+                accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp2);
+                /*
                 var dp2 = accessory.Data.GetDefaultDrawProperties();
                 dp2.Name = $"Fireball_Healer_SafeZone2_{fireball.EntityId}";
                 dp2.Position = safePos2;
@@ -950,7 +1015,8 @@ namespace KodakkuAssistXSZYYS
                 dp2.Color = new Vector4(0, 1, 0, 0.6f); // Green
                 dp2.DestoryAt = 35000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp2);
-                
+                */
+
             }
             else if (IsTank(myIndex))
             {
@@ -958,14 +1024,23 @@ namespace KodakkuAssistXSZYYS
                 var rotation = MathF.Atan2(directionToCenter.X, directionToCenter.Z);
 
                 var dp = accessory.Data.GetDefaultDrawProperties();
-                dp.Name = $"Fireball_Tank_SafeZone_{fireball.EntityId}";
-                dp.Position = fireball.Position;
+                dp.Name = $"Fireball_Tank_SafeZone_{uniqueId}";
+                dp.Position = fireballPos;
                 dp.Rotation = rotation;
                 dp.Scale = new Vector2(5);
                 dp.Radian = 15 * MathF.PI / 180.0f;
                 dp.Color = new Vector4(0, 1, 0, 0.6f); // Green
-                dp.DestoryAt = 35000;
+                dp.DestoryAt = 10000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Fan, dp);
+                var dp2 = accessory.Data.GetDefaultDrawProperties();
+                dp2.Name = "Guide_to_safepos";
+                dp2.Scale = new Vector2(1);
+                dp2.Owner = accessory.Data.Me;
+                dp2.Color = new Vector4(0, 1, 0, 0.6f);
+                dp2.DestoryAt = 10000;
+                dp2.TargetPosition = fireballPos;
+                dp2.ScaleMode |= ScaleMode.YByDistance;
+                accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp2);
             }
         }
         [ScriptMethod(
