@@ -32,9 +32,9 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.5",
+    version: "0.0.6",
     author: "XSZYYS",
-    note: "测试版，请选择自己小队的分组\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球机制，火球"
+    note: "测试版，请选择自己小队的分组\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动"
     )]
 
     public class 力之塔
@@ -789,7 +789,7 @@ namespace KodakkuAssistXSZYYS
                 dp.Scale = new Vector2(10); // 宽度为10
                 dp.ScaleMode |= ScaleMode.YByDistance;
                 dp.Color = color; // 使用计算出的颜色
-                dp.DestoryAt = 5000;
+                dp.DestoryAt = 7000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Rect, dp);
 
                 _snowballRushCastCount++;
@@ -815,6 +815,14 @@ namespace KodakkuAssistXSZYYS
             eventCondition: ["ActionId:42451"]
         )]
         public void GlacialImpact(Event @event, ScriptAccessory accessory)
+        {
+            accessory.Log.Debug("凝冰冲击: 开始读条，触发指路绘制。");
+            DrawGlacialImpactGuide(accessory);
+        }
+
+
+
+        private void DrawGlacialImpactGuide(ScriptAccessory accessory)
         {
             Vector3? safePosition = null;
 
@@ -859,7 +867,7 @@ namespace KodakkuAssistXSZYYS
                 dp.Scale = new Vector2(1.5f);
                 dp.ScaleMode |= ScaleMode.YByDistance;
                 dp.Color = accessory.Data.DefaultSafeColor;
-                dp.DestoryAt = 4000;
+                dp.DestoryAt = 5000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp);
             }
         }
@@ -951,7 +959,7 @@ namespace KodakkuAssistXSZYYS
 
                 var dp = accessory.Data.GetDefaultDrawProperties();
                 dp.Name = $"Fireball_Tank_SafeZone_{fireball.EntityId}";
-                dp.Owner = fireball.EntityId;
+                dp.Position = fireball.Position;
                 dp.Rotation = rotation;
                 dp.Scale = new Vector2(5);
                 dp.Radian = 15 * MathF.PI / 180.0f;
@@ -1011,11 +1019,56 @@ namespace KodakkuAssistXSZYYS
         }
 
 
+        #endregion
+        #region 老三
+        [ScriptMethod(
+            name: "初始化老三",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:30705"],
+            userControl: false
+        )]
+        public void OnInitializeBoss3Draw(Event @event, ScriptAccessory accessory)
+        {
+            // 初始化老三的状态
+
+            accessory.Method.RemoveDraw(".*");
+            accessory.Log.Debug("老三初始化完成。");
+        }
+        [ScriptMethod(
+            name: "龙态行动",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:30657"]
+        )]
+        public void OnDraconiformMotionDraw(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            var dp2 = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "DraconiformMotion_Danger_Zone1";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(60);
+            dp.Radian = 90f * MathF.PI / 180f;
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.ScaleMode = ScaleMode.YByTime;
+            dp.DestoryAt = 4800;
+            dp2.Name = "DraconiformMotion_Danger_Zone2";
+            dp2.Owner = @event.SourceId;
+            dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.Scale = new Vector2(60);
+            dp2.Radian = 90f * MathF.PI / 180f;
+            dp2.Rotation = MathF.PI;
+            dp2.ScaleMode = ScaleMode.YByTime;
+            dp2.DestoryAt = 4800;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp2);
+        }
+
+
+
+
 
 
 
         #endregion
-
 
 
 
