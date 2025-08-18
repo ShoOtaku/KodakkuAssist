@@ -266,12 +266,12 @@ namespace KodakkuAssistXSZYYS
 
             dp1.Name = "TurnLeftRight1_Danger_Zone";
             dp1.Position = @event.SourcePosition;
-            dp1.Scale = new Vector2(66, 3);
+            dp1.Scale = new Vector2(66, 6);
             dp1.Color = accessory.Data.DefaultDangerColor;
             dp1.DestoryAt = 8800;
             dp2.Name = "TurnLeftRight2_Danger_Zone";
             dp2.Position = @event.SourcePosition;
-            dp2.Scale = new Vector2(66, 3);
+            dp2.Scale = new Vector2(66, 6);
             dp2.Color = accessory.Data.DefaultDangerColor;
             dp2.DestoryAt = 8800;
             dp2.Rotation = MathF.PI / 2f;
