@@ -16,6 +16,7 @@ using Newtonsoft.Json;
 using System.Runtime.Intrinsics.Arm;
 using KodakkuAssist.Module.GameEvent.Struct;
 using KodakkuAssist.Module.GameOperate;
+using System.Collections.Concurrent;
 
 namespace KodakkuAssistXSZYYS
 {
@@ -32,9 +33,9 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.8",
+    version: "0.0.10",
     author: "XSZYYS",
-    note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动"
+    note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，最后两轮踩塔"
     )]
 
     public class 力之塔
@@ -99,7 +100,22 @@ namespace KodakkuAssistXSZYYS
             new Vector3(-800.00f, -876.00f, 340.00f), 
             new Vector3(-782.68f, -876.00f, 370.00f)  
         };
-
+        //老三
+        private static readonly Vector3 Boss3ArenaCenter = new(-337.00f, -840.00f, 157.00f); // Boss3场地中心位置
+        // 用于区分水滩类型的枚举
+        private enum PuddleType { Circle, Cross }
+        // 用于存储场上水滩的字典 (Key: 实体ID, Value: 类型)
+        private readonly ConcurrentDictionary<ulong, PuddleType> _puddles = new();
+        // 冰塔分组坐标
+        private static readonly Dictionary<TeamSelection, List<Vector3>> TowerPositions = new()
+        {
+            { TeamSelection.A, new List<Vector3> { new(-346.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 148.00f) } },
+            { TeamSelection.B, new List<Vector3> { new(-337.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 157.00f) } },
+            { TeamSelection.C, new List<Vector3> { new(-328.00f, -840.00f, 151.00f), new(-331.00f, -840.00f, 148.00f) } },
+            { TeamSelection.One, new List<Vector3> { new(-328.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 166.00f) } },
+            { TeamSelection.Two, new List<Vector3> { new(-337.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 157.00f) } },
+            { TeamSelection.Three, new List<Vector3> { new(-346.00f, -840.00f, 163.00f), new(-343.00f, -840.00f, 166.00f) } }
+        };
         public void Init(ScriptAccessory accessory)
         {
             accessory.Log.Debug("力之塔脚本已加载。");
@@ -122,6 +138,8 @@ namespace KodakkuAssistXSZYYS
             _tetherSourceId = 0;
             // 火球/地热
             _fireballPositions.Clear();
+            // 老三水滩
+            _puddles.Clear();
         }
         #region 老一
         [ScriptMethod(
@@ -1108,6 +1126,7 @@ namespace KodakkuAssistXSZYYS
 
             accessory.Method.RemoveDraw(".*");
             accessory.Log.Debug("老三初始化完成。");
+            _puddles.Clear();
         }
         [ScriptMethod(
             name: "龙态行动",
@@ -1136,8 +1155,170 @@ namespace KodakkuAssistXSZYYS
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp2);
         }
+        [ScriptMethod(
+            name: "俯冲",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:37819"]
+        )]
+        public void OnFrigidDiveDraw(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "FrigidDive_Danger_Zone";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(20, 60);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.ScaleMode = ScaleMode.ByTime;
+            dp.DestoryAt = 8000;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+        }
+        [ScriptMethod(
+            name: "水滩 - 记录",
+            eventType: EventTypeEnum.ObjectChanged,
+            eventCondition: ["Operate:Add", "DataId:regex:^(2014546|2014547)$"],
+            userControl: false
+        )]
+        public void OnPuddleSpawn(Event @event, ScriptAccessory accessory)
+        {
+            var id = @event.SourceId;
+            var dataId = uint.Parse(@event["DataId"]);
 
+            if (dataId == 2014546)
+            {
+                _puddles[id] = PuddleType.Circle;
+            }
+            else if (dataId == 2014547)
+            {
+                _puddles[id] = PuddleType.Cross;
+            }
+        }
+        [ScriptMethod(
+            name: "水滩 - 移除",
+            eventType: EventTypeEnum.ObjectChanged,
+            eventCondition: ["Operate:Remove", "DataId:regex:^(2014546|2014547)$"],
+            userControl: false
+        )]
+        public void OnPuddleDespawn(Event @event, ScriptAccessory accessory)
+        {
+            _puddles.TryRemove(@event.SourceId, out _);
+        }
+        [ScriptMethod(
+            name: "水滩(钢铁十字)",
+            eventType: EventTypeEnum.ObjectEffect,
+            eventCondition: ["Id1:16", "Id2:32"]
+        )]
+        public void OnPuddleEffect(Event @event, ScriptAccessory accessory)
+        {
+            var sourceId = @event.SourceId;
+            var source = accessory.Data.Objects.SearchById(sourceId);
 
+            // 检查单位是否存在，是否在场地内，以及是否是我们记录的水滩
+            if (source == null ||
+                Vector3.Distance(source.Position, Boss3ArenaCenter) > 30 ||
+                !_puddles.TryGetValue(sourceId, out var type))
+            {
+                return;
+            }
+
+            switch (type)
+            {
+                case PuddleType.Circle:
+                    var dpCircle = accessory.Data.GetDefaultDrawProperties();
+                    dpCircle.Name = $"Puddle_Circle_{sourceId}";
+                    dpCircle.Owner = sourceId;
+                    dpCircle.Scale = new Vector2(20);
+                    dpCircle.Color = accessory.Data.DefaultDangerColor;
+                    dpCircle.ScaleMode = ScaleMode.ByTime;
+                    dpCircle.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
+                    break;
+
+                case PuddleType.Cross:
+                    // 绘制第一条直线
+                    var dpCross1 = accessory.Data.GetDefaultDrawProperties();
+                    dpCross1.Name = $"Puddle_Cross1_{sourceId}";
+                    dpCross1.Owner = sourceId;
+                    dpCross1.Scale = new Vector2(16, 120);
+                    dpCross1.Color = accessory.Data.DefaultDangerColor;
+                    dpCross1.ScaleMode = ScaleMode.ByTime;
+                    dpCross1.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dpCross1);
+
+                    // 绘制第二条垂直的直线
+                    var dpCross2 = accessory.Data.GetDefaultDrawProperties();
+                    dpCross2.Name = $"Puddle_Cross2_{sourceId}";
+                    dpCross2.Owner = sourceId;
+                    dpCross2.Scale = new Vector2(16, 120);
+                    dpCross2.Rotation = MathF.PI / 2; // 旋转90度
+                    dpCross2.Color = accessory.Data.DefaultDangerColor;
+                    dpCross2.ScaleMode = ScaleMode.ByTime;
+                    dpCross2.DestoryAt = 4000;
+                    accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dpCross2);
+                    break;
+            }
+        }
+        [ScriptMethod(
+            name: "龙态行动预站位(指路)",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex:^(30063|30264)$"]
+        )]
+        //{-336.98, -840.00, 165.53}
+        public void OnDraconiformMotionGuide(Event @event, ScriptAccessory accessory)
+        {
+            // 绘制指路
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "DraconiformMotion_Guide";
+            dp.Owner = accessory.Data.Me;
+            dp.TargetPosition = new Vector3(-336.98f, -840.00f, 165.53f); // Boss背后
+            dp.Scale = new Vector2(1.5f);
+            dp.ScaleMode |= ScaleMode.YByDistance;
+            dp.Color = accessory.Data.DefaultSafeColor;
+            dp.DestoryAt = 8000;
+            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp);
+        }
+        [ScriptMethod(
+            name: "踩冰塔(指路)",
+            eventType: EventTypeEnum.ObjectChanged,
+            eventCondition: ["Operate:Add", "DataId:2014548"]
+        )]
+        public void OnIceTowerSpawn(Event @event, ScriptAccessory accessory)
+        {
+            var tower = accessory.Data.Objects.SearchById(@event.SourceId);
+            if (tower == null) return;
+
+            // 获取用户选择的队伍对应的坐标列表
+            if (TowerPositions.TryGetValue(MyTeam, out var teamTowerCoords))
+            {
+                // 检查出现的塔是否是自己队伍的塔
+                foreach (var coord in teamTowerCoords)
+                {
+                    if (Vector3.DistanceSquared(tower.Position, coord) < 1.0f)
+                    {
+                        // 是自己的塔，进行绘制
+                        var dpCircle = accessory.Data.GetDefaultDrawProperties();
+                        dpCircle.Name = $"IceTower_Circle_{tower.EntityId}";
+                        dpCircle.Position = tower.Position;
+                        dpCircle.Scale = new Vector2(4);
+                        dpCircle.Color = new Vector4(0, 1, 0, 1); // Green
+                        dpCircle.DestoryAt = 22000;
+                        accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
+
+                        var dpGuide = accessory.Data.GetDefaultDrawProperties();
+                        dpGuide.Name = $"IceTower_Guide_{tower.EntityId}";
+                        dpGuide.Owner = accessory.Data.Me;
+                        dpGuide.TargetObject = tower.EntityId;
+                        dpGuide.Scale = new Vector2(1.5f);
+                        dpGuide.ScaleMode |= ScaleMode.YByDistance;
+                        dpGuide.Color = accessory.Data.DefaultSafeColor;
+                        dpGuide.Delay = 9000;
+                        dpGuide.DestoryAt = 11000;
+                        accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
+
+                        // 找到后即可退出循环
+                        break;
+                    }
+                }
+            }
+        }
 
 
 
