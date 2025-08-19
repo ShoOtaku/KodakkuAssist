@@ -33,7 +33,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.13",
+    version: "0.0.14",
     author: "XSZYYS",
     note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，最后两轮踩塔"
     )]
@@ -81,6 +81,7 @@ namespace KodakkuAssistXSZYYS
         private Vector3? _letterGroupNextPos;
         private Vector3? _numberGroupNextPos;
         private readonly object _snowballLock = new();
+        private readonly object _fireballLock = new();
         private static readonly Vector3 InitialPosLetterGroup = new(-800.00f, -876.00f, 349.50f);
         private static readonly Vector3 InitialPosNumberGroup = new(-809.09f, -876.00f, 365.25f);
         private static readonly Vector3 SnowballArenaCenter = new(-800.00f, -876.00f, 360.00f);
@@ -926,17 +927,21 @@ namespace KodakkuAssistXSZYYS
         )]
         public void FireballPrePosition(Event @event, ScriptAccessory accessory)
         {
-            _fireballPositions.Clear();
-            var fireballs = accessory.Data.Objects.Where(o => o.DataId == 2014637).ToList();
-            if (!fireballs.Any()) return;
-
-            foreach (var fireball in fireballs)
+            // 使用锁来确保线程安全
+            lock (_fireballLock)
             {
-                _fireballPositions.Add(fireball.Position);
-            }
+                _fireballPositions.Clear();
+                var fireballs = accessory.Data.Objects.Where(o => o.DataId == 2014637).ToList();
+                if (!fireballs.Any()) return;
 
-            // 根据新记录的位置列表绘制指引
-            ProcessFireballs(accessory);
+                foreach (var fireball in fireballs)
+                {
+                    _fireballPositions.Add(fireball.Position);
+                }
+
+                // 根据新记录的位置列表绘制指引
+                ProcessFireballs(accessory);
+            }
         }
 
 
