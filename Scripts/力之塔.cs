@@ -33,7 +33,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.11",
+    version: "0.0.12",
     author: "XSZYYS",
     note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，最后两轮踩塔"
     )]
@@ -845,8 +845,9 @@ namespace KodakkuAssistXSZYYS
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:42451"]
         )]
-        public void GlacialImpact(Event @event, ScriptAccessory accessory)
+        public async void GlacialImpact(Event @event, ScriptAccessory accessory)
         {
+            await Task.Delay(1000);
             accessory.Log.Debug("凝冰冲击: 开始读条，触发指路绘制。");
             DrawGlacialImpactGuide(accessory);
         }
@@ -864,7 +865,7 @@ namespace KodakkuAssistXSZYYS
                 if (tetherSource != null)
                 {
                     var direction = Vector3.Normalize(SnowballArenaCenter - tetherSource.Position);
-                    safePosition = SnowballArenaCenter - direction * 5;
+                    safePosition = SnowballArenaCenter + direction * 5;
                     accessory.Log.Debug("凝冰冲击: 检测到连线，计算特殊安全点。");
                 }
                 else
