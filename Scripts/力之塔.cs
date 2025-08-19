@@ -33,7 +33,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.12",
+    version: "0.0.13",
     author: "XSZYYS",
     note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，最后两轮踩塔"
     )]
@@ -1086,27 +1086,53 @@ namespace KodakkuAssistXSZYYS
                 var point1 = RotatePoint(startPos, fireballPos, MathF.PI / 2); // 顺时针90度
                 var point2 = RotatePoint(startPos, fireballPos, MathF.PI);   // 顺时针180度
 
-                // 绘制从起点到90度点的路径
+                // 绘制从起点到90度点的路径（黄）
                 var dp1 = accessory.Data.GetDefaultDrawProperties();
                 dp1.Name = $"GeothermalRupture_Path1_{pathIndex}";
                 dp1.Position = startPos;
                 dp1.TargetPosition = point1;
                 dp1.Scale = new Vector2(1.5f);
                 dp1.ScaleMode |= ScaleMode.YByDistance;
-                dp1.Color = accessory.Data.DefaultSafeColor;
-                dp1.DestoryAt = 10000;
+                dp1.Color = new Vector4(1f, 1f, 0f, 1f);
+                dp1.DestoryAt = 4000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp1);
+                // 绘制从起点到90度点的路径（绿）
+                var dp4 = accessory.Data.GetDefaultDrawProperties();
+                dp4.Name = $"GeothermalRupture_Path1_{pathIndex}";
+                dp4.Position = startPos;
+                dp4.TargetPosition = point1;
+                dp4.Scale = new Vector2(1.5f);
+                dp4.ScaleMode |= ScaleMode.YByDistance;
+                dp4.Color = new Vector4(0f, 1f, 0f, 1f);
+                dp4.Delay = 4000;
+                dp4.DestoryAt = 3000;
+                accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp4);
 
-                // 绘制从90度点到180度点的路径
+                // 绘制从90度点到180度点的路径（黄）
                 var dp2 = accessory.Data.GetDefaultDrawProperties();
                 dp2.Name = $"GeothermalRupture_Path2_{pathIndex}";
                 dp2.Position = point1;
                 dp2.TargetPosition = point2;
                 dp2.Scale = new Vector2(1.5f);
                 dp2.ScaleMode |= ScaleMode.YByDistance;
-                dp2.Color = accessory.Data.DefaultSafeColor;
-                dp2.DestoryAt = 10000;
+                dp2.Color = new Vector4(1f, 1f, 0f, 1f);
+                dp2.DestoryAt = 7000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp2);
+                // 绘制从90度点到180度点的路径（绿）
+                var dp3 = accessory.Data.GetDefaultDrawProperties();
+                dp3.Name = $"GeothermalRupture_Path2_{pathIndex}";
+                dp3.Position = point1;
+                dp3.TargetPosition = point2;
+                dp3.Scale = new Vector2(1.5f);
+                dp3.ScaleMode |= ScaleMode.YByDistance;
+                dp3.Color = new Vector4(0f, 1f, 0f, 1f);
+                dp3.Delay = 7000;
+                dp3.DestoryAt = 3000;
+                accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp3);
+
+
+
+
 
                 pathIndex++;
             }
