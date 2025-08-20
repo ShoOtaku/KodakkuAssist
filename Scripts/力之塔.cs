@@ -33,7 +33,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.14",
+    version: "0.0.15",
     author: "XSZYYS",
     note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，最后两轮踩塔"
     )]
@@ -110,12 +110,22 @@ namespace KodakkuAssistXSZYYS
         // 冰塔分组坐标
         private static readonly Dictionary<TeamSelection, List<Vector3>> TowerPositions = new()
         {
-            { TeamSelection.A, new List<Vector3> { new(-346.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 148.00f) } },
-            { TeamSelection.B, new List<Vector3> { new(-337.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 157.00f) } },
-            { TeamSelection.C, new List<Vector3> { new(-328.00f, -840.00f, 151.00f), new(-331.00f, -840.00f, 148.00f) } },
-            { TeamSelection.One, new List<Vector3> { new(-328.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 166.00f) } },
-            { TeamSelection.Two, new List<Vector3> { new(-337.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 157.00f) } },
-            { TeamSelection.Three, new List<Vector3> { new(-346.00f, -840.00f, 163.00f), new(-343.00f, -840.00f, 166.00f) } }
+            { TeamSelection.A, new List<Vector3> { new(-346.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 148.00f), new(-355.5f, -840.0f, 138.5f), new(-337.0f, -840.0f, 131.0f) } },
+            { TeamSelection.B, new List<Vector3> { new(-337.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 157.00f), new(-337.0f, -840.0f, 131.0f), new(-318.5f, -840.0f, 138.5f) } },
+            { TeamSelection.C, new List<Vector3> { new(-328.00f, -840.00f, 151.00f), new(-331.00f, -840.00f, 148.00f), new(-318.5f, -840.0f, 138.5f), new(-311.0f, -840.0f, 157.0f) } },
+            { TeamSelection.One, new List<Vector3> { new(-328.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 166.00f), new(-318.5f, -840.0f, 175.5f), new(-337.0f, -840.0f, 183.0f) } },
+            { TeamSelection.Two, new List<Vector3> { new(-337.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 157.00f), new(-337.0f, -840.0f, 183.0f), new(-355.5f, -840.0f, 175.5f) } },
+            { TeamSelection.Three, new List<Vector3> { new(-346.00f, -840.00f, 163.00f), new(-343.00f, -840.00f, 166.00f), new(-355.5f, -840.0f, 175.5f), new(-363.0f, -840.0f, 157.0f) } }
+        };
+        //小怪分组坐标
+        private static readonly Dictionary<TeamSelection, Vector3> GroupMarkerPositions = new()
+        {
+            { TeamSelection.A, new Vector3(-347.50f, -840.00f, 146.50f) },
+            { TeamSelection.B, new Vector3(-337.00f, -840.00f, 142.00f) },
+            { TeamSelection.C, new Vector3(-326.50f, -840.00f, 146.50f) },
+            { TeamSelection.One, new Vector3(-326.50f, -840.00f, 167.50f) },
+            { TeamSelection.Two, new Vector3(-337.00f, -840.00f, 172.00f) },
+            { TeamSelection.Three, new Vector3(-347.50f, -840.00f, 167.50f) }
         };
         public void Init(ScriptAccessory accessory)
         {
@@ -1308,7 +1318,7 @@ namespace KodakkuAssistXSZYYS
             accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp);
         }
         [ScriptMethod(
-            name: "踩冰塔(指路)",
+            name: "踩冰塔 - 出现(指路)",
             eventType: EventTypeEnum.ObjectChanged,
             eventCondition: ["Operate:Add", "DataId:2014548"]
         )]
@@ -1332,7 +1342,7 @@ namespace KodakkuAssistXSZYYS
                         dpCircle.Scale = new Vector2(4);
                         dpCircle.Color = new Vector4(0, 1, 0, 1); // Green
                         dpCircle.DestoryAt = 22000;
-                        accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
+                        accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dpCircle);
                         // 找到后即可退出循环
                         break;
                     }
@@ -1340,20 +1350,20 @@ namespace KodakkuAssistXSZYYS
             }
         }
         [ScriptMethod(
-            name: "踩冰塔 - 效果触发",
+            name: "踩冰塔 - 效果触发(指路)",
             eventType: EventTypeEnum.ObjectEffect,
             eventCondition: ["Id1:16", "Id2:32"]
         )]
         public void OnIceTowerEffect(Event @event, ScriptAccessory accessory)
         {
             var tower = accessory.Data.Objects.SearchById(@event.SourceId);
-            // 检查触发效果的是否为冰塔
+
             if (tower == null || tower.DataId != 2014548) return;
 
-            // 获取用户选择的队伍对应的坐标列表
+
             if (TowerPositions.TryGetValue(MyTeam, out var teamTowerCoords))
             {
-                // 检查出现的塔是否是自己队伍的塔
+
                 foreach (var coord in teamTowerCoords)
                 {
                     if (Vector3.DistanceSquared(tower.Position, coord) < 1.0f)
@@ -1372,8 +1382,48 @@ namespace KodakkuAssistXSZYYS
                 }
             }
         }
+        [ScriptMethod(
+            name: "小怪分组(指路)",
+            eventType: EventTypeEnum.AddCombatant,
+            eventCondition: ["DataId:14730"]
+        )]
+        public void OnGroupMarkerSpawn(Event @event, ScriptAccessory accessory)
+        {
+            var marker = accessory.Data.Objects.SearchById(@event.SourceId);
+            if (marker == null) return;
 
 
+            foreach (var groupEntry in GroupMarkerPositions)
+            {
+
+                if (Vector3.DistanceSquared(marker.Position, groupEntry.Value) < 1.0f)
+                {
+
+                    if (groupEntry.Key == MyTeam)
+                    {
+
+                        var dpCircle = accessory.Data.GetDefaultDrawProperties();
+                        dpCircle.Name = $"GroupMarker_Circle_{marker.EntityId}";
+                        dpCircle.Position = marker.Position;
+                        dpCircle.Scale = new Vector2(3); 
+                        dpCircle.Color = new Vector4(0, 1, 0, 1); 
+                        dpCircle.DestoryAt = 4000;
+                        accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dpCircle);
+
+                        var dpGuide = accessory.Data.GetDefaultDrawProperties();
+                        dpGuide.Name = $"GroupMarker_Guide_{marker.EntityId}";
+                        dpGuide.Owner = accessory.Data.Me;
+                        dpGuide.TargetObject = marker.EntityId;
+                        dpGuide.Scale = new Vector2(1.5f);
+                        dpGuide.ScaleMode |= ScaleMode.YByDistance;
+                        dpGuide.Color = accessory.Data.DefaultSafeColor;
+                        dpGuide.DestoryAt = 4000;
+                        accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
+                        break;
+                    }
+                }
+            }
+        }
 
 
         #endregion
