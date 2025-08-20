@@ -17,6 +17,7 @@ using System.Runtime.Intrinsics.Arm;
 using KodakkuAssist.Module.GameEvent.Struct;
 using KodakkuAssist.Module.GameOperate;
 using System.Collections.Concurrent;
+using KodakkuAssist.Module.Draw.Manager;
 
 namespace KodakkuAssistXSZYYS
 {
@@ -33,9 +34,9 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.16",
+    version: "0.0.17",
     author: "XSZYYS",
-    note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：致命斧/枪，符文之斧"
+    note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略，圣枪指路A和1组会和最后的致命斧冲突，先自己看，或者在方法设置中关闭致命枪斧的指路\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：致命斧/枪，符文之斧，圣枪"
     )]
 
     public class 力之塔
@@ -162,6 +163,13 @@ namespace KodakkuAssistXSZYYS
             new(699.82f, -476.00f, -680.72f),
             new(706.28f, -476.00f, -670.38f)
         };
+        // 圣枪机制的分组站位坐标
+        private static readonly Vector3 RectSideInA = new(683.71f, -476.00f, -688.60f);
+        private static readonly Vector3 RectSideOutA = new(680.45f, -476.00f, -691.63f);
+        private static readonly Vector3 RectSideInB = new(721.56f, -476.00f, -682.53f);
+        private static readonly Vector3 RectSideOutB = new(724.71f, -476.00f, -680.50f);
+        private static readonly Vector3 RectSideInC = new(695.61f, -476.00f, -653.43f);
+        private static readonly Vector3 RectSideOutC = new(694.24f, -476.00f, -648.11f);
         public void Init(ScriptAccessory accessory)
         {
             accessory.Log.Debug("力之塔脚本已加载。");
@@ -1551,16 +1559,8 @@ namespace KodakkuAssistXSZYYS
                             closestPos = CriticalLanceSafePositions[i];
                         }
                     }
-                    var dpGuide = accessory.Data.GetDefaultDrawProperties();
-                    dpGuide.Name = "CriticalLance_Guide";
-                    dpGuide.Owner = player.EntityId;
-                    dpGuide.TargetPosition = closestPos;
-                    dpGuide.Scale = new Vector2(1.5f);
-                    dpGuide.ScaleMode |= ScaleMode.YByDistance;
-                    dpGuide.Color = accessory.Data.DefaultSafeColor;
-                    dpGuide.DestoryAt = 6400;
-                    accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
                 }
+                
             }
             else // 斧击
             {
@@ -1586,15 +1586,6 @@ namespace KodakkuAssistXSZYYS
                             closestPos = CriticalAxeSafePositions[i];
                         }
                     }
-                    var dpGuide = accessory.Data.GetDefaultDrawProperties();
-                    dpGuide.Name = "CriticalAxe_Guide";
-                    dpGuide.Owner = player.EntityId;
-                    dpGuide.TargetPosition = closestPos;
-                    dpGuide.Scale = new Vector2(1.5f);
-                    dpGuide.ScaleMode |= ScaleMode.YByDistance;
-                    dpGuide.Color = accessory.Data.DefaultSafeColor;
-                    dpGuide.DestoryAt = 6100;
-                    accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
                 }
             }
             // 绘制三个方形AOE
@@ -1610,7 +1601,42 @@ namespace KodakkuAssistXSZYYS
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dpSquare);
             }
         }
+        [ScriptMethod(
+            name: "致命枪斧（指路）",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex:^(41547|41543)$"]
+        )]
+        public void CriticalBlowGuide(Event @event, ScriptAccessory accessory)
+        {
+            var player = accessory.Data.MyObject;
+            if (player == null) return;
 
+            bool isLance = @event.ActionId == 41547; // 枪
+            var safePositions = isLance ? CriticalLanceSafePositions : CriticalAxeSafePositions;
+            var duration = isLance ? 6400 : 6100;
+
+            Vector3 closestPos = safePositions[0];
+            float minDistanceSq = Vector3.DistanceSquared(player.Position, closestPos);
+            for (int i = 1; i < safePositions.Count; i++)
+            {
+                float distSq = Vector3.DistanceSquared(player.Position, safePositions[i]);
+                if (distSq < minDistanceSq)
+                {
+                    minDistanceSq = distSq;
+                    closestPos = safePositions[i];
+                }
+            }
+
+            var dpGuide = accessory.Data.GetDefaultDrawProperties();
+            dpGuide.Name = isLance ? "CriticalLance_Guide" : "CriticalAxe_Guide";
+            dpGuide.Owner = player.EntityId;
+            dpGuide.TargetPosition = closestPos;
+            dpGuide.Scale = new Vector2(1.5f);
+            dpGuide.ScaleMode |= ScaleMode.YByDistance;
+            dpGuide.Color = accessory.Data.DefaultSafeColor;
+            dpGuide.DestoryAt = duration;
+            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
+        }
         [ScriptMethod(
             name: "大斧猎物 (9秒)",
             eventType: EventTypeEnum.StatusAdd,
@@ -1747,32 +1773,58 @@ namespace KodakkuAssistXSZYYS
                 }
             }
         }
+        [ScriptMethod(
+            name: "圣枪（指路）",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41557"]
+        )]
+        public void HolyLanceGuide(Event @event, ScriptAccessory accessory)
+        {
+            var path = new List<DisplacementContainer>();
 
+            // 根据分组确定路径
+            switch (MyTeam)
+            {
+                case TeamSelection.A:
+                case TeamSelection.One:
+                    path.Add(new DisplacementContainer(SquarePositions[2], 0, 5000));
+                    path.Add(new DisplacementContainer(CriticalLanceSafePositions[1], 0, 10000));
+                    path.Add(new DisplacementContainer(SquarePositions[2], 0, 17000));
+                    path.Add(new DisplacementContainer(RectSideInA, 0, 4000));
+                    path.Add(new DisplacementContainer(RectSideOutA, 0, 6000));
+                    break;
+                case TeamSelection.B:
+                case TeamSelection.Two:
+                    path.Add(new DisplacementContainer(SquarePositions[0], 0, 5000));
+                    path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 10000));
+                    path.Add(new DisplacementContainer(SquarePositions[0], 0, 9000));
+                    path.Add(new DisplacementContainer(RectSideInB, 0, 4000));
+                    path.Add(new DisplacementContainer(RectSideOutB, 0, 6000));
+                    path.Add(new DisplacementContainer(SquarePositions[0], 0, 6000));
+                    break;
+                case TeamSelection.C:
+                case TeamSelection.Three:
+                    path.Add(new DisplacementContainer(SquarePositions[1], 0, 5000));
+                    path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 10000));
+                    path.Add(new DisplacementContainer(RectSideInB, 0, 5000));
+                    path.Add(new DisplacementContainer(RectSideOutB, 0, 6000));
+                    path.Add(new DisplacementContainer(SquarePositions[1], 0, 14000));
+                    break;
+            }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+            if (path.Count > 0)
+            {
+                var props = new MultiDisDrawProp
+                {
+                    Color_GoNow = new Vector4(0, 1, 0, 1), // Green
+                    Color_GoLater = new Vector4(1, 1, 0, 1), // Yellow
+                    DrawMode = DrawModeEnum.Imgui
+                };
+                accessory.MultiDisDraw(path, props);
+                accessory.Log.Debug($"圣枪机制触发：为 {MyTeam} 组绘制路径。");
+            }
+        }
         #endregion
-
-
-
-
-
-
-
-
-
-
         #region Helper_Functions
 
         private bool IsTank(int partyIndex)
@@ -1808,5 +1860,112 @@ namespace KodakkuAssistXSZYYS
             return point;
         }
         #endregion
+
+
     }
+    #region Helper_Classes_And_Methods
+
+    public class DisplacementContainer
+    {
+        public Vector3 Pos;
+        public long Delay;
+        public long DestoryAt;
+
+        public DisplacementContainer(Vector3 pos, long delay, long destoryAt)
+        {
+            Pos = pos;
+            Delay = delay;
+            DestoryAt = destoryAt;
+        }
+    }
+
+    public class MultiDisDrawProp
+    {
+        public Vector4 Color_GoNow;
+        public Vector4 Color_GoLater;
+        public long BaseDelay;
+        public float Width;
+        public float EndCircleRadius;
+        public DrawModeEnum DrawMode;
+
+        public MultiDisDrawProp()
+        {
+            this.Color_GoNow = new(1, 1, 1, 1);
+            this.Color_GoLater = new(0, 1, 1, 1);
+            this.BaseDelay = 0;
+            this.Width = 1.2f;
+            this.EndCircleRadius = 0.65f;
+            this.DrawMode = DrawModeEnum.Default;
+        }
+    }
+
+    public static class HelperExtensions
+    {
+        internal static void MultiDisDraw(this ScriptAccessory accessory, List<DisplacementContainer> list, MultiDisDrawProp prop)
+        {
+            long startTimeMillis = prop.BaseDelay;
+            const long preMs = 270;
+            string guid = Guid.NewGuid().ToString();
+            for (int i = 0; i < list.Count; i++)
+            {
+                int count = 0;
+                DisplacementContainer dis = list[i];
+                string name = $"_MultiDisDraw Part {i} : {guid} / ";
+
+                // go now 直线引导部分
+                DrawPropertiesEdit dp_goNowLine = accessory.Data.GetDefaultDrawProperties();
+                dp_goNowLine.Name = name + count++;
+                dp_goNowLine.Owner = (ulong)accessory.Data.Me;
+                dp_goNowLine.Scale = new(prop.Width);
+                dp_goNowLine.Delay = startTimeMillis;
+                dp_goNowLine.DestoryAt = dis.DestoryAt;
+                dp_goNowLine.ScaleMode |= ScaleMode.YByDistance;
+                dp_goNowLine.TargetPosition = dis.Pos;
+                dp_goNowLine.Color = prop.Color_GoNow;
+                accessory.Method.SendDraw(prop.DrawMode, DrawTypeEnum.Displacement, dp_goNowLine);
+
+                if (prop.EndCircleRadius > 0)
+                {
+                    DrawPropertiesEdit dp_goNowCircle = accessory.Data.GetDefaultDrawProperties();
+                    dp_goNowCircle.Name = name + count++;
+                    dp_goNowCircle.Position = dis.Pos;
+                    dp_goNowCircle.Scale = new(prop.EndCircleRadius);
+                    dp_goNowCircle.Delay = dp_goNowLine.Delay;
+                    dp_goNowCircle.DestoryAt = dp_goNowLine.DestoryAt;
+                    dp_goNowCircle.Color = prop.Color_GoNow;
+                    accessory.Method.SendDraw(prop.DrawMode, DrawTypeEnum.Circle, dp_goNowCircle);
+                }
+
+                //如果当前点位不是最后一个点位，则进行go later部分
+                if (i < list.Count - 1)
+                {
+                    DrawPropertiesEdit dp_goLaterLine = accessory.Data.GetDefaultDrawProperties();
+                    dp_goLaterLine.Name = name + count++;
+                    dp_goLaterLine.Position = list[i].Pos;
+                    dp_goLaterLine.TargetPosition = list[i + 1].Pos;
+                    dp_goLaterLine.Scale = new(prop.Width);
+                    dp_goLaterLine.ScaleMode |= ScaleMode.YByDistance;
+                    dp_goLaterLine.Delay = dp_goNowLine.Delay;
+                    dp_goLaterLine.DestoryAt = dp_goNowLine.DestoryAt;
+                    dp_goLaterLine.Color = prop.Color_GoLater;
+                    accessory.Method.SendDraw(prop.DrawMode, DrawTypeEnum.Displacement, dp_goLaterLine);
+
+                    if (prop.EndCircleRadius > 0)
+                    {
+                        DrawPropertiesEdit dp_goLaterCircle = accessory.Data.GetDefaultDrawProperties();
+                        dp_goLaterCircle.Name = name + count++;
+                        dp_goLaterCircle.Position = list[i + 1].Pos;
+                        dp_goLaterCircle.Scale = new(prop.EndCircleRadius);
+                        dp_goLaterCircle.Delay = dp_goLaterLine.Delay;
+                        dp_goLaterCircle.DestoryAt = dp_goLaterLine.DestoryAt;
+                        dp_goLaterCircle.Color = prop.Color_GoLater;
+                        accessory.Method.SendDraw(prop.DrawMode, DrawTypeEnum.Circle, dp_goLaterCircle);
+                    }
+                }
+                startTimeMillis += dis.DestoryAt;
+            }
+        }
+    }
+
+    #endregion
 }
