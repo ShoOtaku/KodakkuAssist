@@ -33,9 +33,9 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.15",
+    version: "0.0.16",
     author: "XSZYYS",
-    note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，最后两轮踩塔"
+    note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：致命斧/枪，符文之斧"
     )]
 
     public class 力之塔
@@ -126,6 +126,41 @@ namespace KodakkuAssistXSZYYS
             { TeamSelection.One, new Vector3(-326.50f, -840.00f, 167.50f) },
             { TeamSelection.Two, new Vector3(-337.00f, -840.00f, 172.00f) },
             { TeamSelection.Three, new Vector3(-347.50f, -840.00f, 167.50f) }
+        };
+        //尾王
+        // 方形AOE的固定坐标和角度
+        private static readonly Vector3[] SquarePositions =
+        {
+            new(700f, -476f, -659.504f),
+            new(712.554f, -476f, -681.248f),
+            new(687.443f, -476f, -681.25f)
+        };
+        private static readonly float[] SquareAngles =
+        {
+            -45 * MathF.PI / 180.0f,
+            -15 * MathF.PI / 180.0f,
+            105 * MathF.PI / 180.0f
+        };
+        // 大斧猎物机制的三个场边坐标
+        private static readonly List<Vector3> GreataxePreyPositions = new()
+        {
+            new(699.95f, -476.00f, -705.12f),
+            new(673.07f, -476.00f, -658.11f),
+            new(726.77f, -476.00f, -658.39f)
+        };
+        // 致命斧机制的三个安全点坐标
+        private static readonly List<Vector3> CriticalAxeSafePositions = new()
+        {
+            new(723.11f, -476.00f, -687.15f),
+            new(677.93f, -476.00f, -686.84f),
+            new(699.77f, -476.00f, -648.27f)
+        };
+        // 致命枪机制的三个安全点坐标
+        private static readonly List<Vector3> CriticalLanceSafePositions = new()
+        {
+            new(693.53f, -476.00f, -670.09f),
+            new(699.82f, -476.00f, -680.72f),
+            new(706.28f, -476.00f, -670.38f)
         };
         public void Init(ScriptAccessory accessory)
         {
@@ -1404,7 +1439,7 @@ namespace KodakkuAssistXSZYYS
 
                         var dpCircle = accessory.Data.GetDefaultDrawProperties();
                         dpCircle.Name = $"GroupMarker_Circle_{marker.EntityId}";
-                        dpCircle.Position = marker.Position;
+                        dpCircle.Owner = marker.EntityId;
                         dpCircle.Scale = new Vector2(3); 
                         dpCircle.Color = new Vector4(0, 1, 0, 1); 
                         dpCircle.DestoryAt = 4000;
@@ -1424,10 +1459,310 @@ namespace KodakkuAssistXSZYYS
                 }
             }
         }
+        #endregion
+        #region 尾王
+        [ScriptMethod(
+            name: "尾王 - 初始化",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41572"],
+            userControl: false
+        )]
+        public void OnInitializeBoss4Draw(Event @event, ScriptAccessory accessory)
+        {
+            // 初始化尾王的状态
+            accessory.Method.RemoveDraw(".*");
+            accessory.Log.Debug("尾王初始化完成。");
+        }
+
+
+        [ScriptMethod(
+            name: "暗杀短剑",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41569"] 
+        )]
+        public void AssassinsDagger(Event @event, ScriptAccessory accessory)
+        {
+            var caster = accessory.Data.Objects.SearchById(@event.SourceId);
+            if (caster == null) return;
+
+
+            var directionVector = @event.EffectPosition - caster.Position;
+            var initialAngle = MathF.Atan2(directionVector.X, directionVector.Z);
+            var distance = directionVector.Length();
+            var rotationOffset = -50 * MathF.PI / 180.0f;
+
+            for (int i = 0; i < 6; i++)
+            {
+                var currentAngle = initialAngle + i * rotationOffset;
+                var delay = 1100 + (long)(i * 3900);
+
+                var dp = accessory.Data.GetDefaultDrawProperties();
+                dp.Name = $"AssassinsDagger_{i}";
+                dp.Position = caster.Position;
+                dp.Scale = new Vector2(6, distance);
+                dp.Rotation = currentAngle;
+                dp.Delay = delay;
+                dp.DestoryAt = 6100;
+                dp.Color = accessory.Data.DefaultDangerColor;
+
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+            }
+        }
+
+        [ScriptMethod(
+            name: "致命枪斧组合AOE",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex:^(41547|41543)$"]
+        )]
+        public void CriticalBlow(Event @event, ScriptAccessory accessory)
+        {
+            var caster = accessory.Data.Objects.SearchById(@event.SourceId);
+            if (caster == null) return;
+
+            bool isLance = @event.ActionId == 41547; // 枪
+
+            var mainShapeDuration = isLance ? 6400 : 6100;
+            var squareColor = isLance ? accessory.Data.DefaultDangerColor : new Vector4(0f, 0.6f, 0f, 0.8f);
+
+            // 绘制主AOE (月环或钢铁)
+            if (isLance)
+            {
+                var dpDonut = accessory.Data.GetDefaultDrawProperties();
+                dpDonut.Name = "CriticalLanceblow_Donut";
+                dpDonut.Owner = caster.EntityId;
+                dpDonut.Scale = new Vector2(32);
+                dpDonut.InnerScale = new Vector2(10);
+                dpDonut.Radian = 2f * MathF.PI;
+                dpDonut.Color = accessory.Data.DefaultDangerColor;
+                dpDonut.DestoryAt = mainShapeDuration;
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dpDonut);
+                // 为枪击绘制指路
+                var player = accessory.Data.MyObject;
+                if (player != null)
+                {
+                    Vector3 closestPos = CriticalLanceSafePositions[0];
+                    float minDistanceSq = Vector3.DistanceSquared(player.Position, closestPos);
+                    for (int i = 1; i < CriticalLanceSafePositions.Count; i++)
+                    {
+                        float distSq = Vector3.DistanceSquared(player.Position, CriticalLanceSafePositions[i]);
+                        if (distSq < minDistanceSq)
+                        {
+                            minDistanceSq = distSq;
+                            closestPos = CriticalLanceSafePositions[i];
+                        }
+                    }
+                    var dpGuide = accessory.Data.GetDefaultDrawProperties();
+                    dpGuide.Name = "CriticalLance_Guide";
+                    dpGuide.Owner = player.EntityId;
+                    dpGuide.TargetPosition = closestPos;
+                    dpGuide.Scale = new Vector2(1.5f);
+                    dpGuide.ScaleMode |= ScaleMode.YByDistance;
+                    dpGuide.Color = accessory.Data.DefaultSafeColor;
+                    dpGuide.DestoryAt = 6400;
+                    accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
+                }
+            }
+            else // 斧击
+            {
+                var dpCircle = accessory.Data.GetDefaultDrawProperties();
+                dpCircle.Name = "CriticalAxeblow_Circle";
+                dpCircle.Owner = caster.EntityId;
+                dpCircle.Scale = new Vector2(20);
+                dpCircle.Color = new Vector4(1f, 0f, 0f, 1f);
+                dpCircle.DestoryAt = mainShapeDuration;
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
+                // 为斧击绘制指路
+                var player = accessory.Data.MyObject;
+                if (player != null)
+                {
+                    Vector3 closestPos = CriticalAxeSafePositions[0];
+                    float minDistanceSq = Vector3.DistanceSquared(player.Position, closestPos);
+                    for (int i = 1; i < CriticalAxeSafePositions.Count; i++)
+                    {
+                        float distSq = Vector3.DistanceSquared(player.Position, CriticalAxeSafePositions[i]);
+                        if (distSq < minDistanceSq)
+                        {
+                            minDistanceSq = distSq;
+                            closestPos = CriticalAxeSafePositions[i];
+                        }
+                    }
+                    var dpGuide = accessory.Data.GetDefaultDrawProperties();
+                    dpGuide.Name = "CriticalAxe_Guide";
+                    dpGuide.Owner = player.EntityId;
+                    dpGuide.TargetPosition = closestPos;
+                    dpGuide.Scale = new Vector2(1.5f);
+                    dpGuide.ScaleMode |= ScaleMode.YByDistance;
+                    dpGuide.Color = accessory.Data.DefaultSafeColor;
+                    dpGuide.DestoryAt = 6100;
+                    accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
+                }
+            }
+            // 绘制三个方形AOE
+            for (int i = 0; i < SquarePositions.Length; i++)
+            {
+                var dpSquare = accessory.Data.GetDefaultDrawProperties();
+                dpSquare.Name = $"Square_AOE_{i}";
+                dpSquare.Position = SquarePositions[i];
+                dpSquare.Rotation = SquareAngles[i];
+                dpSquare.Scale = new Vector2(20, 20);
+                dpSquare.Color = squareColor;
+                dpSquare.DestoryAt = mainShapeDuration;
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dpSquare);
+            }
+        }
+
+        [ScriptMethod(
+            name: "大斧猎物 (9秒)",
+            eventType: EventTypeEnum.StatusAdd,
+            eventCondition: ["StatusID:4337"]
+        )]
+        public void GreatAxePrey(Event @event, ScriptAccessory accessory)
+        {
+            // 确认是自己获得了这个状态
+            if (@event.TargetId != accessory.Data.Me) return;
+
+            // 检查buff持续时间是否为9秒
+            if (float.TryParse(@event["Duration"], out var duration) && Math.Abs(duration - 9.0f) < 0.1f)
+            {
+                var player = accessory.Data.MyObject;
+                if (player == null) return;
+
+                // 找到最近的坐标点
+                Vector3 closestPos = GreataxePreyPositions[0];
+                float minDistanceSq = Vector3.DistanceSquared(player.Position, closestPos);
+
+                for (int i = 1; i < GreataxePreyPositions.Count; i++)
+                {
+                    float distSq = Vector3.DistanceSquared(player.Position, GreataxePreyPositions[i]);
+                    if (distSq < minDistanceSq)
+                    {
+                        minDistanceSq = distSq;
+                        closestPos = GreataxePreyPositions[i];
+                    }
+                }
+
+                // 绘制指路
+                var dp = accessory.Data.GetDefaultDrawProperties();
+                dp.Name = "GreataxePrey_Guide";
+                dp.Owner = player.EntityId;
+                dp.TargetPosition = closestPos;
+                dp.Scale = new Vector2(1.5f);
+                dp.ScaleMode |= ScaleMode.YByDistance;
+                dp.Color = accessory.Data.DefaultSafeColor;
+                dp.DestoryAt = 9000;
+                accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp);
+            }
+        }
+        [ScriptMethod(
+            name: "大斧猎物 (21秒)",
+            eventType: EventTypeEnum.StatusAdd,
+            eventCondition: ["StatusID:4337"]
+        )]
+        public async void GreatAxePreyLong(Event @event, ScriptAccessory accessory)
+        {
+            // 确认是自己获得了这个状态
+            if (@event.TargetId != accessory.Data.Me) return;
+
+            // 检查buff持续时间是否为9秒
+            if (float.TryParse(@event["Duration"], out var duration) && Math.Abs(duration - 21.0f) < 0.1f)
+            {
+                var player = accessory.Data.MyObject;
+                if (player == null) return;
+                await Task.Delay(15000);
+                // 找到最近的坐标点
+                Vector3 closestPos = GreataxePreyPositions[0];
+                float minDistanceSq = Vector3.DistanceSquared(player.Position, closestPos);
+
+                for (int i = 1; i < GreataxePreyPositions.Count; i++)
+                {
+                    float distSq = Vector3.DistanceSquared(player.Position, GreataxePreyPositions[i]);
+                    if (distSq < minDistanceSq)
+                    {
+                        minDistanceSq = distSq;
+                        closestPos = GreataxePreyPositions[i];
+                    }
+                }
+
+                // 绘制指路
+                var dp = accessory.Data.GetDefaultDrawProperties();
+                dp.Name = "GreataxePrey_Guide";
+                dp.Owner = player.EntityId;
+                dp.TargetPosition = closestPos;
+                dp.Scale = new Vector2(1.5f);
+                dp.ScaleMode |= ScaleMode.YByDistance;
+                dp.Color = accessory.Data.DefaultSafeColor;
+                dp.DestoryAt = 6000;
+                accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp);
+            }
+        }
+        [ScriptMethod(
+            name: "小斧猎物 (13秒)",
+            eventType: EventTypeEnum.StatusAdd,
+            eventCondition: ["StatusID:4336"]
+        )]
+        public void LesserAxePrey(Event @event, ScriptAccessory accessory)
+        {
+            // 确认是自己获得了这个状态
+            if (@event.TargetId != accessory.Data.Me) return;
+
+            if (float.TryParse(@event["Duration"], out var duration))
+            {
+                // 检查buff持续时间是否为13秒
+                if (Math.Abs(duration - 13.0f) < 0.1f)
+                {
+                    // 在三个方形AOE中心点绘制绿色安全圈
+                    for (int i = 0; i < SquarePositions.Length; i++)
+                    {
+                        var dp = accessory.Data.GetDefaultDrawProperties();
+                        dp.Name = $"LittleAxePrey_SafeZone_13s_{i}";
+                        dp.Position = SquarePositions[i];
+                        dp.Scale = new Vector2(3);
+                        dp.Color = new Vector4(0, 1, 0, 1);
+                        dp.DestoryAt = 13000;
+                        accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp);
+                    }
+                }
+                // 检查buff持续时间是否为21秒
+                else if (Math.Abs(duration - 21.0f) < 0.1f)
+                {
+                    // 在第1个方形AOE中心点绘制绿色安全圈
+                    var dp1 = accessory.Data.GetDefaultDrawProperties();
+                    dp1.Name = "LittleAxePrey_SafeZone_21s_1";
+                    dp1.Position = SquarePositions[1];
+                    dp1.Scale = new Vector2(3);
+                    dp1.Color = new Vector4(0, 1, 0, 1);
+                    dp1.Delay = 15000;
+                    dp1.DestoryAt = 6000;
+                    accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp1);
+
+                    // 在第3个方形AOE中心点绘制绿色安全圈
+                    var dp3 = accessory.Data.GetDefaultDrawProperties();
+                    dp3.Name = "LittleAxePrey_SafeZone_21s_3";
+                    dp3.Position = SquarePositions[2];
+                    dp3.Scale = new Vector2(3);
+                    dp3.Color = new Vector4(0, 1, 0, 1);
+                    dp3.Delay = 15000;
+                    dp3.DestoryAt = 6000;
+                    accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp3);
+                }
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
         #endregion
-
 
 
 
