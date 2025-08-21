@@ -34,9 +34,9 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.18",
+    version: "0.0.19",
     author: "XSZYYS",
-    note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略，圣枪指路A和1组会和最后的致命斧冲突，先自己看，或者在方法设置中关闭致命枪斧的指路\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：致命斧/枪，符文之斧，圣枪"
+    note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
 
     public class 力之塔
@@ -170,6 +170,9 @@ namespace KodakkuAssistXSZYYS
         private static readonly Vector3 RectSideOutB = new(724.71f, -476.00f, -680.50f);
         private static readonly Vector3 RectSideInC = new(695.61f, -476.00f, -653.43f);
         private static readonly Vector3 RectSideOutC = new(694.24f, -476.00f, -648.11f);
+        // 用于神圣机制的状态变量
+        private enum HolyWeaponType { None, Axe, Lance }
+        private HolyWeaponType _holyWeaponType = HolyWeaponType.None;
         public void Init(ScriptAccessory accessory)
         {
             accessory.Log.Debug("力之塔脚本已加载。");
@@ -194,6 +197,8 @@ namespace KodakkuAssistXSZYYS
             _fireballPositions.Clear();
             // 老三水滩
             _puddles.Clear();
+            // 尾王
+            _holyWeaponType = HolyWeaponType.None;
         }
         #region 老一
         [ScriptMethod(
@@ -1480,6 +1485,7 @@ namespace KodakkuAssistXSZYYS
             // 初始化尾王的状态
             accessory.Method.RemoveDraw(".*");
             accessory.Log.Debug("尾王初始化完成。");
+            _holyWeaponType = HolyWeaponType.None;
         }
 
 
@@ -1601,6 +1607,7 @@ namespace KodakkuAssistXSZYYS
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dpSquare);
             }
         }
+/*
         [ScriptMethod(
             name: "致命枪斧（指路）",
             eventType: EventTypeEnum.StartCasting,
@@ -1637,6 +1644,7 @@ namespace KodakkuAssistXSZYYS
             dpGuide.DestoryAt = duration;
             accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
         }
+*/
         [ScriptMethod(
             name: "大斧猎物 (9秒)",
             eventType: EventTypeEnum.StatusAdd,
@@ -1823,6 +1831,55 @@ namespace KodakkuAssistXSZYYS
                 accessory.MultiDisDraw(path, props);
                 accessory.Log.Debug($"圣枪机制触发：为 {MyTeam} 组绘制路径。");
             }
+        }
+        [ScriptMethod(
+            name: "神圣 - 记录武器",
+            eventType: EventTypeEnum.StatusAdd,
+            eventCondition: ["StatusID:4339"],
+            userControl: false
+        )]
+        public void OnSealMeltStatus(Event @event, ScriptAccessory accessory)
+        {
+            if (int.TryParse(@event["Param"], System.Globalization.NumberStyles.HexNumber, null, out int paramValue))
+            {
+                if (paramValue == 851)
+                {
+                    _holyWeaponType = HolyWeaponType.Axe;
+                    accessory.Log.Debug("神圣机制：记录为斧头。");
+                }
+                else if (paramValue == 852)
+                {
+                    _holyWeaponType = HolyWeaponType.Lance;
+                    accessory.Log.Debug("神圣机制：记录为长枪。");
+                }
+            }
+        }
+
+        [ScriptMethod(
+            name: "神圣 - 提示",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41563"]
+        )]
+        public void OnHallowedPlumeCast(Event @event, ScriptAccessory accessory)
+        {
+            string hintText = "";
+            switch (_holyWeaponType)
+            {
+                case HolyWeaponType.Axe:
+                    hintText = "打黄色罐子";
+                    break;
+                case HolyWeaponType.Lance:
+                    hintText = "打蓝色罐子";
+                    break;
+                default:
+                    accessory.Log.Error("神圣机制：未能获取到武器类型。");
+                    return;
+            }
+
+            accessory.Method.TextInfo(hintText, 5000);
+
+            // 重置状态
+            _holyWeaponType = HolyWeaponType.None;
         }
         #endregion
         #region Helper_Functions
