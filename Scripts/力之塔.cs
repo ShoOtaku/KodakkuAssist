@@ -34,7 +34,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.17",
+    version: "0.0.18",
     author: "XSZYYS",
     note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略，圣枪指路A和1组会和最后的致命斧冲突，先自己看，或者在方法设置中关闭致命枪斧的指路\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：致命斧/枪，符文之斧，圣枪"
     )]
@@ -1795,20 +1795,20 @@ namespace KodakkuAssistXSZYYS
                     break;
                 case TeamSelection.B:
                 case TeamSelection.Two:
-                    path.Add(new DisplacementContainer(SquarePositions[0], 0, 5000));
-                    path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 10000));
-                    path.Add(new DisplacementContainer(SquarePositions[0], 0, 9000));
-                    path.Add(new DisplacementContainer(RectSideInB, 0, 4000));
-                    path.Add(new DisplacementContainer(RectSideOutB, 0, 6000));
-                    path.Add(new DisplacementContainer(SquarePositions[0], 0, 6000));
-                    break;
-                case TeamSelection.C:
-                case TeamSelection.Three:
                     path.Add(new DisplacementContainer(SquarePositions[1], 0, 5000));
-                    path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 10000));
+                    path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 10000));
                     path.Add(new DisplacementContainer(RectSideInB, 0, 5000));
                     path.Add(new DisplacementContainer(RectSideOutB, 0, 6000));
                     path.Add(new DisplacementContainer(SquarePositions[1], 0, 14000));
+                    break;
+                case TeamSelection.C:
+                case TeamSelection.Three:
+                    path.Add(new DisplacementContainer(SquarePositions[0], 0, 5000));
+                    path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 10000));
+                    path.Add(new DisplacementContainer(SquarePositions[0], 0, 9000));
+                    path.Add(new DisplacementContainer(RectSideInC, 0, 4000));
+                    path.Add(new DisplacementContainer(RectSideOutC, 0, 6000));
+                    path.Add(new DisplacementContainer(SquarePositions[0], 0, 6000));
                     break;
             }
 
