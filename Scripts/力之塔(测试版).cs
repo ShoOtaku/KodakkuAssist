@@ -2043,7 +2043,7 @@ namespace KodakkuAssistXSZYYStest
         )]
         public void OnSealMeltStatus(Event @event, ScriptAccessory accessory)
         {
-            if (int.TryParse(@event["Param"], System.Globalization.NumberStyles.HexNumber, null, out int paramValue))
+            if (int.TryParse(@event["Param"], out int paramValue))
             {
                 if (paramValue == 851)
                 {
