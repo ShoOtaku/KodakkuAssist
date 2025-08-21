@@ -2059,9 +2059,9 @@ namespace KodakkuAssistXSZYYStest
         }
 
         [ScriptMethod(
-            name: "神圣 - 提示",
+            name: "灵气爆 - 提示",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:41563"]
+            eventCondition: ["ActionId:41562"]
         )]
         public void OnHallowedPlumeCast(Event @event, ScriptAccessory accessory)
         {
@@ -2078,7 +2078,27 @@ namespace KodakkuAssistXSZYYStest
                     accessory.Log.Error("神圣机制：未能获取到武器类型。");
                     return;
             }
-
+        }
+        [ScriptMethod(
+            name: "神圣 - 提示",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41563"]
+        )]
+        public void OnHolyCast(Event @event, ScriptAccessory accessory)
+        {
+            string hintText = "";
+            switch (_holyWeaponType)
+            {
+                case HolyWeaponType.Axe:
+                    hintText = "打黄色罐子";
+                    break;
+                case HolyWeaponType.Lance:
+                    hintText = "打蓝色罐子";
+                    break;
+                default:
+                    accessory.Log.Error("神圣机制：未能获取到武器类型。");
+                    return;
+            }
             accessory.Method.TextInfo(hintText, 5000);
 
             // 重置状态
