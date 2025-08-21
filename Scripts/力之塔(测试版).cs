@@ -2061,7 +2061,7 @@ namespace KodakkuAssistXSZYYStest
         [ScriptMethod(
             name: "神圣 - 提示",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:41563"]
+            eventCondition: ["ActionId:41562"]
         )]
         public void OnHallowedPlumeCast(Event @event, ScriptAccessory accessory)
         {
