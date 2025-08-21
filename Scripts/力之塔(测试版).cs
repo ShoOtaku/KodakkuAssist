@@ -24,7 +24,7 @@ namespace KodakkuAssistXSZYYStest
     public enum StrategySelection
     {
         ABC_123,  // 代表 ABC / 123 分组攻略
-        Pos_123456 // 代表 123456 分组攻略
+        Pos_152463 // 代表 123456 分组攻略
     }
 
     public enum TeamSelection
@@ -50,9 +50,9 @@ namespace KodakkuAssistXSZYYStest
     name: "力之塔(测试)",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4806",
     territorys: [1252],
-    version: "0.0.18",
+    version: "0.0.19",
     author: "XSZYYS",
-    note: "测试版，请选择自己小队的分组，指路可选ABC123或者123456攻略，圣枪指路A和1组会和最后的致命斧冲突，先自己看，或者在方法设置中关闭致命枪斧的指路\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：致命斧/枪，符文之斧，圣枪"
+    note: "测试版，请选择自己小队的分组，指路可选ABC123或者152463攻略，圣枪指路A和1组会和最后的致命斧冲突，先自己看，或者在方法设置中关闭致命枪斧的指路\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：致命斧/枪，符文之斧，圣枪"
     )]
 
     public class 力之塔
@@ -331,7 +331,7 @@ namespace KodakkuAssistXSZYYStest
                         case TeamSelection.Three: targetPosition = Pos_Three; break;
                     }
                     break;
-                case StrategySelection.Pos_123456:
+                case StrategySelection.Pos_152463:
                     switch (MyPosition)
                     {
                         case PositionSelection.Pos2: targetPosition = Pos_A; break;
@@ -501,7 +501,7 @@ namespace KodakkuAssistXSZYYStest
                         targetPosition = numberGroupPos;
                     }
                     break;
-                case StrategySelection.Pos_123456:
+                case StrategySelection.Pos_152463:
                     switch (MyPosition)
                     {
                         case PositionSelection.Pos1:
@@ -585,7 +585,7 @@ namespace KodakkuAssistXSZYYStest
                     }
                     break;
 
-                case StrategySelection.Pos_123456:
+                case StrategySelection.Pos_152463:
                     switch (MyPosition)
                     {
                         case PositionSelection.Pos2: // Corresponds to A
@@ -656,7 +656,7 @@ namespace KodakkuAssistXSZYYStest
                         }
                     }
                     break;
-                case StrategySelection.Pos_123456:
+                case StrategySelection.Pos_152463:
                     if (MyPosition == PositionSelection.Pos3 || MyPosition == PositionSelection.Pos4 || MyPosition == PositionSelection.Pos6)
                     {
                         shouldDraw = true;
@@ -709,7 +709,7 @@ namespace KodakkuAssistXSZYYStest
                         shouldDraw = true;
                     }
                     break;
-                case StrategySelection.Pos_123456:
+                case StrategySelection.Pos_152463:
                     if (MyPosition == PositionSelection.Pos1 || MyPosition == PositionSelection.Pos2 || MyPosition == PositionSelection.Pos5)
                     {
                         shouldDraw = true;
@@ -956,7 +956,7 @@ namespace KodakkuAssistXSZYYStest
                         }
                         break;
 
-                    case StrategySelection.Pos_123456:
+                    case StrategySelection.Pos_152463:
                         if (isLetterGroup) // 1组(A), 2组(B), 3组(C)
                         {
                             if ((MyPosition == PositionSelection.Pos1 && currentGroupRushCount == 0) || // 1组对应A组(第1次)
@@ -1051,7 +1051,7 @@ namespace KodakkuAssistXSZYYStest
                         finalDropPos = isUserInLetterGroup ? _letterGroupNextPos : _numberGroupNextPos;
                         break;
 
-                    case StrategySelection.Pos_123456:
+                    case StrategySelection.Pos_152463:
                         bool isPosInLetterGroup = MyPosition == PositionSelection.Pos1 || MyPosition == PositionSelection.Pos2 || MyPosition == PositionSelection.Pos3;
                         finalDropPos = isPosInLetterGroup ? _letterGroupNextPos : _numberGroupNextPos;
                         break;
@@ -1147,7 +1147,7 @@ namespace KodakkuAssistXSZYYStest
                 case StrategySelection.ABC_123:
                     isUserInLetterGroup = MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C;
                     break;
-                case StrategySelection.Pos_123456:
+                case StrategySelection.Pos_152463:
                     isUserInLetterGroup = MyPosition == PositionSelection.Pos1 || MyPosition == PositionSelection.Pos2 || MyPosition == PositionSelection.Pos3;
                     break;
             }
@@ -1508,7 +1508,7 @@ namespace KodakkuAssistXSZYYStest
                 case StrategySelection.ABC_123:
                     TowerPositions_ABC123.TryGetValue(MyTeam, out teamTowerCoords);
                     break;
-                case StrategySelection.Pos_123456:
+                case StrategySelection.Pos_152463:
                     TowerPositions_123456.TryGetValue(MyPosition, out teamTowerCoords);
                     break;
             }
@@ -1551,7 +1551,7 @@ namespace KodakkuAssistXSZYYStest
                 case StrategySelection.ABC_123:
                     TowerPositions_ABC123.TryGetValue(MyTeam, out teamTowerCoords);
                     break;
-                case StrategySelection.Pos_123456:
+                case StrategySelection.Pos_152463:
                     TowerPositions_123456.TryGetValue(MyPosition, out teamTowerCoords);
                     break;
             }
@@ -1589,7 +1589,7 @@ namespace KodakkuAssistXSZYYStest
             TeamSelection targetGroup = MyTeam; // Default for ABC_123
             bool shouldDraw = SelectedStrategy == StrategySelection.ABC_123;
 
-            if (SelectedStrategy == StrategySelection.Pos_123456)
+            if (SelectedStrategy == StrategySelection.Pos_152463)
             {
                 shouldDraw = true;
                 switch (MyPosition)
@@ -1982,7 +1982,7 @@ namespace KodakkuAssistXSZYYStest
                             break;
                     }
                     break;
-                case StrategySelection.Pos_123456:
+                case StrategySelection.Pos_152463:
                     switch (MyPosition)
                     {
                         case PositionSelection.Pos1:
