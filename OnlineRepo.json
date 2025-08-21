@@ -22,7 +22,7 @@
   {
     "Name": "力之塔(测试)",
     "Guid": "874D3ECF-BD6B-448F-BB42-AE7F082E4806",
-    "Version": "0.0.19",
+    "Version": "0.0.20",
     "Author": "XSZYYS",
     "TerritoryIds": [
       1252
@@ -44,7 +44,7 @@
   {
     "Name": "力之塔",
     "Guid": "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
-    "Version": "0.0.18",
+    "Version": "0.0.19",
     "Author": "XSZYYS",
     "TerritoryIds": [
       1252
