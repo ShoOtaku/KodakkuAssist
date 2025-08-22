@@ -50,7 +50,7 @@ namespace KodakkuAssistXSZYYStest
     name: "力之塔(测试)",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4806",
     territorys: [1252],
-    version: "0.0.20",
+    version: "0.0.21",
     author: "XSZYYS",
     note: "测试版，请选择自己小队的分组，指路可选ABC123或者152463攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：致命斧/枪，符文之斧，圣枪"
     )]
@@ -145,10 +145,10 @@ namespace KodakkuAssistXSZYYStest
         // 123456 攻略的冰塔分组坐标
         private static readonly Dictionary<PositionSelection, List<Vector3>> TowerPositions_123456 = new()
         {
-            { PositionSelection.Pos1, new List<Vector3> { new(-346.00f, -840.00f, 163.00f), new(-343.00f, -840.00f, 148.00f), new(-355.5f, -840.0f, 138.5f), new(-337.0f, -840.0f, 131.0f) } },
-            { PositionSelection.Pos2, new List<Vector3> { new(-346.00f, -840.00f, 151.00f), new(-331.00f, -840.00f, 148.00f), new(-318.5f, -840.0f, 138.5f), new(-311.0f, -840.0f, 157.0f) } },
-            { PositionSelection.Pos3, new List<Vector3> { new(-328.00f, -840.00f, 151.00f), new(-331.00f, -840.00f, 166.00f), new(-318.5f, -840.0f, 175.5f), new(-337.0f, -840.0f, 183.0f) } },
-            { PositionSelection.Pos4, new List<Vector3> { new(-328.00f, -840.00f, 163.00f), new(-343.00f, -840.00f, 166.00f), new(-355.5f, -840.0f, 175.5f), new(-363.0f, -840.0f, 157.0f) } },
+            { PositionSelection.Pos1, new List<Vector3> { new(-346.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 166.00f), new(-355.5f, -840.0f, 138.5f), new(-337.0f, -840.0f, 131.0f) } },
+            { PositionSelection.Pos2, new List<Vector3> { new(-328.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 148.00f), new(-318.5f, -840.0f, 138.5f), new(-311.0f, -840.0f, 157.0f) } },
+            { PositionSelection.Pos3, new List<Vector3> { new(-328.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 148.00f), new(-318.5f, -840.0f, 175.5f), new(-337.0f, -840.0f, 183.0f) } },
+            { PositionSelection.Pos4, new List<Vector3> { new(-346.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 166.00f), new(-355.5f, -840.0f, 175.5f), new(-363.0f, -840.0f, 157.0f) } },
             { PositionSelection.Pos5, new List<Vector3> { new(-337.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 157.00f), new(-337.0f, -840.0f, 131.0f), new(-318.5f, -840.0f, 138.5f) } },
             { PositionSelection.Pos6, new List<Vector3> { new(-337.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 157.00f), new(-337.0f, -840.0f, 183.0f), new(-355.5f, -840.0f, 175.5f) } }
         };
@@ -1653,7 +1653,6 @@ namespace KodakkuAssistXSZYYStest
             // 初始化尾王的状态
             accessory.Method.RemoveDraw(".*");
             accessory.Log.Debug("尾王初始化完成。");
-            _holyWeaponType = HolyWeaponType.None;
         }
 
 
@@ -2061,7 +2060,8 @@ namespace KodakkuAssistXSZYYStest
         [ScriptMethod(
             name: "灵气爆 - 提示",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:41562"]
+            eventCondition: ["ActionId:41562"],
+            suppress:2000
         )]
         public void OnHallowedPlumeCast(Event @event, ScriptAccessory accessory)
         {
@@ -2082,7 +2082,8 @@ namespace KodakkuAssistXSZYYStest
         [ScriptMethod(
             name: "神圣 - 提示",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:41563"]
+            eventCondition: ["ActionId:41563"],
+            suppress: 2000
         )]
         public void OnHolyCast(Event @event, ScriptAccessory accessory)
         {

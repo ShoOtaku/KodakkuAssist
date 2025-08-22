@@ -34,7 +34,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.19",
+    version: "0.0.20",
     author: "XSZYYS",
     note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
@@ -1485,7 +1485,6 @@ namespace KodakkuAssistXSZYYS
             // 初始化尾王的状态
             accessory.Method.RemoveDraw(".*");
             accessory.Log.Debug("尾王初始化完成。");
-            _holyWeaponType = HolyWeaponType.None;
         }
 
 
@@ -1858,7 +1857,8 @@ namespace KodakkuAssistXSZYYS
         [ScriptMethod(
             name: "灵气爆 - 提示",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:41562"]
+            eventCondition: ["ActionId:41562"],
+            suppress: 2000
         )]
         public void OnHallowedPlumeCast(Event @event, ScriptAccessory accessory)
         {
@@ -1879,7 +1879,8 @@ namespace KodakkuAssistXSZYYS
         [ScriptMethod(
             name: "神圣 - 提示",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:41563"]
+            eventCondition: ["ActionId:41563"],
+            suppress: 2000
         )]
         public void OnHolyCast(Event @event, ScriptAccessory accessory)
         {
