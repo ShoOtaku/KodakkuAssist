@@ -21,6 +21,12 @@ using KodakkuAssist.Module.Draw.Manager;
 
 namespace KodakkuAssistXSZYYS
 {
+    public enum StrategySelection
+    {
+        ABC_123,  // 代表 ABC / 123 分组攻略
+        Pos_152463 // 代表 123456 分组攻略
+    }
+
     public enum TeamSelection
     {
         A,
@@ -30,13 +36,32 @@ namespace KodakkuAssistXSZYYS
         Two,
         Three
     }
+
+    public enum PositionSelection
+    {
+        Pos1,
+        Pos2,
+        Pos3,
+        Pos4,
+        Pos5,
+        Pos6
+    }
+    // 圣枪专用：分组覆盖（None=不变；左上=A；右上=C；下=B）
+    public enum LanceGuideOverride
+    {
+        None, 
+        左上, 
+        右上, 
+        下
+    }
+
     [ScriptType(
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.20",
+    version: "0.0.23",
     author: "XSZYYS",
-    note: "测试版，请选择自己小队的分组，指路基于玉子烧攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
+    note: "请选择自己小队的分组，指路可选ABC123或者152463攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
 
     public class 力之塔
@@ -44,9 +69,17 @@ namespace KodakkuAssistXSZYYS
         #region User_Settings_用户设置
         [UserSetting("-----全局设置----- (此设置无实际意义)")]
         public bool _____Global_Settings_____ { get; set; } = true;
-        [UserSetting("请选择您在团队中被分配到的分组")]
+
+        [UserSetting("攻略分组策略(钰子烧即ABC123/152463)")]
+        public StrategySelection SelectedStrategy { get; set; } = StrategySelection.ABC_123;
+
+        [UserSetting("【钰子烧】请选择您在团队中被分配到的分组")]
         public TeamSelection MyTeam { get; set; } = TeamSelection.A;
 
+        [UserSetting("【152463】请选择您在团队中被分配到的分组")]
+        public PositionSelection MyPosition { get; set; } = PositionSelection.Pos1;
+        [UserSetting("圣枪分组覆盖（None=不变）")]
+        public LanceGuideOverride HolyLanceGroupOverride { get; set; } = LanceGuideOverride.None;
         [UserSetting("-----开发者设置----- (此设置无实际意义)")]
         public bool _____Developer_Settings_____ { get; set; } = true;
 
@@ -109,7 +142,7 @@ namespace KodakkuAssistXSZYYS
         // 用于存储场上水滩的字典 (Key: 实体ID, Value: 类型)
         private readonly ConcurrentDictionary<ulong, PuddleType> _puddles = new();
         // 冰塔分组坐标
-        private static readonly Dictionary<TeamSelection, List<Vector3>> TowerPositions = new()
+        private static readonly Dictionary<TeamSelection, List<Vector3>> TowerPositions_ABC123 = new()
         {
             { TeamSelection.A, new List<Vector3> { new(-346.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 148.00f), new(-355.5f, -840.0f, 138.5f), new(-337.0f, -840.0f, 131.0f) } },
             { TeamSelection.B, new List<Vector3> { new(-337.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 157.00f), new(-337.0f, -840.0f, 131.0f), new(-318.5f, -840.0f, 138.5f) } },
@@ -118,6 +151,21 @@ namespace KodakkuAssistXSZYYS
             { TeamSelection.Two, new List<Vector3> { new(-337.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 157.00f), new(-337.0f, -840.0f, 183.0f), new(-355.5f, -840.0f, 175.5f) } },
             { TeamSelection.Three, new List<Vector3> { new(-346.00f, -840.00f, 163.00f), new(-343.00f, -840.00f, 166.00f), new(-355.5f, -840.0f, 175.5f), new(-363.0f, -840.0f, 157.0f) } }
         };
+        // 123456 攻略的冰塔分组坐标
+        private static readonly Dictionary<PositionSelection, List<Vector3>> TowerPositions_123456 = new()
+        {
+            { PositionSelection.Pos1, new List<Vector3> { new(-346.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 166.00f), new(-355.5f, -840.0f, 138.5f), new(-337.0f, -840.0f, 131.0f) } },
+            { PositionSelection.Pos2, new List<Vector3> { new(-328.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 148.00f), new(-318.5f, -840.0f, 138.5f), new(-311.0f, -840.0f, 157.0f) } },
+            { PositionSelection.Pos3, new List<Vector3> { new(-328.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 148.00f), new(-318.5f, -840.0f, 175.5f), new(-337.0f, -840.0f, 183.0f) } },
+            { PositionSelection.Pos4, new List<Vector3> { new(-346.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 166.00f), new(-355.5f, -840.0f, 175.5f), new(-363.0f, -840.0f, 157.0f) } },
+            { PositionSelection.Pos5, new List<Vector3> { new(-337.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 157.00f), new(-337.0f, -840.0f, 131.0f), new(-318.5f, -840.0f, 138.5f) } },
+            { PositionSelection.Pos6, new List<Vector3> { new(-337.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 157.00f), new(-337.0f, -840.0f, 183.0f), new(-355.5f, -840.0f, 175.5f) } }
+        };
+
+
+
+
+
         //小怪分组坐标
         private static readonly Dictionary<TeamSelection, Vector3> GroupMarkerPositions = new()
         {
@@ -173,6 +221,7 @@ namespace KodakkuAssistXSZYYS
         // 用于神圣机制的状态变量
         private enum HolyWeaponType { None, Axe, Lance }
         private HolyWeaponType _holyWeaponType = HolyWeaponType.None;
+
         public void Init(ScriptAccessory accessory)
         {
             accessory.Log.Debug("力之塔脚本已加载。");
@@ -284,25 +333,29 @@ namespace KodakkuAssistXSZYYS
             Vector3 targetPosition = new Vector3(); // Default value
 
             // 根据用户设置选择目标坐标
-            switch (MyTeam)
+            switch (SelectedStrategy)
             {
-                case TeamSelection.A:
-                    targetPosition = new Vector3(704.49f, -481.01f, 365.38f);
+                case StrategySelection.ABC_123:
+                    switch (MyTeam)
+                    {
+                        case TeamSelection.A: targetPosition = Pos_A; break;
+                        case TeamSelection.B: targetPosition = Pos_B; break;
+                        case TeamSelection.C: targetPosition = Pos_C; break;
+                        case TeamSelection.One: targetPosition = Pos_One; break;
+                        case TeamSelection.Two: targetPosition = Pos_Two; break;
+                        case TeamSelection.Three: targetPosition = Pos_Three; break;
+                    }
                     break;
-                case TeamSelection.B:
-                    targetPosition = new Vector3(699.98f, -481.01f, 355.49f);
-                    break;
-                case TeamSelection.C:
-                    targetPosition = new Vector3(695.49f, -481.01f, 365.38f);
-                    break;
-                case TeamSelection.One:
-                    targetPosition = new Vector3(695.49f, -481.01f, 392.60f);
-                    break;
-                case TeamSelection.Two:
-                    targetPosition = new Vector3(699.98f, -481.01f, 402.49f);
-                    break;
-                case TeamSelection.Three:
-                    targetPosition = new Vector3(704.49f, -481.01f, 392.60f);
+                case StrategySelection.Pos_152463:
+                    switch (MyPosition)
+                    {
+                        case PositionSelection.Pos2: targetPosition = Pos_A; break;
+                        case PositionSelection.Pos5: targetPosition = Pos_B; break;
+                        case PositionSelection.Pos1: targetPosition = Pos_C; break;
+                        case PositionSelection.Pos4: targetPosition = Pos_One; break;
+                        case PositionSelection.Pos6: targetPosition = Pos_Two; break;
+                        case PositionSelection.Pos3: targetPosition = Pos_Three; break;
+                    }
                     break;
             }
 
@@ -447,16 +500,37 @@ namespace KodakkuAssistXSZYYS
         )]
         public void SummonGuide(Event @event, ScriptAccessory accessory)
         {
-            Vector3 targetPosition;
+            Vector3 targetPosition = new Vector3();
+            var letterGroupPos = new Vector3(700.24f, -481.00f, 360.46f);
+            var numberGroupPos = new Vector3(700.02f, -481.00f, 398.08f);
 
-            // 根据队伍选择是字母队还是数字队的目标点
-            if (MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C)
+            switch (SelectedStrategy)
             {
-                targetPosition = new Vector3(700.24f, -481.00f, 360.46f);
-            }
-            else // One, Two, Three
-            {
-                targetPosition = new Vector3(700.02f, -481.00f, 398.08f);
+                case StrategySelection.ABC_123:
+                    if (MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C)
+                    {
+                        targetPosition = letterGroupPos;
+                    }
+                    else // One, Two, Three
+                    {
+                        targetPosition = numberGroupPos;
+                    }
+                    break;
+                case StrategySelection.Pos_152463:
+                    switch (MyPosition)
+                    {
+                        case PositionSelection.Pos1:
+                        case PositionSelection.Pos5:
+                        case PositionSelection.Pos2:
+                            targetPosition = letterGroupPos;
+                            break;
+                        case PositionSelection.Pos4:
+                        case PositionSelection.Pos6:
+                        case PositionSelection.Pos3:
+                            targetPosition = numberGroupPos;
+                            break;
+                    }
+                    break;
             }
 
             // 绘制指路
@@ -500,61 +574,72 @@ namespace KodakkuAssistXSZYYS
             eventCondition: ["ActionId:41707"],
             suppress: 1000
         )]
-        public void AbcTeamHalfArenaGuide(Event @event, ScriptAccessory accessory)
+        public void FloatingTowerGuide(Event @event, ScriptAccessory accessory)
         {
-            // 检查玩家分组是否为A, B, C
-            if (MyTeam != TeamSelection.A && MyTeam != TeamSelection.B && MyTeam != TeamSelection.C)
-                return;
-
-            // 检查是否已记录半场信息
             if (_isCasterInUpperHalf == null)
             {
-                if (Enable_Developer_Mode) accessory.Log.Error("字母队指路: 未能获取到之前的半场信息。");
+                if (Enable_Developer_Mode) accessory.Log.Error("浮空塔指路: 未能获取到之前的半场信息。");
                 return;
             }
 
             Vector3 targetPosition = new Vector3();
+            bool shouldDraw = false;
 
-            // 根据玩家分组和记录的半场位置，选择目标坐标
-            switch (MyTeam)
+            switch (SelectedStrategy)
             {
-                case TeamSelection.A:
-                    targetPosition = _isCasterInUpperHalf.Value ? Pos_One : Pos_A;
+                case StrategySelection.ABC_123:
+                    if (MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C)
+                    {
+                        shouldDraw = true;
+                        switch (MyTeam)
+                        {
+                            case TeamSelection.A: targetPosition = _isCasterInUpperHalf.Value ? Pos_One : Pos_A; break;
+                            case TeamSelection.B: targetPosition = _isCasterInUpperHalf.Value ? Pos_Two : Pos_B; break;
+                            case TeamSelection.C: targetPosition = _isCasterInUpperHalf.Value ? Pos_Three : Pos_C; break;
+                        }
+                    }
                     break;
-                case TeamSelection.B:
-                    targetPosition = _isCasterInUpperHalf.Value ? Pos_Two : Pos_B;
-                    break;
-                case TeamSelection.C:
-                    targetPosition = _isCasterInUpperHalf.Value ? Pos_Three : Pos_C;
+
+                case StrategySelection.Pos_152463:
+                    switch (MyPosition)
+                    {
+                        case PositionSelection.Pos2: // Corresponds to A
+                            shouldDraw = true;
+                            targetPosition = _isCasterInUpperHalf.Value ? Pos_One : Pos_A;
+                            break;
+                        case PositionSelection.Pos5: // Corresponds to B
+                            shouldDraw = true;
+                            targetPosition = _isCasterInUpperHalf.Value ? Pos_Two : Pos_B;
+                            break;
+                        case PositionSelection.Pos1: // Corresponds to C
+                            shouldDraw = true;
+                            targetPosition = _isCasterInUpperHalf.Value ? Pos_Three : Pos_C;
+                            break;
+                    }
                     break;
             }
 
-            // 绘制指路
-            var dpGuide = accessory.Data.GetDefaultDrawProperties();
-            dpGuide.Name = $"Abc_Team_Guide_Arrow_{MyTeam}";
-            dpGuide.Owner = accessory.Data.Me;
-            dpGuide.TargetPosition = targetPosition;
-            dpGuide.Scale = new Vector2(1.5f);
-            dpGuide.ScaleMode |= ScaleMode.YByDistance;
-            dpGuide.Color = accessory.Data.DefaultSafeColor;
-            dpGuide.DestoryAt = 7000;
-            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
-
-            // 在目标点绘制绿色圆圈
-            var dpCircle = accessory.Data.GetDefaultDrawProperties();
-            dpCircle.Name = $"Abc_Team_Guide_Circle_{MyTeam}";
-            dpCircle.Position = targetPosition;
-            dpCircle.Scale = new Vector2(4);
-            dpCircle.Color = new Vector4(0, 1, 0, 0.6f); // 绿色
-            dpCircle.DestoryAt = 7000;
-            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dpCircle);
-
-            if (Enable_Developer_Mode)
+            if (shouldDraw)
             {
-                accessory.Log.Debug($"字母队指路: 队伍 {MyTeam}, 指向 {targetPosition}");
+                var dpGuide = accessory.Data.GetDefaultDrawProperties();
+                dpGuide.Name = $"Floating_Tower_Guide_Arrow";
+                dpGuide.Owner = accessory.Data.Me;
+                dpGuide.TargetPosition = targetPosition;
+                dpGuide.Scale = new Vector2(1.5f);
+                dpGuide.ScaleMode |= ScaleMode.YByDistance;
+                dpGuide.Color = accessory.Data.DefaultSafeColor;
+                dpGuide.DestoryAt = 7000;
+                accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
+
+                var dpCircle = accessory.Data.GetDefaultDrawProperties();
+                dpCircle.Name = $"Floating_Tower_Guide_Circle";
+                dpCircle.Position = targetPosition;
+                dpCircle.Scale = new Vector2(4);
+                dpCircle.Color = new Vector4(0, 1, 0, 0.6f); // 绿色
+                dpCircle.DestoryAt = 7000;
+                accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dpCircle);
             }
 
-            // 重置状态，为下一次机制做准备
             _isCasterInUpperHalf = null;
         }
         [ScriptMethod(
@@ -563,57 +648,62 @@ namespace KodakkuAssistXSZYYS
             eventCondition: ["ActionId:regex:^(41713|41711)$"],
             suppress: 1000
         )]
-        public void NumberTeamHalfArenaGuide(Event @event, ScriptAccessory accessory)
+        public void GroundTowerGuide(Event @event, ScriptAccessory accessory)
         {
-            // 检查玩家分组是否为数字队
-            if (MyTeam != TeamSelection.One && MyTeam != TeamSelection.Two && MyTeam != TeamSelection.Three)
-                return;
-
             var caster = accessory.Data.Objects.SearchById(@event.SourceId);
             if (caster == null) return;
 
-            // 判断施法者在哪个半场
             bool isCasterInUpperHalf = caster.Position.Z > ArenaCenterZ;
-
             Vector3 targetPosition = new Vector3();
+            bool shouldDraw = false;
 
-            // 根据玩家分组和施法者半场位置，选择目标坐标
-            switch (MyTeam)
+            switch (SelectedStrategy)
             {
-                case TeamSelection.One:
-                    targetPosition = isCasterInUpperHalf ? Pos_One : Pos_A;
+                case StrategySelection.ABC_123:
+                    if (MyTeam == TeamSelection.One || MyTeam == TeamSelection.Two || MyTeam == TeamSelection.Three)
+                    {
+                        shouldDraw = true;
+                        switch (MyTeam)
+                        {
+                            case TeamSelection.One: targetPosition = isCasterInUpperHalf ? Pos_One : Pos_A; break;
+                            case TeamSelection.Two: targetPosition = isCasterInUpperHalf ? Pos_Two : Pos_B; break;
+                            case TeamSelection.Three: targetPosition = isCasterInUpperHalf ? Pos_Three : Pos_C; break;
+                        }
+                    }
                     break;
-                case TeamSelection.Two:
-                    targetPosition = isCasterInUpperHalf ? Pos_Two : Pos_B;
-                    break;
-                case TeamSelection.Three:
-                    targetPosition = isCasterInUpperHalf ? Pos_Three : Pos_C;
+                case StrategySelection.Pos_152463:
+                    if (MyPosition == PositionSelection.Pos3 || MyPosition == PositionSelection.Pos4 || MyPosition == PositionSelection.Pos6)
+                    {
+                        shouldDraw = true;
+                        switch (MyPosition)
+                        {
+                            case PositionSelection.Pos4: targetPosition = isCasterInUpperHalf ? Pos_One : Pos_A; break;
+                            case PositionSelection.Pos6: targetPosition = isCasterInUpperHalf ? Pos_Two : Pos_B; break;
+                            case PositionSelection.Pos3: targetPosition = isCasterInUpperHalf ? Pos_Three : Pos_C; break;
+                        }
+                    }
                     break;
             }
 
-            // 绘制指路
-            var dpGuide = accessory.Data.GetDefaultDrawProperties();
-            dpGuide.Name = $"Number_Team_Guide_Arrow_{MyTeam}";
-            dpGuide.Owner = accessory.Data.Me;
-            dpGuide.TargetPosition = targetPosition;
-            dpGuide.Scale = new Vector2(1.5f);
-            dpGuide.ScaleMode |= ScaleMode.YByDistance;
-            dpGuide.Color = accessory.Data.DefaultSafeColor;
-            dpGuide.DestoryAt = 21000;
-            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
-
-            // 在目标点绘制绿色圆圈
-            var dpCircle = accessory.Data.GetDefaultDrawProperties();
-            dpCircle.Name = $"Number_Team_Guide_Circle_{MyTeam}";
-            dpCircle.Position = targetPosition;
-            dpCircle.Scale = new Vector2(4);
-            dpCircle.Color = new Vector4(0, 1, 0, 0.6f); // 绿色
-            dpCircle.DestoryAt = 21000;
-            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dpCircle);
-
-            if (Enable_Developer_Mode)
+            if (shouldDraw)
             {
-                accessory.Log.Debug($"数字队指路: 队伍 {MyTeam}, 施法者在 {(isCasterInUpperHalf ? "上半场" : "下半场")}, 指向 {targetPosition}");
+                var dpGuide = accessory.Data.GetDefaultDrawProperties();
+                dpGuide.Name = $"Ground_Tower_Guide_Arrow";
+                dpGuide.Owner = accessory.Data.Me;
+                dpGuide.TargetPosition = targetPosition;
+                dpGuide.Scale = new Vector2(1.5f);
+                dpGuide.ScaleMode |= ScaleMode.YByDistance;
+                dpGuide.Color = accessory.Data.DefaultSafeColor;
+                dpGuide.DestoryAt = 21000;
+                accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
+
+                var dpCircle = accessory.Data.GetDefaultDrawProperties();
+                dpCircle.Name = $"Ground_Tower_Guide_Circle";
+                dpCircle.Position = targetPosition;
+                dpCircle.Scale = new Vector2(4);
+                dpCircle.Color = new Vector4(0, 1, 0, 0.6f); // 绿色
+                dpCircle.DestoryAt = 21000;
+                accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dpCircle);
             }
         }
 
@@ -625,9 +715,24 @@ namespace KodakkuAssistXSZYYS
         )]
         public void AbcTeamSafeZone(Event @event, ScriptAccessory accessory)
         {
-            // 检查玩家分组是否为A, B, C
-            if (MyTeam != TeamSelection.A && MyTeam != TeamSelection.B && MyTeam != TeamSelection.C)
-                return;
+            bool shouldDraw = false;
+            switch (SelectedStrategy)
+            {
+                case StrategySelection.ABC_123:
+                    if (MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C)
+                    {
+                        shouldDraw = true;
+                    }
+                    break;
+                case StrategySelection.Pos_152463:
+                    if (MyPosition == PositionSelection.Pos1 || MyPosition == PositionSelection.Pos2 || MyPosition == PositionSelection.Pos5)
+                    {
+                        shouldDraw = true;
+                    }
+                    break;
+            }
+
+            if (!shouldDraw) return;
 
             var caster = accessory.Data.Objects.SearchById(@event.SourceId);
             if (caster == null) return;
@@ -643,17 +748,10 @@ namespace KodakkuAssistXSZYYS
 
             if (Enable_Developer_Mode)
             {
-                accessory.Log.Debug("为字母队绘制安全区。");
+                accessory.Log.Debug("为浮空塔组绘制安全区。");
             }
         }
-
-
-
-
-
         #endregion
-
-
         #region 老二
         [ScriptMethod(
             name: "初始化老二",
@@ -850,23 +948,49 @@ namespace KodakkuAssistXSZYYS
                 // --- 颜色判断逻辑 ---
                 bool isSafe = false;
                 // currentGroupRushCount 是从0开始计数的 (0=第1次, 1=第2次, 2=第3次)
-                if (isLetterGroup)
+                switch (SelectedStrategy)
                 {
-                    if ((MyTeam == TeamSelection.A && currentGroupRushCount == 0) ||
-                        (MyTeam == TeamSelection.B && currentGroupRushCount == 1) ||
-                        (MyTeam == TeamSelection.C && currentGroupRushCount == 2))
-                    {
-                        isSafe = true;
-                    }
-                }
-                else // isNumberGroup
-                {
-                    if ((MyTeam == TeamSelection.One && currentGroupRushCount == 0) ||
-                        (MyTeam == TeamSelection.Two && currentGroupRushCount == 1) ||
-                        (MyTeam == TeamSelection.Three && currentGroupRushCount == 2))
-                    {
-                        isSafe = true;
-                    }
+                    case StrategySelection.ABC_123:
+                        if (isLetterGroup)
+                        {
+                            if ((MyTeam == TeamSelection.A && currentGroupRushCount == 0) ||
+                                (MyTeam == TeamSelection.B && currentGroupRushCount == 1) ||
+                                (MyTeam == TeamSelection.C && currentGroupRushCount == 2))
+                            {
+                                isSafe = true;
+                            }
+                        }
+                        else // isNumberGroup
+                        {
+                            if ((MyTeam == TeamSelection.One && currentGroupRushCount == 0) ||
+                                (MyTeam == TeamSelection.Two && currentGroupRushCount == 1) ||
+                                (MyTeam == TeamSelection.Three && currentGroupRushCount == 2))
+                            {
+                                isSafe = true;
+                            }
+                        }
+                        break;
+
+                    case StrategySelection.Pos_152463:
+                        if (isLetterGroup) // 1组(A), 2组(B), 3组(C)
+                        {
+                            if ((MyPosition == PositionSelection.Pos1 && currentGroupRushCount == 0) || // 1组对应A组(第1次)
+                                (MyPosition == PositionSelection.Pos2 && currentGroupRushCount == 1) || // 2组对应B组(第2次)
+                                (MyPosition == PositionSelection.Pos3 && currentGroupRushCount == 2))   // 3组对应C组(第3次)
+                            {
+                                isSafe = true;
+                            }
+                        }
+                        else // isNumberGroup 4组(One), 5组(Two), 6组(Three)
+                        {
+                            if ((MyPosition == PositionSelection.Pos4 && currentGroupRushCount == 0) || // 4组对应One组(第1次)
+                                (MyPosition == PositionSelection.Pos5 && currentGroupRushCount == 1) || // 5组对应Two组(第2次)
+                                (MyPosition == PositionSelection.Pos6 && currentGroupRushCount == 2))   // 6组对应Three组(第3次)
+                            {
+                                isSafe = true;
+                            }
+                        }
+                        break;
                 }
 
                 var color = isSafe ? accessory.Data.DefaultSafeColor : accessory.Data.DefaultDangerColor;
@@ -916,6 +1040,7 @@ namespace KodakkuAssistXSZYYS
         private void DrawGlacialImpactGuide(ScriptAccessory accessory)
         {
             Vector3? safePosition = null;
+            Vector3? finalDropPos = null;
 
             // 优先处理连线情况
             if (_tetherSourceId != 0)
@@ -934,8 +1059,18 @@ namespace KodakkuAssistXSZYYS
             }
             else // 如果没有被连线，则执行分组逻辑
             {
-                bool isUserInLetterGroup = MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C;
-                Vector3? finalDropPos = isUserInLetterGroup ? _letterGroupNextPos : _numberGroupNextPos;
+                switch (SelectedStrategy)
+                {
+                    case StrategySelection.ABC_123:
+                        bool isUserInLetterGroup = MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C;
+                        finalDropPos = isUserInLetterGroup ? _letterGroupNextPos : _numberGroupNextPos;
+                        break;
+
+                    case StrategySelection.Pos_152463:
+                        bool isPosInLetterGroup = MyPosition == PositionSelection.Pos1 || MyPosition == PositionSelection.Pos2 || MyPosition == PositionSelection.Pos3;
+                        finalDropPos = isPosInLetterGroup ? _letterGroupNextPos : _numberGroupNextPos;
+                        break;
+                }
 
                 if (finalDropPos != null)
                 {
@@ -1022,7 +1157,15 @@ namespace KodakkuAssistXSZYYS
         private void ProcessFireballs(ScriptAccessory accessory)
         {
             bool isUserInLetterGroup = MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C;
-
+            switch (SelectedStrategy)
+            {
+                case StrategySelection.ABC_123:
+                    isUserInLetterGroup = MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C;
+                    break;
+                case StrategySelection.Pos_152463:
+                    isUserInLetterGroup = MyPosition == PositionSelection.Pos1 || MyPosition == PositionSelection.Pos2 || MyPosition == PositionSelection.Pos3;
+                    break;
+            }
             int fireballIndex = 0;
             foreach (var fireballPos in _fireballPositions)
             {
@@ -1201,7 +1344,6 @@ namespace KodakkuAssistXSZYYS
             }
         }
 
-
         #endregion
         #region 老三
         [ScriptMethod(
@@ -1375,8 +1517,18 @@ namespace KodakkuAssistXSZYYS
             var tower = accessory.Data.Objects.SearchById(@event.SourceId);
             if (tower == null) return;
 
-            // 获取用户选择的队伍对应的坐标列表
-            if (TowerPositions.TryGetValue(MyTeam, out var teamTowerCoords))
+            List<Vector3> teamTowerCoords = new();
+            switch (SelectedStrategy)
+            {
+                case StrategySelection.ABC_123:
+                    TowerPositions_ABC123.TryGetValue(MyTeam, out teamTowerCoords);
+                    break;
+                case StrategySelection.Pos_152463:
+                    TowerPositions_123456.TryGetValue(MyPosition, out teamTowerCoords);
+                    break;
+            }
+
+            if (teamTowerCoords != null)
             {
                 // 检查出现的塔是否是自己队伍的塔
                 foreach (var coord in teamTowerCoords)
@@ -1408,10 +1560,19 @@ namespace KodakkuAssistXSZYYS
 
             if (tower == null || tower.DataId != 2014548) return;
 
-
-            if (TowerPositions.TryGetValue(MyTeam, out var teamTowerCoords))
+            List<Vector3> teamTowerCoords = null;
+            switch (SelectedStrategy)
             {
+                case StrategySelection.ABC_123:
+                    TowerPositions_ABC123.TryGetValue(MyTeam, out teamTowerCoords);
+                    break;
+                case StrategySelection.Pos_152463:
+                    TowerPositions_123456.TryGetValue(MyPosition, out teamTowerCoords);
+                    break;
+            }
 
+            if (teamTowerCoords != null)
+            {
                 foreach (var coord in teamTowerCoords)
                 {
                     if (Vector3.DistanceSquared(tower.Position, coord) < 1.0f)
@@ -1440,34 +1601,50 @@ namespace KodakkuAssistXSZYYS
             var marker = accessory.Data.Objects.SearchById(@event.SourceId);
             if (marker == null) return;
 
+            TeamSelection targetGroup = MyTeam; // Default for ABC_123
+            bool shouldDraw = SelectedStrategy == StrategySelection.ABC_123;
 
-            foreach (var groupEntry in GroupMarkerPositions)
+            if (SelectedStrategy == StrategySelection.Pos_152463)
             {
-
-                if (Vector3.DistanceSquared(marker.Position, groupEntry.Value) < 1.0f)
+                shouldDraw = true;
+                switch (MyPosition)
                 {
+                    case PositionSelection.Pos1: targetGroup = TeamSelection.A; break;
+                    case PositionSelection.Pos5: targetGroup = TeamSelection.B; break;
+                    case PositionSelection.Pos2: targetGroup = TeamSelection.C; break;
+                    case PositionSelection.Pos3: targetGroup = TeamSelection.One; break;
+                    case PositionSelection.Pos6: targetGroup = TeamSelection.Two; break;
+                    case PositionSelection.Pos4: targetGroup = TeamSelection.Three; break;
+                }
+            }
 
-                    if (groupEntry.Key == MyTeam)
+            if (shouldDraw)
+            {
+                foreach (var groupEntry in GroupMarkerPositions)
+                {
+                    if (Vector3.DistanceSquared(marker.Position, groupEntry.Value) < 1.0f)
                     {
+                        if (groupEntry.Key == targetGroup)
+                        {
+                            var dpCircle = accessory.Data.GetDefaultDrawProperties();
+                            dpCircle.Name = $"GroupMarker_Circle_{marker.EntityId}";
+                            dpCircle.Owner = marker.EntityId;
+                            dpCircle.Scale = new Vector2(3);
+                            dpCircle.Color = new Vector4(0, 1, 0, 1);
+                            dpCircle.DestoryAt = 4000;
+                            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dpCircle);
 
-                        var dpCircle = accessory.Data.GetDefaultDrawProperties();
-                        dpCircle.Name = $"GroupMarker_Circle_{marker.EntityId}";
-                        dpCircle.Owner = marker.EntityId;
-                        dpCircle.Scale = new Vector2(3); 
-                        dpCircle.Color = new Vector4(0, 1, 0, 1); 
-                        dpCircle.DestoryAt = 4000;
-                        accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dpCircle);
-
-                        var dpGuide = accessory.Data.GetDefaultDrawProperties();
-                        dpGuide.Name = $"GroupMarker_Guide_{marker.EntityId}";
-                        dpGuide.Owner = accessory.Data.Me;
-                        dpGuide.TargetObject = marker.EntityId;
-                        dpGuide.Scale = new Vector2(1.5f);
-                        dpGuide.ScaleMode |= ScaleMode.YByDistance;
-                        dpGuide.Color = accessory.Data.DefaultSafeColor;
-                        dpGuide.DestoryAt = 4000;
-                        accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
-                        break;
+                            var dpGuide = accessory.Data.GetDefaultDrawProperties();
+                            dpGuide.Name = $"GroupMarker_Guide_{marker.EntityId}";
+                            dpGuide.Owner = accessory.Data.Me;
+                            dpGuide.TargetObject = marker.EntityId;
+                            dpGuide.Scale = new Vector2(1.5f);
+                            dpGuide.ScaleMode |= ScaleMode.YByDistance;
+                            dpGuide.Color = accessory.Data.DefaultSafeColor;
+                            dpGuide.DestoryAt = 4000;
+                            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
+                            break;
+                        }
                     }
                 }
             }
@@ -1485,6 +1662,7 @@ namespace KodakkuAssistXSZYYS
             // 初始化尾王的状态
             accessory.Method.RemoveDraw(".*");
             accessory.Log.Debug("尾王初始化完成。");
+            _holyWeaponType = HolyWeaponType.None;
         }
 
 
@@ -1606,7 +1784,7 @@ namespace KodakkuAssistXSZYYS
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dpSquare);
             }
         }
-/*
+        /*
         [ScriptMethod(
             name: "致命枪斧（指路）",
             eventType: EventTypeEnum.StartCasting,
@@ -1643,7 +1821,7 @@ namespace KodakkuAssistXSZYYS
             dpGuide.DestoryAt = duration;
             accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dpGuide);
         }
-*/
+        */
         [ScriptMethod(
             name: "大斧猎物 (9秒)",
             eventType: EventTypeEnum.StatusAdd,
@@ -1788,35 +1966,113 @@ namespace KodakkuAssistXSZYYS
         public void HolyLanceGuide(Event @event, ScriptAccessory accessory)
         {
             var path = new List<DisplacementContainer>();
-
-            // 根据分组确定路径
-            switch (MyTeam)
+            // 覆盖逻辑：仅当选择了“左上/右上/下”时，强制使用 A/B/C 的路径块；
+            // 选择 None 时，保持原有 SelectedStrategy 的完整分支，不做任何改动。
+            if (HolyLanceGroupOverride != LanceGuideOverride.None)
             {
-                case TeamSelection.A:
-                case TeamSelection.One:
-                    path.Add(new DisplacementContainer(SquarePositions[2], 0, 5000));
-                    path.Add(new DisplacementContainer(CriticalLanceSafePositions[1], 0, 10000));
-                    path.Add(new DisplacementContainer(SquarePositions[2], 0, 17000));
-                    path.Add(new DisplacementContainer(RectSideInA, 0, 4000));
-                    path.Add(new DisplacementContainer(RectSideOutA, 0, 6000));
-                    break;
-                case TeamSelection.B:
-                case TeamSelection.Two:
-                    path.Add(new DisplacementContainer(SquarePositions[1], 0, 5000));
-                    path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 10000));
-                    path.Add(new DisplacementContainer(RectSideInB, 0, 5000));
-                    path.Add(new DisplacementContainer(RectSideOutB, 0, 6000));
-                    path.Add(new DisplacementContainer(SquarePositions[1], 0, 14000));
-                    break;
-                case TeamSelection.C:
-                case TeamSelection.Three:
-                    path.Add(new DisplacementContainer(SquarePositions[0], 0, 5000));
-                    path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 10000));
-                    path.Add(new DisplacementContainer(SquarePositions[0], 0, 9000));
-                    path.Add(new DisplacementContainer(RectSideInC, 0, 4000));
-                    path.Add(new DisplacementContainer(RectSideOutC, 0, 6000));
-                    path.Add(new DisplacementContainer(SquarePositions[0], 0, 6000));
-                    break;
+                TeamSelection forcedTeam = TeamSelection.A;
+                switch (HolyLanceGroupOverride)
+                {
+                    case LanceGuideOverride.左上: forcedTeam = TeamSelection.A; break;
+                    case LanceGuideOverride.右上: forcedTeam = TeamSelection.B; break;
+                    case LanceGuideOverride.下:   forcedTeam = TeamSelection.C; break;
+                }
+
+                switch (forcedTeam)
+                {
+                    case TeamSelection.A:
+                        path.Add(new DisplacementContainer(SquarePositions[2], 0, 5000));
+                        path.Add(new DisplacementContainer(CriticalLanceSafePositions[1], 0, 10000));
+                        path.Add(new DisplacementContainer(SquarePositions[2], 0, 17000));
+                        path.Add(new DisplacementContainer(RectSideInA, 0, 4000));
+                        path.Add(new DisplacementContainer(RectSideOutA, 0, 6000));
+                        break;
+                    case TeamSelection.B:
+                        path.Add(new DisplacementContainer(SquarePositions[1], 0, 5000));
+                        path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 10000));
+                        path.Add(new DisplacementContainer(RectSideInB, 0, 5000));
+                        path.Add(new DisplacementContainer(RectSideOutB, 0, 6000));
+                        path.Add(new DisplacementContainer(SquarePositions[1], 0, 14000));
+                        break;
+                    case TeamSelection.C:
+                        path.Add(new DisplacementContainer(SquarePositions[0], 0, 5000));
+                        path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 10000));
+                        path.Add(new DisplacementContainer(SquarePositions[0], 0, 9000));
+                        path.Add(new DisplacementContainer(RectSideInC, 0, 4000));
+                        path.Add(new DisplacementContainer(RectSideOutC, 0, 6000));
+                        path.Add(new DisplacementContainer(SquarePositions[0], 0, 6000));
+                        break;
+                }
+            }
+            else
+            {
+                // None：保留原有策略分支（SelectedStrategy 完整生效）
+                // 根据分组确定路径
+                switch (SelectedStrategy)
+                {
+                    case StrategySelection.ABC_123:
+                        switch (MyTeam)
+                        {
+                            case TeamSelection.A:
+                            case TeamSelection.One:
+                                path.Add(new DisplacementContainer(SquarePositions[2], 0, 5000));
+                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[1], 0, 10000));
+                                path.Add(new DisplacementContainer(SquarePositions[2], 0, 17000));
+                                path.Add(new DisplacementContainer(RectSideInA, 0, 4000));
+                                path.Add(new DisplacementContainer(RectSideOutA, 0, 6000));
+                                break;
+                            case TeamSelection.B:
+                            case TeamSelection.Two:
+                                path.Add(new DisplacementContainer(SquarePositions[1], 0, 5000));
+                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 10000));
+                                path.Add(new DisplacementContainer(RectSideInB, 0, 5000));
+                                path.Add(new DisplacementContainer(RectSideOutB, 0, 6000));
+                                path.Add(new DisplacementContainer(SquarePositions[1], 0, 14000));
+                                break;
+                            case TeamSelection.C:
+                            case TeamSelection.Three:
+                                path.Add(new DisplacementContainer(SquarePositions[0], 0, 5000));
+                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 10000));
+                                path.Add(new DisplacementContainer(SquarePositions[0], 0, 9000));
+                                path.Add(new DisplacementContainer(RectSideInC, 0, 4000));
+                                path.Add(new DisplacementContainer(RectSideOutC, 0, 6000));
+                                path.Add(new DisplacementContainer(SquarePositions[0], 0, 6000));
+                                break;
+                        }
+
+                        break;
+                    case StrategySelection.Pos_152463:
+                        switch (MyPosition)
+                        {
+                            case PositionSelection.Pos1:
+                            case PositionSelection.Pos2:
+                                path.Add(new DisplacementContainer(SquarePositions[2], 0, 5000));
+                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[1], 0, 10000));
+                                path.Add(new DisplacementContainer(SquarePositions[2], 0, 17000));
+                                path.Add(new DisplacementContainer(RectSideInA, 0, 4000));
+                                path.Add(new DisplacementContainer(RectSideOutA, 0, 6000));
+                                break;
+                            case PositionSelection.Pos5:
+                            case PositionSelection.Pos6:
+                                path.Add(new DisplacementContainer(SquarePositions[1], 0, 5000));
+                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 10000));
+                                path.Add(new DisplacementContainer(RectSideInB, 0, 5000));
+                                path.Add(new DisplacementContainer(RectSideOutB, 0, 6000));
+                                path.Add(new DisplacementContainer(SquarePositions[1], 0, 14000));
+                                break;
+                            case PositionSelection.Pos3:
+                            case PositionSelection.Pos4:
+                                path.Add(new DisplacementContainer(SquarePositions[0], 0, 5000));
+                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 10000));
+                                path.Add(new DisplacementContainer(SquarePositions[0], 0, 9000));
+                                path.Add(new DisplacementContainer(RectSideInC, 0, 4000));
+                                path.Add(new DisplacementContainer(RectSideOutC, 0, 6000));
+                                path.Add(new DisplacementContainer(SquarePositions[0], 0, 6000));
+                                break;
+                        }
+
+                        break;
+                }
             }
 
             if (path.Count > 0)
@@ -1828,7 +2084,7 @@ namespace KodakkuAssistXSZYYS
                     DrawMode = DrawModeEnum.Imgui
                 };
                 accessory.MultiDisDraw(path, props);
-                accessory.Log.Debug($"圣枪机制触发：为 {MyTeam} 组绘制路径。");
+                accessory.Log.Debug($"圣枪机制：覆盖={HolyLanceGroupOverride}，策略={SelectedStrategy}。");
             }
         }
         [ScriptMethod(
@@ -1858,7 +2114,7 @@ namespace KodakkuAssistXSZYYS
             name: "灵气爆 - 提示",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41562"],
-            suppress: 2000
+            suppress:2000
         )]
         public void OnHallowedPlumeCast(Event @event, ScriptAccessory accessory)
         {
@@ -1875,6 +2131,10 @@ namespace KodakkuAssistXSZYYS
                     accessory.Log.Error("神圣机制：未能获取到武器类型。");
                     return;
             }
+            accessory.Method.TextInfo(hintText, 5000);
+
+            // 重置状态
+            _holyWeaponType = HolyWeaponType.None;
         }
         [ScriptMethod(
             name: "神圣 - 提示",
@@ -1899,8 +2159,8 @@ namespace KodakkuAssistXSZYYS
             }
             accessory.Method.TextInfo(hintText, 5000);
 
-        // 重置状态
-        _holyWeaponType = HolyWeaponType.None;
+            // 重置状态
+            _holyWeaponType = HolyWeaponType.None;
         }
         #endregion
         #region Helper_Functions
