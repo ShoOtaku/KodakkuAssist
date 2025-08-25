@@ -59,7 +59,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.24",
+    version: "0.0.25",
     author: "XSZYYS",
     note: "请选择自己小队的分组，指路可选ABC123或者152463攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
@@ -2006,22 +2006,22 @@ namespace KodakkuAssistXSZYYS
                 switch (forcedTeam)
                 {
                     case TeamSelection.A:
-                        path.Add(new DisplacementContainer(SquarePositions[2], 0, 5000));
-                        path.Add(new DisplacementContainer(CriticalLanceSafePositions[1], 0, 10000));
+                        path.Add(new DisplacementContainer(SquarePositions[2], 0, 10000));
+                        path.Add(new DisplacementContainer(CriticalLanceSafePositions[1], 0, 5000));
                         path.Add(new DisplacementContainer(SquarePositions[2], 0, 17000));
                         path.Add(new DisplacementContainer(RectSideInA, 0, 3000));
                         path.Add(new DisplacementContainer(RectSideOutA, 0, 6000));
                         break;
                     case TeamSelection.B:
-                        path.Add(new DisplacementContainer(SquarePositions[1], 0, 5000));
-                        path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 10000));
+                        path.Add(new DisplacementContainer(SquarePositions[1], 0, 10000));
+                        path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 5000));
                         path.Add(new DisplacementContainer(RectSideInB, 0, 4000));
                         path.Add(new DisplacementContainer(RectSideOutB, 0, 6000));
                         path.Add(new DisplacementContainer(SquarePositions[1], 0, 14000));
                         break;
                     case TeamSelection.C:
-                        path.Add(new DisplacementContainer(SquarePositions[0], 0, 5000));
-                        path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 10000));
+                        path.Add(new DisplacementContainer(SquarePositions[0], 0, 10000));
+                        path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 5000));
                         path.Add(new DisplacementContainer(SquarePositions[0], 0, 9000));
                         path.Add(new DisplacementContainer(RectSideInC, 0, 3000));
                         path.Add(new DisplacementContainer(RectSideOutC, 0, 6000));
@@ -2040,24 +2040,24 @@ namespace KodakkuAssistXSZYYS
                         {
                             case TeamSelection.A:
                             case TeamSelection.One:
-                                path.Add(new DisplacementContainer(SquarePositions[2], 0, 5000));
-                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[1], 0, 10000));
+                                path.Add(new DisplacementContainer(SquarePositions[2], 0, 10000));
+                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[1], 0, 5000));
                                 path.Add(new DisplacementContainer(SquarePositions[2], 0, 17000));
                                 path.Add(new DisplacementContainer(RectSideInA, 0, 3000));
                                 path.Add(new DisplacementContainer(RectSideOutA, 0, 6000));
                                 break;
                             case TeamSelection.B:
                             case TeamSelection.Two:
-                                path.Add(new DisplacementContainer(SquarePositions[1], 0, 5000));
-                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 10000));
+                                path.Add(new DisplacementContainer(SquarePositions[1], 0, 10000));
+                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 5000));
                                 path.Add(new DisplacementContainer(RectSideInB, 0, 4000));
                                 path.Add(new DisplacementContainer(RectSideOutB, 0, 6000));
                                 path.Add(new DisplacementContainer(SquarePositions[1], 0, 14000));
                                 break;
                             case TeamSelection.C:
                             case TeamSelection.Three:
-                                path.Add(new DisplacementContainer(SquarePositions[0], 0, 5000));
-                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 10000));
+                                path.Add(new DisplacementContainer(SquarePositions[0], 0, 10000));
+                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 5000));
                                 path.Add(new DisplacementContainer(SquarePositions[0], 0, 9000));
                                 path.Add(new DisplacementContainer(RectSideInC, 0, 3000));
                                 path.Add(new DisplacementContainer(RectSideOutC, 0, 6000));
@@ -2071,24 +2071,24 @@ namespace KodakkuAssistXSZYYS
                         {
                             case PositionSelection.Pos1:
                             case PositionSelection.Pos2:
-                                path.Add(new DisplacementContainer(SquarePositions[2], 0, 5000));
-                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[1], 0, 10000));
+                                path.Add(new DisplacementContainer(SquarePositions[2], 0, 10000));
+                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[1], 0, 5000));
                                 path.Add(new DisplacementContainer(SquarePositions[2], 0, 17000));
                                 path.Add(new DisplacementContainer(RectSideInA, 0, 3000));
                                 path.Add(new DisplacementContainer(RectSideOutA, 0, 6000));
                                 break;
                             case PositionSelection.Pos5:
                             case PositionSelection.Pos6:
-                                path.Add(new DisplacementContainer(SquarePositions[1], 0, 5000));
-                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 10000));
+                                path.Add(new DisplacementContainer(SquarePositions[1], 0, 10000));
+                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 5000));
                                 path.Add(new DisplacementContainer(RectSideInB, 0, 4000));
                                 path.Add(new DisplacementContainer(RectSideOutB, 0, 6000));
                                 path.Add(new DisplacementContainer(SquarePositions[1], 0, 14000));
                                 break;
                             case PositionSelection.Pos3:
                             case PositionSelection.Pos4:
-                                path.Add(new DisplacementContainer(SquarePositions[0], 0, 5000));
-                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 10000));
+                                path.Add(new DisplacementContainer(SquarePositions[0], 0, 10000));
+                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 5000));
                                 path.Add(new DisplacementContainer(SquarePositions[0], 0, 9000));
                                 path.Add(new DisplacementContainer(RectSideInC, 0, 3000));
                                 path.Add(new DisplacementContainer(RectSideOutC, 0, 6000));
