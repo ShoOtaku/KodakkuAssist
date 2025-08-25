@@ -59,7 +59,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.23",
+    version: "0.0.24",
     author: "XSZYYS",
     note: "请选择自己小队的分组，指路可选ABC123或者152463攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
@@ -863,7 +863,7 @@ namespace KodakkuAssistXSZYYS
                 dpBlue.Name = $"PrimordialChaos_Blue_{_pairsProcessed}";
                 dpBlue.Position = bluePos;
                 dpBlue.Scale = new Vector2(22);
-                dpBlue.Color = new Vector4(0.2f, 0.5f, 1f, 0.6f);
+                dpBlue.Color = new Vector4(0.2f, 0.5f, 1f, 2.0f);
                 dpBlue.Delay = delay;
                 dpBlue.DestoryAt = displayDuration;
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpBlue);
@@ -873,7 +873,7 @@ namespace KodakkuAssistXSZYYS
                 dpRed.Name = $"PrimordialChaos_Red_{_pairsProcessed}";
                 dpRed.Position = redPos;
                 dpRed.Scale = new Vector2(22);
-                dpRed.Color = new Vector4(1f, 0.2f, 0.2f, 0.6f);
+                dpRed.Color = new Vector4(1f, 0.2f, 0.2f, 2.0f);
                 dpRed.Delay = delay;
                 dpRed.DestoryAt = displayDuration;
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpRed);
@@ -1300,7 +1300,7 @@ namespace KodakkuAssistXSZYYS
                 dp1.Scale = new Vector2(1.5f);
                 dp1.ScaleMode |= ScaleMode.YByDistance;
                 dp1.Color = new Vector4(1f, 1f, 0f, 1f);
-                dp1.DestoryAt = 4000;
+                dp1.DestoryAt = 5000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp1);
                 // 绘制从起点到90度点的路径（绿）
                 var dp4 = accessory.Data.GetDefaultDrawProperties();
@@ -1310,7 +1310,7 @@ namespace KodakkuAssistXSZYYS
                 dp4.Scale = new Vector2(1.5f);
                 dp4.ScaleMode |= ScaleMode.YByDistance;
                 dp4.Color = new Vector4(0f, 1f, 0f, 1f);
-                dp4.Delay = 4000;
+                dp4.Delay = 5000;
                 dp4.DestoryAt = 3000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp4);
 
@@ -1322,7 +1322,7 @@ namespace KodakkuAssistXSZYYS
                 dp2.Scale = new Vector2(1.5f);
                 dp2.ScaleMode |= ScaleMode.YByDistance;
                 dp2.Color = new Vector4(1f, 1f, 0f, 1f);
-                dp2.DestoryAt = 7000;
+                dp2.DestoryAt = 8000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp2);
                 // 绘制从90度点到180度点的路径（绿）
                 var dp3 = accessory.Data.GetDefaultDrawProperties();
@@ -1332,7 +1332,7 @@ namespace KodakkuAssistXSZYYS
                 dp3.Scale = new Vector2(1.5f);
                 dp3.ScaleMode |= ScaleMode.YByDistance;
                 dp3.Color = new Vector4(0f, 1f, 0f, 1f);
-                dp3.Delay = 7000;
+                dp3.Delay = 8000;
                 dp3.DestoryAt = 3000;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp3);
 
@@ -1665,7 +1665,32 @@ namespace KodakkuAssistXSZYYS
             _holyWeaponType = HolyWeaponType.None;
         }
 
-
+        [ScriptMethod(
+            name: "封印解除",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex:^(41538|41537)$"]
+        )]
+        public void UnsealAlert(Event @event, ScriptAccessory accessory)
+        {
+            var ActionId = @event.ActionId;
+            if (ActionId == 41538) //枪
+            {
+                accessory.Method.TextInfo("枪，远平A", 5000);
+            }
+            else
+            {
+                accessory.Method.TextInfo("斧，近平A", 5000);
+            }
+        }
+        [ScriptMethod(
+            name: "两岐之怒",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41573"]
+        )]
+        public void OnForkedFuryAlert(Event @event, ScriptAccessory accessory)
+        {
+            accessory.Method.TextInfo("远近死刑", 5000);
+        }
         [ScriptMethod(
             name: "暗杀短剑",
             eventType: EventTypeEnum.StartCasting,
@@ -1751,7 +1776,7 @@ namespace KodakkuAssistXSZYYS
                 dpCircle.Name = "CriticalAxeblow_Circle";
                 dpCircle.Owner = caster.EntityId;
                 dpCircle.Scale = new Vector2(20);
-                dpCircle.Color = new Vector4(1f, 0f, 0f, 1f);
+                dpCircle.Color = new Vector4(1f, 0f, 0f, 1.5f);
                 dpCircle.DestoryAt = mainShapeDuration;
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
                 // 为斧击绘制指路
@@ -1984,13 +2009,13 @@ namespace KodakkuAssistXSZYYS
                         path.Add(new DisplacementContainer(SquarePositions[2], 0, 5000));
                         path.Add(new DisplacementContainer(CriticalLanceSafePositions[1], 0, 10000));
                         path.Add(new DisplacementContainer(SquarePositions[2], 0, 17000));
-                        path.Add(new DisplacementContainer(RectSideInA, 0, 4000));
+                        path.Add(new DisplacementContainer(RectSideInA, 0, 3000));
                         path.Add(new DisplacementContainer(RectSideOutA, 0, 6000));
                         break;
                     case TeamSelection.B:
                         path.Add(new DisplacementContainer(SquarePositions[1], 0, 5000));
                         path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 10000));
-                        path.Add(new DisplacementContainer(RectSideInB, 0, 5000));
+                        path.Add(new DisplacementContainer(RectSideInB, 0, 4000));
                         path.Add(new DisplacementContainer(RectSideOutB, 0, 6000));
                         path.Add(new DisplacementContainer(SquarePositions[1], 0, 14000));
                         break;
@@ -1998,7 +2023,7 @@ namespace KodakkuAssistXSZYYS
                         path.Add(new DisplacementContainer(SquarePositions[0], 0, 5000));
                         path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 10000));
                         path.Add(new DisplacementContainer(SquarePositions[0], 0, 9000));
-                        path.Add(new DisplacementContainer(RectSideInC, 0, 4000));
+                        path.Add(new DisplacementContainer(RectSideInC, 0, 3000));
                         path.Add(new DisplacementContainer(RectSideOutC, 0, 6000));
                         path.Add(new DisplacementContainer(SquarePositions[0], 0, 6000));
                         break;
@@ -2018,14 +2043,14 @@ namespace KodakkuAssistXSZYYS
                                 path.Add(new DisplacementContainer(SquarePositions[2], 0, 5000));
                                 path.Add(new DisplacementContainer(CriticalLanceSafePositions[1], 0, 10000));
                                 path.Add(new DisplacementContainer(SquarePositions[2], 0, 17000));
-                                path.Add(new DisplacementContainer(RectSideInA, 0, 4000));
+                                path.Add(new DisplacementContainer(RectSideInA, 0, 3000));
                                 path.Add(new DisplacementContainer(RectSideOutA, 0, 6000));
                                 break;
                             case TeamSelection.B:
                             case TeamSelection.Two:
                                 path.Add(new DisplacementContainer(SquarePositions[1], 0, 5000));
                                 path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 10000));
-                                path.Add(new DisplacementContainer(RectSideInB, 0, 5000));
+                                path.Add(new DisplacementContainer(RectSideInB, 0, 4000));
                                 path.Add(new DisplacementContainer(RectSideOutB, 0, 6000));
                                 path.Add(new DisplacementContainer(SquarePositions[1], 0, 14000));
                                 break;
@@ -2034,7 +2059,7 @@ namespace KodakkuAssistXSZYYS
                                 path.Add(new DisplacementContainer(SquarePositions[0], 0, 5000));
                                 path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 10000));
                                 path.Add(new DisplacementContainer(SquarePositions[0], 0, 9000));
-                                path.Add(new DisplacementContainer(RectSideInC, 0, 4000));
+                                path.Add(new DisplacementContainer(RectSideInC, 0, 3000));
                                 path.Add(new DisplacementContainer(RectSideOutC, 0, 6000));
                                 path.Add(new DisplacementContainer(SquarePositions[0], 0, 6000));
                                 break;
@@ -2049,14 +2074,14 @@ namespace KodakkuAssistXSZYYS
                                 path.Add(new DisplacementContainer(SquarePositions[2], 0, 5000));
                                 path.Add(new DisplacementContainer(CriticalLanceSafePositions[1], 0, 10000));
                                 path.Add(new DisplacementContainer(SquarePositions[2], 0, 17000));
-                                path.Add(new DisplacementContainer(RectSideInA, 0, 4000));
+                                path.Add(new DisplacementContainer(RectSideInA, 0, 3000));
                                 path.Add(new DisplacementContainer(RectSideOutA, 0, 6000));
                                 break;
                             case PositionSelection.Pos5:
                             case PositionSelection.Pos6:
                                 path.Add(new DisplacementContainer(SquarePositions[1], 0, 5000));
                                 path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 10000));
-                                path.Add(new DisplacementContainer(RectSideInB, 0, 5000));
+                                path.Add(new DisplacementContainer(RectSideInB, 0, 4000));
                                 path.Add(new DisplacementContainer(RectSideOutB, 0, 6000));
                                 path.Add(new DisplacementContainer(SquarePositions[1], 0, 14000));
                                 break;
@@ -2065,7 +2090,7 @@ namespace KodakkuAssistXSZYYS
                                 path.Add(new DisplacementContainer(SquarePositions[0], 0, 5000));
                                 path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 10000));
                                 path.Add(new DisplacementContainer(SquarePositions[0], 0, 9000));
-                                path.Add(new DisplacementContainer(RectSideInC, 0, 4000));
+                                path.Add(new DisplacementContainer(RectSideInC, 0, 3000));
                                 path.Add(new DisplacementContainer(RectSideOutC, 0, 6000));
                                 path.Add(new DisplacementContainer(SquarePositions[0], 0, 6000));
                                 break;
