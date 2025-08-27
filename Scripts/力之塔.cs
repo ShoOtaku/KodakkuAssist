@@ -24,7 +24,9 @@ namespace KodakkuAssistXSZYYS
     public enum StrategySelection
     {
         ABC_123,  // 代表 ABC / 123 分组攻略
-        Pos_152463 // 代表 123456 分组攻略
+        Pos_152463, // 代表 152463 分组攻略
+        LemonCookie // 代表 柠檬烧饼 分组攻略
+
     }
 
     public enum TeamSelection
@@ -59,9 +61,9 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.25",
+    version: "0.0.26",
     author: "XSZYYS",
-    note: "请选择自己小队的分组，指路可选ABC123或者152463攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
+    note: "请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
 
     public class 力之塔
@@ -70,7 +72,7 @@ namespace KodakkuAssistXSZYYS
         [UserSetting("-----全局设置----- (此设置无实际意义)")]
         public bool _____Global_Settings_____ { get; set; } = true;
 
-        [UserSetting("攻略分组策略(钰子烧即ABC123/152463)")]
+        [UserSetting("攻略分组策略(钰子烧即ABC123/152463/柠檬松饼)")]
         public StrategySelection SelectedStrategy { get; set; } = StrategySelection.ABC_123;
 
         [UserSetting("【钰子烧】请选择您在团队中被分配到的分组")]
@@ -78,6 +80,8 @@ namespace KodakkuAssistXSZYYS
 
         [UserSetting("【152463】请选择您在团队中被分配到的分组")]
         public PositionSelection MyPosition { get; set; } = PositionSelection.Pos1;
+        [UserSetting("【柠檬松饼】请选择您在团队中被分配到的分组")]
+        public PositionSelection MyLemonCookiePosition { get; set; } = PositionSelection.Pos1;
         [UserSetting("圣枪分组覆盖（None=不变）")]
         public LanceGuideOverride HolyLanceGroupOverride { get; set; } = LanceGuideOverride.None;
         [UserSetting("-----开发者设置----- (此设置无实际意义)")]
@@ -151,7 +155,7 @@ namespace KodakkuAssistXSZYYS
             { TeamSelection.Two, new List<Vector3> { new(-337.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 157.00f), new(-337.0f, -840.0f, 183.0f), new(-355.5f, -840.0f, 175.5f) } },
             { TeamSelection.Three, new List<Vector3> { new(-346.00f, -840.00f, 163.00f), new(-343.00f, -840.00f, 166.00f), new(-355.5f, -840.0f, 175.5f), new(-363.0f, -840.0f, 157.0f) } }
         };
-        // 123456 攻略的冰塔分组坐标
+        // 152463 攻略的冰塔分组坐标
         private static readonly Dictionary<PositionSelection, List<Vector3>> TowerPositions_123456 = new()
         {
             { PositionSelection.Pos1, new List<Vector3> { new(-346.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 166.00f), new(-355.5f, -840.0f, 138.5f), new(-337.0f, -840.0f, 131.0f) } },
@@ -161,8 +165,15 @@ namespace KodakkuAssistXSZYYS
             { PositionSelection.Pos5, new List<Vector3> { new(-337.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 157.00f), new(-337.0f, -840.0f, 131.0f), new(-318.5f, -840.0f, 138.5f) } },
             { PositionSelection.Pos6, new List<Vector3> { new(-337.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 157.00f), new(-337.0f, -840.0f, 183.0f), new(-355.5f, -840.0f, 175.5f) } }
         };
-
-
+        private static readonly Dictionary<PositionSelection, List<Vector3>> TowerPosition_Lemon = new()
+        {
+            { PositionSelection.Pos1, new List<Vector3> { new(-346.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 166.00f), new(-355.5f, -840.0f, 138.5f), new(-337.0f, -840.0f, 131.0f) } },
+            { PositionSelection.Pos2, new List<Vector3> { new(-337.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 157.00f), new(-337.0f, -840.0f, 131.0f), new(-318.5f, -840.0f, 138.5f) } },
+            { PositionSelection.Pos3, new List<Vector3> { new(-328.00f, -840.00f, 151.00f), new(-343.00f, -840.00f, 148.00f), new(-318.5f, -840.0f, 138.5f), new(-311.0f, -840.0f, 157.0f) } },
+            { PositionSelection.Pos4, new List<Vector3> { new(-346.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 166.00f), new(-355.5f, -840.0f, 175.5f), new(-363.0f, -840.0f, 157.0f) } },
+            { PositionSelection.Pos5, new List<Vector3> { new(-337.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 157.00f), new(-337.0f, -840.0f, 183.0f), new(-355.5f, -840.0f, 175.5f) } },
+            { PositionSelection.Pos6, new List<Vector3> { new(-328.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 148.00f), new(-318.5f, -840.0f, 175.5f), new(-337.0f, -840.0f, 183.0f) } }
+        };
 
 
 
@@ -357,6 +368,32 @@ namespace KodakkuAssistXSZYYS
                         case PositionSelection.Pos3: targetPosition = Pos_Three; break;
                     }
                     break;
+                case StrategySelection.LemonCookie:
+                    // 柠檬烧饼分组攻略
+                    // 152463组号到柠檬烧饼组号的映射：1->3, 2->1, 3->6, 4->4, 5->2, 6->5
+                    switch (MyLemonCookiePosition) // 使用152463的位置选择器来表示柠檬烧饼的组号
+                    {
+                        case PositionSelection.Pos1: // 柠檬烧饼1组 -> 对应152463的2组位置
+                            targetPosition = Pos_A; // 152463的2组对应Pos_A
+                            break;
+                        case PositionSelection.Pos2: // 柠檬烧饼2组 -> 对应152463的5组位置
+                            targetPosition = Pos_B; // 152463的5组对应Pos_B
+                            break;
+                        case PositionSelection.Pos3: // 柠檬烧饼3组 -> 对应152463的1组位置
+                            targetPosition = Pos_C; // 152463的1组对应Pos_C
+                            break;
+                        case PositionSelection.Pos4: // 柠檬烧饼4组 -> 对应152463的4组位置
+                            targetPosition = Pos_One; // 152463的4组对应Pos_One
+                            break;
+                        case PositionSelection.Pos5: // 柠檬烧饼5组 -> 对应152463的6组位置
+                            targetPosition = Pos_Two; // 152463的6组对应Pos_Two
+                            break;
+                        case PositionSelection.Pos6: // 柠檬烧饼6组 -> 对应152463的3组位置
+                            targetPosition = Pos_Three; // 152463的3组对应Pos_Three
+                            break;
+                    }
+
+                    break;
             }
 
             // 绘制指向目标位置的箭头
@@ -531,6 +568,21 @@ namespace KodakkuAssistXSZYYS
                             break;
                     }
                     break;
+                case StrategySelection.LemonCookie:
+                    switch (MyLemonCookiePosition)
+                    {
+                        case PositionSelection.Pos1:
+                        case PositionSelection.Pos2:
+                        case PositionSelection.Pos3:
+                            targetPosition = letterGroupPos;
+                            break;
+                        case PositionSelection.Pos4:
+                        case PositionSelection.Pos5:
+                        case PositionSelection.Pos6:
+                            targetPosition = numberGroupPos;
+                            break;
+                    }
+                    break;
             }
 
             // 绘制指路
@@ -617,6 +669,23 @@ namespace KodakkuAssistXSZYYS
                             break;
                     }
                     break;
+                case StrategySelection.LemonCookie:
+                    switch (MyLemonCookiePosition)
+                    {
+                        case PositionSelection.Pos1: // Corresponds to A
+                            shouldDraw = true;
+                            targetPosition = _isCasterInUpperHalf.Value ? Pos_One : Pos_A;
+                            break;
+                        case PositionSelection.Pos2: // Corresponds to B
+                            shouldDraw = true;
+                            targetPosition = _isCasterInUpperHalf.Value ? Pos_Two : Pos_B;
+                            break;
+                        case PositionSelection.Pos3: // Corresponds to C
+                            shouldDraw = true;
+                            targetPosition = _isCasterInUpperHalf.Value ? Pos_Three : Pos_C;
+                            break;
+                    }
+                    break;
             }
 
             if (shouldDraw)
@@ -683,6 +752,20 @@ namespace KodakkuAssistXSZYYS
                         }
                     }
                     break;
+                case StrategySelection.LemonCookie:
+                    if (MyLemonCookiePosition == PositionSelection.Pos4 ||
+                        MyLemonCookiePosition == PositionSelection.Pos5 ||
+                        MyLemonCookiePosition == PositionSelection.Pos6)
+                    {
+                        shouldDraw = true;
+                        switch (MyLemonCookiePosition)
+                        {
+                            case PositionSelection.Pos4: targetPosition = isCasterInUpperHalf ? Pos_One : Pos_A; break;
+                            case PositionSelection.Pos5: targetPosition = isCasterInUpperHalf ? Pos_Two : Pos_B; break;
+                            case PositionSelection.Pos6: targetPosition = isCasterInUpperHalf ? Pos_Three : Pos_C; break;
+                        }
+                    }
+                    break;
             }
 
             if (shouldDraw)
@@ -726,6 +809,12 @@ namespace KodakkuAssistXSZYYS
                     break;
                 case StrategySelection.Pos_152463:
                     if (MyPosition == PositionSelection.Pos1 || MyPosition == PositionSelection.Pos2 || MyPosition == PositionSelection.Pos5)
+                    {
+                        shouldDraw = true;
+                    }
+                    break;
+                case StrategySelection.LemonCookie:
+                    if (MyLemonCookiePosition == PositionSelection.Pos1 || MyLemonCookiePosition == PositionSelection.Pos2 || MyLemonCookiePosition == PositionSelection.Pos3)
                     {
                         shouldDraw = true;
                     }
@@ -991,6 +1080,26 @@ namespace KodakkuAssistXSZYYS
                             }
                         }
                         break;
+                    case StrategySelection.LemonCookie:
+                        if (isLetterGroup) // 1组(A), 2组(B), 3组(C)
+                        {
+                            if ((MyLemonCookiePosition == PositionSelection.Pos1 && currentGroupRushCount == 0) || // 1组对应A组(第1次)
+                                (MyLemonCookiePosition == PositionSelection.Pos2 && currentGroupRushCount == 1) || // 2组对应B组(第2次)
+                                (MyLemonCookiePosition == PositionSelection.Pos3 && currentGroupRushCount == 2))   // 3组对应C组(第3次)
+                            {
+                                isSafe = true;
+                            }
+                        }
+                        else // isNumberGroup 4组(One), 5组(Two), 6组(Three)
+                        {
+                            if ((MyLemonCookiePosition == PositionSelection.Pos4 && currentGroupRushCount == 0) || // 4组对应One组(第1次)
+                                (MyLemonCookiePosition == PositionSelection.Pos5 && currentGroupRushCount == 1) || // 5组对应Two组(第2次)
+                                (MyLemonCookiePosition == PositionSelection.Pos6 && currentGroupRushCount == 2))   // 6组对应Three组(第3次)
+                            {
+                                isSafe = true;
+                            }
+                        }
+                        break;
                 }
 
                 var color = isSafe ? accessory.Data.DefaultSafeColor : accessory.Data.DefaultDangerColor;
@@ -1069,6 +1178,10 @@ namespace KodakkuAssistXSZYYS
                     case StrategySelection.Pos_152463:
                         bool isPosInLetterGroup = MyPosition == PositionSelection.Pos1 || MyPosition == PositionSelection.Pos2 || MyPosition == PositionSelection.Pos3;
                         finalDropPos = isPosInLetterGroup ? _letterGroupNextPos : _numberGroupNextPos;
+                        break;
+                    case StrategySelection.LemonCookie:
+                        bool isLemonPosInLetterGroup = MyLemonCookiePosition == PositionSelection.Pos4 || MyLemonCookiePosition == PositionSelection.Pos5 || MyLemonCookiePosition == PositionSelection.Pos6;
+                        finalDropPos = isLemonPosInLetterGroup ? _letterGroupNextPos : _numberGroupNextPos;
                         break;
                 }
 
@@ -1164,6 +1277,9 @@ namespace KodakkuAssistXSZYYS
                     break;
                 case StrategySelection.Pos_152463:
                     isUserInLetterGroup = MyPosition == PositionSelection.Pos1 || MyPosition == PositionSelection.Pos2 || MyPosition == PositionSelection.Pos3;
+                    break;
+                case StrategySelection.LemonCookie:
+                    isUserInLetterGroup = MyLemonCookiePosition == PositionSelection.Pos1 || MyLemonCookiePosition == PositionSelection.Pos2 || MyLemonCookiePosition == PositionSelection.Pos3;
                     break;
             }
             int fireballIndex = 0;
@@ -1526,6 +1642,9 @@ namespace KodakkuAssistXSZYYS
                 case StrategySelection.Pos_152463:
                     TowerPositions_123456.TryGetValue(MyPosition, out teamTowerCoords);
                     break;
+                case StrategySelection.LemonCookie:
+                    TowerPosition_Lemon.TryGetValue(MyLemonCookiePosition, out teamTowerCoords);
+                    break;
             }
 
             if (teamTowerCoords != null)
@@ -1569,6 +1688,9 @@ namespace KodakkuAssistXSZYYS
                 case StrategySelection.Pos_152463:
                     TowerPositions_123456.TryGetValue(MyPosition, out teamTowerCoords);
                     break;
+                case StrategySelection.LemonCookie:
+                    TowerPosition_Lemon.TryGetValue(MyLemonCookiePosition, out teamTowerCoords);
+                    break;
             }
 
             if (teamTowerCoords != null)
@@ -1602,10 +1724,17 @@ namespace KodakkuAssistXSZYYS
             if (marker == null) return;
 
             TeamSelection targetGroup = MyTeam; // Default for ABC_123
-            bool shouldDraw = SelectedStrategy == StrategySelection.ABC_123;
+            bool shouldDraw = false;
 
-            if (SelectedStrategy == StrategySelection.Pos_152463)
-            {
+
+        switch (SelectedStrategy)
+        {
+            case StrategySelection.ABC_123:
+                shouldDraw = true;
+                targetGroup = MyTeam;
+                break;
+                
+            case StrategySelection.Pos_152463:
                 shouldDraw = true;
                 switch (MyPosition)
                 {
@@ -1616,7 +1745,37 @@ namespace KodakkuAssistXSZYYS
                     case PositionSelection.Pos6: targetGroup = TeamSelection.Two; break;
                     case PositionSelection.Pos4: targetGroup = TeamSelection.Three; break;
                 }
-            }
+                break;
+                
+            case StrategySelection.LemonCookie:
+                shouldDraw = true;
+                // 柠檬松饼分组攻略
+                // 152463组号到柠檬松饼组号的映射：1->1, 2->3, 3->6, 4->4, 5->2, 6->5
+                // 这里需要反向映射：柠檬松饼组号 -> 对应的152463位置 -> 对应的TeamSelection
+                switch (MyLemonCookiePosition)
+                {
+                    case PositionSelection.Pos1: // 柠檬松饼1组 -> 152463的1组 -> TeamSelection.A
+                        targetGroup = TeamSelection.A; 
+                        break;
+                    case PositionSelection.Pos2: // 柠檬松饼2组 -> 152463的5组 -> TeamSelection.B  
+                        targetGroup = TeamSelection.B;
+                        break;
+                    case PositionSelection.Pos3: // 柠檬松饼3组 -> 152463的2组 -> TeamSelection.C
+                        targetGroup = TeamSelection.C;
+                        break;
+                    case PositionSelection.Pos4: // 柠檬松饼4组 -> 152463的4组 -> TeamSelection.Three
+                        targetGroup = TeamSelection.Three;
+                        break;
+                    case PositionSelection.Pos5: // 柠檬松饼5组 -> 152463的6组 -> TeamSelection.Two  
+                        targetGroup = TeamSelection.Two;
+                        break;
+                    case PositionSelection.Pos6: // 柠檬松饼6组 -> 152463的3组 -> TeamSelection.One
+                        targetGroup = TeamSelection.One;
+                        break;
+                }
+                break;
+        }
+
 
             if (shouldDraw)
             {
@@ -2064,7 +2223,6 @@ namespace KodakkuAssistXSZYYS
                                 path.Add(new DisplacementContainer(SquarePositions[0], 0, 6000));
                                 break;
                         }
-
                         break;
                     case StrategySelection.Pos_152463:
                         switch (MyPosition)
@@ -2095,8 +2253,37 @@ namespace KodakkuAssistXSZYYS
                                 path.Add(new DisplacementContainer(SquarePositions[0], 0, 6000));
                                 break;
                         }
-
                         break;
+                    case StrategySelection.LemonCookie:
+                        switch (MyLemonCookiePosition)
+                        {
+                            case PositionSelection.Pos1:
+                            case PositionSelection.Pos2:
+                                path.Add(new DisplacementContainer(SquarePositions[2], 0, 10000));
+                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[1], 0, 5000));
+                                path.Add(new DisplacementContainer(SquarePositions[2], 0, 17000));
+                                path.Add(new DisplacementContainer(RectSideInA, 0, 3000));
+                                path.Add(new DisplacementContainer(RectSideOutA, 0, 6000));
+                                break;
+                            case PositionSelection.Pos5:
+                            case PositionSelection.Pos6:
+                                path.Add(new DisplacementContainer(SquarePositions[1], 0, 10000));
+                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[2], 0, 5000));
+                                path.Add(new DisplacementContainer(RectSideInB, 0, 4000));
+                                path.Add(new DisplacementContainer(RectSideOutB, 0, 6000));
+                                path.Add(new DisplacementContainer(SquarePositions[1], 0, 14000));
+                                break;
+                            case PositionSelection.Pos3:
+                            case PositionSelection.Pos4:
+                                path.Add(new DisplacementContainer(SquarePositions[0], 0, 10000));
+                                path.Add(new DisplacementContainer(CriticalLanceSafePositions[0], 0, 5000));
+                                path.Add(new DisplacementContainer(SquarePositions[0], 0, 9000));
+                                path.Add(new DisplacementContainer(RectSideInC, 0, 3000));
+                                path.Add(new DisplacementContainer(RectSideOutC, 0, 6000));
+                                path.Add(new DisplacementContainer(SquarePositions[0], 0, 6000));
+                                break;
+                        }
+                        break;                        
                 }
             }
 
