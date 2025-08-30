@@ -61,7 +61,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.26",
+    version: "0.0.27",
     author: "XSZYYS",
     note: "请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
@@ -82,6 +82,8 @@ namespace KodakkuAssistXSZYYS
         public PositionSelection MyPosition { get; set; } = PositionSelection.Pos1;
         [UserSetting("【柠檬松饼】请选择您在团队中被分配到的分组")]
         public PositionSelection MyLemonCookiePosition { get; set; } = PositionSelection.Pos1;
+        [UserSetting("符文之斧长点名小圈指路（会出现两个箭头指向左上和右上平台）")]
+        public bool LongPointName { get; set; } = false;
         [UserSetting("圣枪分组覆盖（None=不变）")]
         public LanceGuideOverride HolyLanceGroupOverride { get; set; } = LanceGuideOverride.None;
         [UserSetting("-----开发者设置----- (此设置无实际意义)")]
@@ -189,7 +191,7 @@ namespace KodakkuAssistXSZYYS
         };
         //尾王
         // 方形AOE的固定坐标和角度
-        private static readonly Vector3[] SquarePositions =
+        private static readonly List<Vector3> SquarePositions = new()
         {
             new(700f, -476f, -659.504f),
             new(712.554f, -476f, -681.248f),
@@ -1956,7 +1958,7 @@ namespace KodakkuAssistXSZYYS
                 }
             }
             // 绘制三个方形AOE
-            for (int i = 0; i < SquarePositions.Length; i++)
+            for (int i = 0; i < SquarePositions.Count; i++)
             {
                 var dpSquare = accessory.Data.GetDefaultDrawProperties();
                 dpSquare.Name = $"Square_AOE_{i}";
@@ -2099,14 +2101,39 @@ namespace KodakkuAssistXSZYYS
         {
             // 确认是自己获得了这个状态
             if (@event.TargetId != accessory.Data.Me) return;
-
+            var player = accessory.Data.MyObject;
             if (float.TryParse(@event["Duration"], out var duration))
             {
                 // 检查buff持续时间是否为13秒
                 if (Math.Abs(duration - 13.0f) < 0.1f)
                 {
+                    // 找到最近的坐标点
+                    Vector3 closestPos = SquarePositions[0];
+                    float minDistanceSq = Vector3.DistanceSquared(player.Position, closestPos);
+
+                    for (int i = 1; i < SquarePositions.Count; i++)
+                    {
+                        float distSq = Vector3.DistanceSquared(player.Position, SquarePositions[i]);
+                        if (distSq < minDistanceSq)
+                        {
+                            minDistanceSq = distSq;
+                            closestPos = SquarePositions[i];
+                        }
+                    }                    
+                    // 绘制指路
+                    var dp = accessory.Data.GetDefaultDrawProperties();
+                    dp.Name = "LesseraxePrey_Guide";
+                    dp.Owner = player.EntityId;
+                    dp.TargetPosition = closestPos;
+                    dp.Scale = new Vector2(1.5f);
+                    dp.ScaleMode |= ScaleMode.YByDistance;
+                    dp.Color = accessory.Data.DefaultSafeColor;
+                    dp.DestoryAt = 13000;
+                    accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp);                    
+                    
+                    /*
                     // 在三个方形AOE中心点绘制绿色安全圈
-                    for (int i = 0; i < SquarePositions.Length; i++)
+                    for (int i = 0; i < SquarePositions.Count; i++)
                     {
                         var dp = accessory.Data.GetDefaultDrawProperties();
                         dp.Name = $"LittleAxePrey_SafeZone_13s_{i}";
@@ -2116,29 +2143,56 @@ namespace KodakkuAssistXSZYYS
                         dp.DestoryAt = 13000;
                         accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp);
                     }
+                    */
                 }
                 // 检查buff持续时间是否为21秒
                 else if (Math.Abs(duration - 21.0f) < 0.1f)
                 {
-                    // 在第1个方形AOE中心点绘制绿色安全圈
-                    var dp1 = accessory.Data.GetDefaultDrawProperties();
-                    dp1.Name = "LittleAxePrey_SafeZone_21s_1";
-                    dp1.Position = SquarePositions[1];
-                    dp1.Scale = new Vector2(3);
-                    dp1.Color = new Vector4(0, 1, 0, 1);
-                    dp1.Delay = 15000;
-                    dp1.DestoryAt = 6000;
-                    accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp1);
+                    if (LongPointName)
+                    {
+                        var dp1 = accessory.Data.GetDefaultDrawProperties();
+                        dp1.Name = "LittleAxePrey_SafeZone_21s_2";
+                        dp1.Owner = player.EntityId;
+                        dp1.TargetPosition = SquarePositions[1];
+                        dp1.Scale = new Vector2(1.5f);
+                        dp1.ScaleMode |= ScaleMode.YByDistance;
+                        dp1.Color = accessory.Data.DefaultSafeColor;
+                        dp1.Delay = 15000;
+                        dp1.DestoryAt = 6000;
+                        accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp1);
+                        var dp3 = accessory.Data.GetDefaultDrawProperties();
+                        dp3.Name = "LittleAxePrey_SafeZone_21s_3";
+                        dp3.Owner = player.EntityId;
+                        dp3.TargetPosition = SquarePositions[2];
+                        dp3.Scale = new Vector2(1.5f);
+                        dp3.ScaleMode |= ScaleMode.YByDistance;
+                        dp3.Color = accessory.Data.DefaultSafeColor;
+                        dp3.Delay = 15000;
+                        dp3.DestoryAt = 6000;
+                        accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp3);
+                    }
+                    else
+                    {
+                        // 在第2个方形AOE中心点绘制绿色安全圈
+                        var dp1 = accessory.Data.GetDefaultDrawProperties();
+                        dp1.Name = "LittleAxePrey_SafeZone_21s_2";
+                        dp1.Position = SquarePositions[1];
+                        dp1.Scale = new Vector2(3);
+                        dp1.Color = new Vector4(0, 1, 0, 1);
+                        dp1.Delay = 15000;
+                        dp1.DestoryAt = 6000;
+                        accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp1);
 
-                    // 在第3个方形AOE中心点绘制绿色安全圈
-                    var dp3 = accessory.Data.GetDefaultDrawProperties();
-                    dp3.Name = "LittleAxePrey_SafeZone_21s_3";
-                    dp3.Position = SquarePositions[2];
-                    dp3.Scale = new Vector2(3);
-                    dp3.Color = new Vector4(0, 1, 0, 1);
-                    dp3.Delay = 15000;
-                    dp3.DestoryAt = 6000;
-                    accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp3);
+                        // 在第3个方形AOE中心点绘制绿色安全圈
+                        var dp3 = accessory.Data.GetDefaultDrawProperties();
+                        dp3.Name = "LittleAxePrey_SafeZone_21s_3";
+                        dp3.Position = SquarePositions[2];
+                        dp3.Scale = new Vector2(3);
+                        dp3.Color = new Vector4(0, 1, 0, 1);
+                        dp3.Delay = 15000;
+                        dp3.DestoryAt = 6000;
+                        accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp3);
+                    }
                 }
             }
         }
