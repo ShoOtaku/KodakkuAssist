@@ -20,6 +20,17 @@
     "UpdateInfo": ""
   },
   {
+    "Name": "力之塔排雷（塔内）",
+    "Guid": "874D3ECF-BD6B-448F-BB42-AE7F082E4999",
+    "Version": "0.0.1",
+    "Author": "XSZYYS",
+    "TerritoryIds": [
+      1252
+    ],
+    "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/main/Scripts/力之塔排雷（塔内）.cs",
+    "UpdateInfo": ""
+  },
+  {
     "Name": "复活位置",
     "Guid": "874D3ECF-BD6B-448F-BB42-AE7F082E4809",
     "Version": "0.0.1",
