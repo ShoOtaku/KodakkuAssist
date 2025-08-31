@@ -251,7 +251,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔排雷（塔内）",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4999",
     territorys: [1252],
-    version: "0.0.1",
+    version: "0.0.2",
     author: "XSZYYS",
     note: "塔内在聊天栏输入[/e 新月排雷]即可开始排雷。再次输入可关闭显示。显示持续1000s，如果显示消失，则请重新输入"
     )]
@@ -427,9 +427,9 @@ namespace KodakkuAssistXSZYYS
         )]
         public void OnHunterScan(Event @event, ScriptAccessory accessory)
         {
-            // 猎人扫雷是以玩家为中心
+            // 猎人扫雷是以技能为中心
             var scanPosition = @event.EffectPosition;
-            const float scanRadius = 5f;
+            const float scanRadius = 9f;
             int groupIndex = 0;
             foreach (var group in EOMineDatabase.AllMines)
             {
