@@ -61,9 +61,9 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.27",
+    version: "0.0.28",
     author: "XSZYYS",
-    note: "请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
+    note: "更新内容\r\n新增老一旋转还有分摊的危险半场AOE绘制，老一、老二、老四小警察功能\r\n请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
 
     public class 力之塔
@@ -86,6 +86,8 @@ namespace KodakkuAssistXSZYYS
         public bool LongPointName { get; set; } = false;
         [UserSetting("圣枪分组覆盖（None=不变）")]
         public LanceGuideOverride HolyLanceGroupOverride { get; set; } = LanceGuideOverride.None;
+        [UserSetting("小警察（开启后默语频道输出关键机制被点名玩家名字）")]
+        public bool PoliceMode { get; set; } = false;
         [UserSetting("-----开发者设置----- (此设置无实际意义)")]
         public bool _____Developer_Settings_____ { get; set; } = true;
 
@@ -95,11 +97,13 @@ namespace KodakkuAssistXSZYYS
         #endregion
 
         // 用于老一的状态变量
+        private int _turnLeftRightCount = 0;
         // 用于陨石机制的状态变量
         private bool _hasCometeorStatus = false;
         private ulong _cometeorTargetId = 0;
         private const uint PortentousCometeorDataId = 2014582;
         private const float ArenaCenterZ = 379f; // 定义老一场地中心Z轴坐标
+        private static readonly Vector3 Boss1ArenaCenter = new(700f, -481.01f, 379f);
         private bool? _isCasterInUpperHalf = null;
         private static readonly Vector3 Pos_A = new(704.49f, -481.01f, 365.38f);
         private static readonly Vector3 Pos_B = new(699.98f, -481.01f, 355.49f);
@@ -240,6 +244,7 @@ namespace KodakkuAssistXSZYYS
             accessory.Log.Debug("力之塔脚本已加载。");
             accessory.Method.RemoveDraw(".*");
 
+            _turnLeftRightCount = 0;
             // 初始化陨石机制状态
             _hasCometeorStatus = false;
             _cometeorTargetId = 0;
@@ -275,6 +280,7 @@ namespace KodakkuAssistXSZYYS
             _hasCometeorStatus = false;
             _cometeorTargetId = 0;
             _isCasterInUpperHalf = null;
+            _turnLeftRightCount = 0;
             // 清除之前的绘制
             accessory.Method.RemoveDraw(".*");
             accessory.Log.Debug("老一初始化完成。");
@@ -443,9 +449,9 @@ namespace KodakkuAssistXSZYYS
         )]
         public void OnTurnLeftRightDraw(Event @event, ScriptAccessory accessory)
         {
+            _turnLeftRightCount++;
             var dp1 = accessory.Data.GetDefaultDrawProperties();
             var dp2 = accessory.Data.GetDefaultDrawProperties();
-
             dp1.Name = "TurnLeftRight1_Danger_Zone";
             dp1.Position = @event.SourcePosition;
             dp1.Scale = new Vector2(66, 6);
@@ -459,9 +465,81 @@ namespace KodakkuAssistXSZYYS
             dp2.Rotation = MathF.PI / 2f;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp1);
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
+            if (_turnLeftRightCount == 2 || _turnLeftRightCount == 4)
+            {
+                var dpNorth = accessory.Data.GetDefaultDrawProperties();
+                dpNorth.Name = $"TurnLeftRight_North_Danger_Zone_{_turnLeftRightCount}";
+                dpNorth.Position = Boss1ArenaCenter;
+                dpNorth.Rotation = MathF.PI; // 指向北
+                dpNorth.Scale = new Vector2(30, 33);
+                dpNorth.Color = accessory.Data.DefaultDangerColor;
+                dpNorth.DestoryAt = 8800;
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpNorth);
+            }
+            else if (_turnLeftRightCount == 6)
+            {
+                var dpSouth = accessory.Data.GetDefaultDrawProperties();
+                dpSouth.Name = "TurnLeftRight_South_Danger_Zone";
+                dpSouth.Position = Boss1ArenaCenter;
+                dpSouth.Rotation = 0; // 指向南
+                dpSouth.Scale = new Vector2(30, 33);
+                dpSouth.Color = accessory.Data.DefaultDangerColor;
+                dpSouth.DestoryAt = 8800;
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpSouth);
+            }
         }
 
+        [ScriptMethod(
+            name: "分摊点名（北侧）",
+            eventType: EventTypeEnum.TargetIcon,
+            eventCondition: ["Id:023E"]
+        )]
+        public void OnNorthStack(Event @event, ScriptAccessory accessory)
+        {
+            if (PoliceMode)
+            {
+                var target = accessory.Data.Objects.SearchById(@event.TargetId);
+                if (target != null)
+                {
+                    accessory.Method.SendChat($"/e 分摊（北侧）点名: {target.Name}");
+                }
+            }
+            if (@event.TargetId != accessory.Data.Me) return;
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "North_Stack";
+            dp.Position = Boss1ArenaCenter;
+            dp.Rotation = MathF.PI;
+            dp.Scale = new Vector2(30, 33);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 12000;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+        }
 
+        [ScriptMethod(
+            name: "分摊点名（南侧）",
+            eventType: EventTypeEnum.TargetIcon,
+            eventCondition: ["Id:023F"]
+        )]
+        public void OnSouthStack(Event @event, ScriptAccessory accessory)
+        {
+            if (PoliceMode)
+            {
+                var target = accessory.Data.Objects.SearchById(@event.TargetId);
+                if (target != null)
+                {
+                    accessory.Method.SendChat($"/e 分摊（南侧）点名: {target.Name}");
+                }
+            }
+            if (@event.TargetId != accessory.Data.Me) return;
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "South_Stack";
+            dp.Position = Boss1ArenaCenter;
+            dp.Rotation = 0;
+            dp.Scale = new Vector2(30, 33);
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 12000;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+        }
 
 
         [ScriptMethod(
@@ -471,6 +549,14 @@ namespace KodakkuAssistXSZYYS
         )]
         public void OnCometeorStatusAdd(Event @event, ScriptAccessory accessory)
         {
+            if (PoliceMode)
+            {
+                var target = accessory.Data.Objects.SearchById(@event.TargetId);
+                if (target != null)
+                {
+                    accessory.Method.SendChat($"/e 陨石点名: {target.Name}");
+                }
+            }
             if (@event.TargetId != accessory.Data.Me) return;
             _hasCometeorStatus = true;
             if (Enable_Developer_Mode) accessory.Log.Debug("陨石机制：玩家获得状态。");
@@ -1128,6 +1214,14 @@ namespace KodakkuAssistXSZYYS
         )]
         public void OnGlacialImpactTether(Event @event, ScriptAccessory accessory)
         {
+            if (PoliceMode)
+            {
+                var target = accessory.Data.Objects.SearchById(@event.TargetId);
+                if (target != null)
+                {
+                    accessory.Method.SendChat($"/e 雪球连线点名: {target.Name}");
+                }
+            }
             if (@event.TargetId == accessory.Data.Me)
             {
                 _tetherSourceId = @event.SourceId;
@@ -2015,6 +2109,17 @@ namespace KodakkuAssistXSZYYS
         )]
         public void GreatAxePrey(Event @event, ScriptAccessory accessory)
         {
+            if (PoliceMode)
+            {
+                if (float.TryParse(@event["Duration"], out var duration1) && Math.Abs(duration1 - 9.0f) < 0.1f)
+                {
+                    var target = accessory.Data.Objects.SearchById(@event.TargetId);
+                    if (target != null)
+                    {
+                        accessory.Method.SendChat($"/e 大圈（9秒）点名: {target.Name}");
+                    }
+                }
+            }
             // 确认是自己获得了这个状态
             if (@event.TargetId != accessory.Data.Me) return;
 
@@ -2057,6 +2162,17 @@ namespace KodakkuAssistXSZYYS
         )]
         public async void GreatAxePreyLong(Event @event, ScriptAccessory accessory)
         {
+            if (PoliceMode)
+            {
+                if (float.TryParse(@event["Duration"], out var duration1) && Math.Abs(duration1 - 21.0f) < 0.1f)
+                {
+                    var target = accessory.Data.Objects.SearchById(@event.TargetId);
+                    if (target != null)
+                    {
+                        accessory.Method.SendChat($"/e 大圈（21秒）点名: {target.Name}");
+                    }
+                }
+            }
             // 确认是自己获得了这个状态
             if (@event.TargetId != accessory.Data.Me) return;
 
@@ -2093,12 +2209,31 @@ namespace KodakkuAssistXSZYYS
             }
         }
         [ScriptMethod(
-            name: "小斧猎物 (13秒)",
+            name: "小斧猎物",
             eventType: EventTypeEnum.StatusAdd,
             eventCondition: ["StatusID:4336"]
         )]
         public void LesserAxePrey(Event @event, ScriptAccessory accessory)
         {
+            if (PoliceMode)
+            {
+                if (float.TryParse(@event["Duration"], out var duration1) && Math.Abs(duration1 - 13.0f) < 0.1f)
+                {
+                    var target = accessory.Data.Objects.SearchById(@event.TargetId);
+                    if (target != null)
+                    {
+                        accessory.Method.SendChat($"/e 小圈（13秒）点名: {target.Name}");
+                    }
+                }
+                else if (Math.Abs(duration1 - 21.0f) < 0.1f)
+                {
+                    var target = accessory.Data.Objects.SearchById(@event.TargetId);
+                    if (target != null)
+                    {
+                        accessory.Method.SendChat($"/e 小圈（21秒）点名: {target.Name}");
+                    }
+                }
+            }
             // 确认是自己获得了这个状态
             if (@event.TargetId != accessory.Data.Me) return;
             var player = accessory.Data.MyObject;
@@ -2192,6 +2327,42 @@ namespace KodakkuAssistXSZYYS
                         dp3.Delay = 15000;
                         dp3.DestoryAt = 6000;
                         accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp3);
+                    }
+                }
+            }
+        }
+
+        [ScriptMethod(
+            name: "圣枪分摊点名",
+            eventType: EventTypeEnum.StatusAdd,
+            eventCondition: ["StatusID:4338"],
+            userControl: false)]
+        public void SacredBowPrey(Event @event, ScriptAccessory accessory)
+        {
+            if (PoliceMode)
+            {
+                if (float.TryParse(@event["Duration"], out var duration1) && Math.Abs(duration1 - 17.0f) < 0.1f)
+                {
+                    var target = accessory.Data.Objects.SearchById(@event.TargetId);
+                    if (target != null)
+                    {
+                        accessory.Method.SendChat($"/e 圣枪分摊(17秒）点名: {target.Name}");
+                    }
+                }
+                else if (Math.Abs(duration1 - 25.0f) < 0.1f)
+                {
+                    var target = accessory.Data.Objects.SearchById(@event.TargetId);
+                    if (target != null)
+                    {
+                        accessory.Method.SendChat($"/e 圣枪分摊(25秒）点名: {target.Name}");
+                    }
+                }
+                else if (Math.Abs(duration1 - 33.0f) < 0.1f)
+                {
+                    var target = accessory.Data.Objects.SearchById(@event.TargetId);
+                    if (target != null)
+                    {
+                        accessory.Method.SendChat($"/e 圣枪分摊(33秒）点名: {target.Name}");
                     }
                 }
             }
