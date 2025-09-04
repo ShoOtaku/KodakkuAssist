@@ -61,9 +61,9 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.28",
+    version: "0.0.30",
     author: "XSZYYS",
-    note: "更新内容\r\n新增老一旋转还有分摊的危险半场AOE绘制，老一、老二、老四小警察功能\r\n请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
+    note: "更新内容\r\n检查复活：输入【/e 复活检查 <数字>】，比如【/e 复活检查 1】会显示周围所有剩余1次复活的玩家\r\n检查扔钱：输入【/e 扔钱检查】会显示所有使用扔钱的玩家和扔钱次数，输入【/e 扔钱清理】会清理所有数据\r\n平台外战犯检查不太准确，仅供参考\r\n请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
 
     public class 力之塔
@@ -71,7 +71,10 @@ namespace KodakkuAssistXSZYYS
         #region User_Settings_用户设置
         [UserSetting("-----全局设置----- (此设置无实际意义)")]
         public bool _____Global_Settings_____ { get; set; } = true;
-
+        [UserSetting("启用TTS")]
+        public bool EnableTTS { get; set; } = true;
+        [UserSetting("启用文字横幅提示")]
+        public bool EnableTextBanner { get; set; } = true;
         [UserSetting("攻略分组策略(钰子烧即ABC123/152463/柠檬松饼)")]
         public StrategySelection SelectedStrategy { get; set; } = StrategySelection.ABC_123;
 
@@ -180,9 +183,6 @@ namespace KodakkuAssistXSZYYS
             { PositionSelection.Pos5, new List<Vector3> { new(-337.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 157.00f), new(-337.0f, -840.0f, 183.0f), new(-355.5f, -840.0f, 175.5f) } },
             { PositionSelection.Pos6, new List<Vector3> { new(-328.00f, -840.00f, 163.00f), new(-331.00f, -840.00f, 148.00f), new(-318.5f, -840.0f, 175.5f), new(-337.0f, -840.0f, 183.0f) } }
         };
-
-
-
         //小怪分组坐标
         private static readonly Dictionary<TeamSelection, Vector3> GroupMarkerPositions = new()
         {
@@ -238,7 +238,29 @@ namespace KodakkuAssistXSZYYS
         // 用于神圣机制的状态变量
         private enum HolyWeaponType { None, Axe, Lance }
         private HolyWeaponType _holyWeaponType = HolyWeaponType.None;
-
+        //辅助职业字典
+        private static readonly Dictionary<uint, string> _supportJobStatus = new()
+        {
+            { 4242, "辅助自由人" },
+            { 4358, "辅助骑士" },
+            { 4359, "辅助狂战士" },
+            { 4360, "辅助武僧" },
+            { 4361, "辅助猎人" },
+            { 4362, "辅助武士" },
+            { 4363, "辅助吟游诗人" },
+            { 4364, "辅助风水师" },
+            { 4365, "辅助时魔法师" },
+            { 4366, "辅助炮击士" },
+            { 4367, "辅助药剂师" },
+            { 4368, "辅助预言师" },
+            { 4369, "辅助盗贼" }
+        };
+        // 用于记录扔钱次数的字典和锁
+        private readonly Dictionary<string, Dictionary<string, int>> _moneyThrowCounts = new();
+        private readonly object _moneyThrowLock = new();
+        
+        
+        
         public void Init(ScriptAccessory accessory)
         {
             accessory.Log.Debug("力之塔脚本已加载。");
@@ -289,7 +311,7 @@ namespace KodakkuAssistXSZYYS
 
 
         [ScriptMethod(
-            name: "降落",
+            name: "降落（绘制）",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(41812|43293|41709)$"]
         )]
@@ -324,6 +346,33 @@ namespace KodakkuAssistXSZYYS
         }
 
         [ScriptMethod(
+            name: "降落TTS（钢铁）",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:43293"],
+            suppress: 1000
+        )]
+        public void OnLandingTTS(Event @event, ScriptAccessory accessory)
+        {
+            if (EnableTTS)
+            {
+                accessory.Method.EdgeTTS("钢铁");
+            }
+        }
+
+        [ScriptMethod(
+            name: "降落击退TTS",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex:^(43794|43294)$"],
+            suppress: 1000
+        )]
+        public void OnLandingKnockbackTTS(Event @event, ScriptAccessory accessory)
+        {
+            if (EnableTTS)
+            {
+                accessory.Method.EdgeTTS("击退");
+            }
+        }
+        [ScriptMethod(
             name: "降落(击退)",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:regex:^(43794|43294)$"]
@@ -337,8 +386,7 @@ namespace KodakkuAssistXSZYYS
             dp.Color = accessory.Data.DefaultSafeColor;
             dp.DestoryAt = 10500;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
-            accessory.Method.TextInfo("击退", 5000);
-
+            if(EnableTextBanner) accessory.Method.TextInfo("击退", 5000);
         }
 
         [ScriptMethod(
@@ -513,6 +561,10 @@ namespace KodakkuAssistXSZYYS
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 12000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+            if (EnableTTS)
+            {
+                accessory.Method.EdgeTTS("分摊去北侧");
+            }
         }
 
         [ScriptMethod(
@@ -539,6 +591,10 @@ namespace KodakkuAssistXSZYYS
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 12000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+            if (EnableTTS)
+            {
+                accessory.Method.EdgeTTS("分摊去南侧");
+            }
         }
 
 
@@ -559,6 +615,10 @@ namespace KodakkuAssistXSZYYS
             }
             if (@event.TargetId != accessory.Data.Me) return;
             _hasCometeorStatus = true;
+            if (EnableTTS)
+            {
+                accessory.Method.EdgeTTS("陨石点名");
+            }
             if (Enable_Developer_Mode) accessory.Log.Debug("陨石机制：玩家获得状态。");
             TryDrawCometeorGuide(accessory);
         }
@@ -878,6 +938,19 @@ namespace KodakkuAssistXSZYYS
             }
         }
 
+        [ScriptMethod(
+            name: "浮空TTS",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:41707"],
+            suppress: 1000
+        )]
+        public void FloatingTowerTTS(Event @event, ScriptAccessory accessory)
+        {
+            if (EnableTTS)
+            {
+                accessory.Method.EdgeTTS("浮空后再去踩塔");
+            }
+        }
 
         [ScriptMethod(
             name: "浮空(指路)",
@@ -952,7 +1025,7 @@ namespace KodakkuAssistXSZYYS
             // 火球/地热
             _fireballPositions.Clear();
             accessory.Method.RemoveDraw(".*");
-            accessory.Log.Debug("老二初始化完成。");
+            if(Enable_Developer_Mode) accessory.Log.Debug("老二初始化完成。");
         }
 
         [ScriptMethod(
@@ -1055,7 +1128,7 @@ namespace KodakkuAssistXSZYYS
                 dpRed.DestoryAt = displayDuration;
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpRed);
 
-                accessory.Log.Debug($"绘制第 {_pairsProcessed + 1} 对冰火圈");
+                if(Enable_Developer_Mode) accessory.Log.Debug($"绘制第 {_pairsProcessed + 1} 对冰火圈");
 
                 // 从列表中移除已处理的圈，并增加计数器
                 _blueCircles.RemoveAt(0);
@@ -1087,14 +1160,14 @@ namespace KodakkuAssistXSZYYS
                         isLetterGroup = true;
                         _letterGroupNextPos = nextPos;
                         currentGroupRushCount = _letterGroupRushCount++;
-                        accessory.Log.Debug("雪球狂奔: 字母组已确定。");
+                        if(Enable_Developer_Mode) accessory.Log.Debug("雪球狂奔: 字母组已确定。");
                     }
                     else
                     {
                         isLetterGroup = false;
                         _numberGroupNextPos = nextPos;
                         currentGroupRushCount = _numberGroupRushCount++;
-                        accessory.Log.Debug("雪球狂奔: 数字组已确定。");
+                        if(Enable_Developer_Mode) accessory.Log.Debug("雪球狂奔: 数字组已确定。");
                     }
                 }
                 // 后续读条，用于追踪路径
@@ -1105,19 +1178,19 @@ namespace KodakkuAssistXSZYYS
                         isLetterGroup = true;
                         _letterGroupNextPos = nextPos;
                         currentGroupRushCount = _letterGroupRushCount++;
-                        accessory.Log.Debug("雪球狂奔: 字母组路径更新。");
+                        if(Enable_Developer_Mode) accessory.Log.Debug("雪球狂奔: 字母组路径更新。");
                     }
                     else if (_numberGroupNextPos.HasValue && Vector3.DistanceSquared(sourcePos, _numberGroupNextPos.Value) < 1.0f)
                     {
                         isLetterGroup = false;
                         _numberGroupNextPos = nextPos;
                         currentGroupRushCount = _numberGroupRushCount++;
-                        accessory.Log.Debug("雪球狂奔: 数字组路径更新。");
+                        if(Enable_Developer_Mode) accessory.Log.Debug("雪球狂奔: 数字组路径更新。");
                     }
                     else
                     {
                         // Fallback in case something goes wrong
-                        accessory.Log.Error("雪球狂奔: 无法匹配到路径。");
+                        if(Enable_Developer_Mode) accessory.Log.Error("雪球狂奔: 无法匹配到路径。");
                         return;
                     }
                 }
@@ -1225,7 +1298,7 @@ namespace KodakkuAssistXSZYYS
             if (@event.TargetId == accessory.Data.Me)
             {
                 _tetherSourceId = @event.SourceId;
-                accessory.Log.Debug($"凝冰冲击: 玩家被连线，来源ID: {_tetherSourceId}");
+                if(Enable_Developer_Mode) accessory.Log.Debug($"凝冰冲击: 玩家被连线，来源ID: {_tetherSourceId}");
             }
         }
         [ScriptMethod(
@@ -1236,7 +1309,7 @@ namespace KodakkuAssistXSZYYS
         public async void GlacialImpact(Event @event, ScriptAccessory accessory)
         {
             await Task.Delay(1000);
-            accessory.Log.Debug("凝冰冲击: 开始读条，触发指路绘制。");
+            if(Enable_Developer_Mode) accessory.Log.Debug("凝冰冲击: 开始读条，触发指路绘制。");
             DrawGlacialImpactGuide(accessory);
         }
 
@@ -1255,11 +1328,11 @@ namespace KodakkuAssistXSZYYS
                 {
                     var direction = Vector3.Normalize(SnowballArenaCenter - tetherSource.Position);
                     safePosition = SnowballArenaCenter + direction * 5;
-                    accessory.Log.Debug("凝冰冲击: 检测到连线，计算特殊安全点。");
+                    if(Enable_Developer_Mode) accessory.Log.Debug("凝冰冲击: 检测到连线，计算特殊安全点。");
                 }
                 else
                 {
-                    accessory.Log.Error("凝冰冲击: 找不到连线来源单位。");
+                    if(Enable_Developer_Mode) accessory.Log.Error("凝冰冲击: 找不到连线来源单位。");
                 }
             }
             else // 如果没有被连线，则执行分组逻辑
@@ -1288,7 +1361,7 @@ namespace KodakkuAssistXSZYYS
                 }
                 else
                 {
-                    accessory.Log.Error("凝冰冲击: 找不到雪球最终落点。");
+                    if(Enable_Developer_Mode) accessory.Log.Error("凝冰冲击: 找不到雪球最终落点。");
                 }
             }
 
@@ -1317,7 +1390,7 @@ namespace KodakkuAssistXSZYYS
         {
             // 机制结束后重置连线状态
             _tetherSourceId = 0;
-            accessory.Log.Debug("凝冰冲击: 机制结束，重置连线状态。");
+            if(Enable_Developer_Mode) accessory.Log.Debug("凝冰冲击: 机制结束，重置连线状态。");
         }
 
         //火球塔DataId=2014637
@@ -1358,7 +1431,7 @@ namespace KodakkuAssistXSZYYS
             // 使用第一次事件中储存的位置信息进行重绘
             if (!_fireballPositions.Any())
             {
-                accessory.Log.Error("火球重绘: 找不到第一轮的火球坐标。");
+                if(Enable_Developer_Mode) accessory.Log.Error("火球重绘: 找不到第一轮的火球坐标。");
                 return;
             }
             ProcessFireballs(accessory);
@@ -1489,7 +1562,7 @@ namespace KodakkuAssistXSZYYS
         {
             if (_fireballPositions.Count == 0)
             {
-                accessory.Log.Error("地热破裂: 未能获取到火球位置信息。");
+                if(Enable_Developer_Mode) accessory.Log.Error("地热破裂: 未能获取到火球位置信息。");
                 return;
             }
 
@@ -1569,7 +1642,7 @@ namespace KodakkuAssistXSZYYS
             // 初始化老三的状态
 
             accessory.Method.RemoveDraw(".*");
-            accessory.Log.Debug("老三初始化完成。");
+            if(Enable_Developer_Mode) accessory.Log.Debug("老三初始化完成。");
             _puddles.Clear();
         }
         [ScriptMethod(
@@ -1614,6 +1687,10 @@ namespace KodakkuAssistXSZYYS
             dp.ScaleMode = ScaleMode.ByTime;
             dp.DestoryAt = 8000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+            if (EnableTTS)
+            {
+                accessory.Method.EdgeTTS("俯冲");
+            }
         }
         [ScriptMethod(
             name: "水滩 - 记录",
@@ -1718,6 +1795,10 @@ namespace KodakkuAssistXSZYYS
             dp.Color = accessory.Data.DefaultSafeColor;
             dp.DestoryAt = 8000;
             accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp);
+            if (EnableTTS)
+            {
+                accessory.Method.EdgeTTS("预站位");
+            }
         }
         [ScriptMethod(
             name: "踩冰塔 - 出现(指路)",
@@ -1916,7 +1997,7 @@ namespace KodakkuAssistXSZYYS
         {
             // 初始化尾王的状态
             accessory.Method.RemoveDraw(".*");
-            accessory.Log.Debug("尾王初始化完成。");
+            if(Enable_Developer_Mode) accessory.Log.Debug("尾王初始化完成。");
             _holyWeaponType = HolyWeaponType.None;
         }
 
@@ -1930,11 +2011,19 @@ namespace KodakkuAssistXSZYYS
             var ActionId = @event.ActionId;
             if (ActionId == 41538) //枪
             {
-                accessory.Method.TextInfo("枪，远平A", 5000);
+                if(EnableTextBanner) accessory.Method.TextInfo("枪，远平A", 5000);
+                if (EnableTTS)
+                {
+                    accessory.Method.EdgeTTS("远平A，3下");
+                }
             }
             else
             {
-                accessory.Method.TextInfo("斧，近平A", 5000);
+                if(EnableTextBanner) accessory.Method.TextInfo("斧，近平A", 5000);
+                if (EnableTTS)
+                {
+                    accessory.Method.EdgeTTS("近平A，3下");
+                }
             }
         }
         [ScriptMethod(
@@ -1944,7 +2033,11 @@ namespace KodakkuAssistXSZYYS
         )]
         public void OnForkedFuryAlert(Event @event, ScriptAccessory accessory)
         {
-            accessory.Method.TextInfo("远近死刑", 5000);
+            if(EnableTextBanner) accessory.Method.TextInfo("远近死刑", 5000);
+            if (EnableTTS)
+            {
+                accessory.Method.EdgeTTS("远近死刑，然后两下平A");
+            }
         }
         [ScriptMethod(
             name: "暗杀短剑",
@@ -2023,7 +2116,10 @@ namespace KodakkuAssistXSZYYS
                         }
                     }
                 }
-                
+                if (EnableTTS)
+                {
+                    accessory.Method.EdgeTTS("月环");
+                }
             }
             else // 斧击
             {
@@ -2049,6 +2145,10 @@ namespace KodakkuAssistXSZYYS
                             closestPos = CriticalAxeSafePositions[i];
                         }
                     }
+                }
+                if (EnableTTS)
+                {
+                    accessory.Method.EdgeTTS("钢铁");
                 }
             }
             // 绘制三个方形AOE
@@ -2164,6 +2264,7 @@ namespace KodakkuAssistXSZYYS
         {
             if (PoliceMode)
             {
+                CheckPreyPosition(accessory, @event.TargetId);
                 if (float.TryParse(@event["Duration"], out var duration1) && Math.Abs(duration1 - 21.0f) < 0.1f)
                 {
                     var target = accessory.Data.Objects.SearchById(@event.TargetId);
@@ -2217,6 +2318,7 @@ namespace KodakkuAssistXSZYYS
         {
             if (PoliceMode)
             {
+                CheckPreyPosition(accessory, @event.TargetId);
                 if (float.TryParse(@event["Duration"], out var duration1) && Math.Abs(duration1 - 13.0f) < 0.1f)
                 {
                     var target = accessory.Data.Objects.SearchById(@event.TargetId);
@@ -2341,6 +2443,7 @@ namespace KodakkuAssistXSZYYS
         {
             if (PoliceMode)
             {
+                CheckPreyPosition(accessory, @event.TargetId);
                 if (float.TryParse(@event["Duration"], out var duration1) && Math.Abs(duration1 - 17.0f) < 0.1f)
                 {
                     var target = accessory.Data.Objects.SearchById(@event.TargetId);
@@ -2521,7 +2624,7 @@ namespace KodakkuAssistXSZYYS
                     DrawMode = DrawModeEnum.Imgui
                 };
                 accessory.MultiDisDraw(path, props);
-                accessory.Log.Debug($"圣枪机制：覆盖={HolyLanceGroupOverride}，策略={SelectedStrategy}。");
+                if(Enable_Developer_Mode) accessory.Log.Debug($"圣枪机制：覆盖={HolyLanceGroupOverride}，策略={SelectedStrategy}。");
             }
         }
         [ScriptMethod(
@@ -2537,12 +2640,12 @@ namespace KodakkuAssistXSZYYS
                 if (paramValue == 851)
                 {
                     _holyWeaponType = HolyWeaponType.Axe;
-                    accessory.Log.Debug("神圣机制：记录为斧头。");
+                    if(Enable_Developer_Mode) accessory.Log.Debug("神圣机制：记录为斧头。");
                 }
                 else if (paramValue == 852)
                 {
                     _holyWeaponType = HolyWeaponType.Lance;
-                    accessory.Log.Debug("神圣机制：记录为长枪。");
+                    if(Enable_Developer_Mode) accessory.Log.Debug("神圣机制：记录为长枪。");
                 }
             }
         }
@@ -2568,7 +2671,11 @@ namespace KodakkuAssistXSZYYS
                     accessory.Log.Error("神圣机制：未能获取到武器类型。");
                     return;
             }
-            accessory.Method.TextInfo(hintText, 5000);
+            if(EnableTextBanner) accessory.Method.TextInfo(hintText, 5000);
+            if (EnableTTS)
+            {
+                accessory.Method.EdgeTTS(hintText);
+            }
 
             // 重置状态
             _holyWeaponType = HolyWeaponType.None;
@@ -2594,12 +2701,205 @@ namespace KodakkuAssistXSZYYS
                     accessory.Log.Error("神圣机制：未能获取到武器类型。");
                     return;
             }
-            accessory.Method.TextInfo(hintText, 5000);
+            if(EnableTextBanner) accessory.Method.TextInfo(hintText, 5000);
+            if (EnableTTS)
+            {
+                accessory.Method.EdgeTTS(hintText);
+            }
 
             // 重置状态
             _holyWeaponType = HolyWeaponType.None;
         }
+        private void CheckPreyPosition(ScriptAccessory accessory, ulong targetId)
+        {
+            // 这个检查由小警察模式统一控制
+            if (!PoliceMode) return;
+        
+            var player = accessory.Data.Objects.SearchById(targetId);
+            if (player == null) return; // 如果找不到该玩家（可能已离开范围），则不处理
+        
+            bool isInAnySquare = false;
+            for (int i = 0; i < SquarePositions.Count; i++)
+            {
+                if (IsPointInRotatedRect(player.Position, SquarePositions[i], 21, 21, SquareAngles[i]))
+                {
+                    isInAnySquare = true;
+                    break;
+                }
+            }
+
+            if (!isInAnySquare)
+            {
+                accessory.Method.SendChat($"/e {player.Name} 站位错误！");
+            }
+        }
+        
+        private bool IsPointInRotatedRect(Vector3 point, Vector3 rectCenter, float rectWidth, float rectHeight, float rectAngleRad)
+        {
+            float translatedX = point.X - rectCenter.X;
+            float translatedZ = point.Z - rectCenter.Z;
+            
+            float cosAngle = MathF.Cos(-rectAngleRad);
+            float sinAngle = MathF.Sin(-rectAngleRad);
+
+            float rotatedX = translatedX * cosAngle - translatedZ * sinAngle;
+            float rotatedZ = translatedX * sinAngle + translatedZ * cosAngle;
+
+
+            return (Math.Abs(rotatedX) <= rectWidth / 2) && (Math.Abs(rotatedZ) <= rectHeight / 2);
+        }
         #endregion
+        [ScriptMethod(
+            name: "检查复活",
+            eventType: EventTypeEnum.Chat,
+            eventCondition: ["Type:Echo"]
+        )]
+        public async void CheckResurrection(Event @event, ScriptAccessory accessory)
+        {
+            string message = @event["Message"];
+            if (!message.StartsWith("复活检查")) return;
+            string[] parts = message.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            int? targetCount = null;
+            if (parts.Length > 1 && int.TryParse(parts[1], out int count))
+            {
+                targetCount = count;
+            }
+            var allResurrectionData = new List<Tuple<string, string, string, int>>();
+
+            foreach (var gameObject in accessory.Data.Objects)
+            {
+                if (gameObject is IPlayerCharacter player)
+                {
+                    string playerName = player.Name.TextValue;
+                    string classJob = player.ClassJob.Value.Name.ToString();
+                    string supportJob = "无";
+                    int resurrectionCount = 0;
+                    bool hasResDebuff = false;
+                    foreach (var status in player.StatusList)
+                    {
+                        if (status.StatusId == 4262 || status.StatusId == 4263)
+                        {
+                            resurrectionCount = status.Param; 
+                            hasResDebuff = true;
+                        }
+                        if (_supportJobStatus.TryGetValue(status.StatusId, out var jobName))
+                        {
+                            supportJob = jobName;
+                        }
+                    }
+                    if (hasResDebuff)
+                    {
+                        allResurrectionData.Add(new Tuple<string, string, string, int>(playerName, classJob, supportJob, resurrectionCount));
+                    }
+                }
+            }
+            var filteredData = targetCount.HasValue
+                ? allResurrectionData.Where(t => t.Item4 == targetCount.Value).ToList()
+                : allResurrectionData;
+
+            if (filteredData.Count > 0)
+            {
+                var sortedData = filteredData.OrderBy(t => t.Item4).ToList();
+
+                string title = targetCount.HasValue ? $"--- 复活次数为 {targetCount.Value} 的玩家 ---" : "--- 复活次数检查 ---";
+                accessory.Method.SendChat($"/e {title}");
+                
+                foreach (var data in sortedData)
+                {
+                    await Task.Delay(10);
+                    accessory.Method.SendChat($"/e {data.Item1} ({data.Item2} | {data.Item3}): {data.Item4}");
+                }
+            }
+            else
+            {
+                await Task.Delay(10);
+                string notFoundMessage = targetCount.HasValue ? $"未找到复活次数为 {targetCount.Value} 的玩家。" : "未找到有限制复活的玩家。";
+                accessory.Method.SendChat($"/e {notFoundMessage}");
+            }
+        }
+        [ScriptMethod(
+            name: "记录扔钱次数",
+            eventType: EventTypeEnum.ActionEffect,
+            eventCondition: ["ActionId:41606"],
+            userControl: false
+        )]
+        public void RecordMoneyThrow(Event @event, ScriptAccessory accessory)
+        {
+            var source = accessory.Data.Objects.SearchById(@event.SourceId);
+            var target = accessory.Data.Objects.SearchById(@event.TargetId);
+
+            // 确保来源和目标都存在，且目标不是玩家
+            if (source == null || target == null || !(source is IBattleChara) || !(target is IBattleChara))
+                return;
+
+            string playerName = source.Name.TextValue;
+            string bossName = target.Name.TextValue;
+
+            lock (_moneyThrowLock)
+            {
+                if (!_moneyThrowCounts.ContainsKey(bossName))
+                {
+                    _moneyThrowCounts[bossName] = new Dictionary<string, int>();
+                }
+                if (!_moneyThrowCounts[bossName].ContainsKey(playerName))
+                {
+                    _moneyThrowCounts[bossName][playerName] = 0;
+                }
+                _moneyThrowCounts[bossName][playerName]++;
+            }
+        }
+        [ScriptMethod(
+            name: "检查扔钱",
+            eventType: EventTypeEnum.Chat,
+            eventCondition: ["Type:Echo", "Message:扔钱检查"]
+        )]
+        public async void CheckMoneyThrow(Event @event, ScriptAccessory accessory)
+        {
+            Dictionary<string, List<KeyValuePair<string, int>>> sortedData;
+            lock (_moneyThrowLock)
+            {
+                if (_moneyThrowCounts.Count == 0)
+                {
+                    accessory.Method.SendChat("/e 未记录到任何扔钱数据。");
+                    return;
+                }
+                
+                sortedData = new Dictionary<string, List<KeyValuePair<string, int>>>();
+                foreach (var bossEntry in _moneyThrowCounts)
+                {
+                    sortedData[bossEntry.Key] = bossEntry.Value.OrderBy(kvp => kvp.Value).ToList();
+                }
+            }
+            
+            foreach (var bossEntry in sortedData)
+            {
+                accessory.Method.SendChat($"/e --- {bossEntry.Key} 扔钱统计 ---");
+                
+                foreach (var data in bossEntry.Value)
+                {
+                    await Task.Delay(50);
+                    accessory.Method.SendChat($"/e {data.Key}: {data.Value} 次");
+                }
+            }
+        }
+        [ScriptMethod(
+            name: "清理扔钱数据",
+            eventType: EventTypeEnum.Chat,
+            eventCondition: ["Type:Echo", "Message:扔钱清理"]
+        )]
+        public void ClearMoneyThrowData(Event @event, ScriptAccessory accessory)
+        {
+            lock (_moneyThrowLock)
+            {
+                _moneyThrowCounts.Clear();
+            }
+            accessory.Method.SendChat("/e 扔钱数据已清理。");
+        }
+        
+        
+        
+        
+        
         #region Helper_Functions
 
         private bool IsTank(int partyIndex)
