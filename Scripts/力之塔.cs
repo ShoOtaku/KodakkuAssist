@@ -61,9 +61,9 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.30",
+    version: "0.0.31",
     author: "XSZYYS",
-    note: "更新内容\r\n检查复活：输入【/e 复活检查 <数字>】，比如【/e 复活检查 1】会显示周围所有剩余1次复活的玩家\r\n检查扔钱：输入【/e 扔钱检查】会显示所有使用扔钱的玩家和扔钱次数，输入【/e 扔钱清理】会清理所有数据\r\n平台外战犯检查不太准确，仅供参考\r\n请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
+    note: "更新内容\r\n藏宝图：1.5道中给箱子连线\r\n检查蓝药：输入【/e 蓝药检查】会输出药师蓝药使用情况，输入【/e 蓝药清理】会清理所有数据\r\n检查复活：输入【/e 复活检查 <数字>】，比如【/e 复活检查 1】会输出周围所有剩余1次复活的玩家\r\n检查扔钱：输入【/e 扔钱检查】会输出所有使用扔钱的玩家和扔钱次数，输入【/e 扔钱清理】会清理所有数据\r\n平台外战犯检查不太准确，仅供参考\r\n请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
 
     public class 力之塔
@@ -91,6 +91,8 @@ namespace KodakkuAssistXSZYYS
         public LanceGuideOverride HolyLanceGroupOverride { get; set; } = LanceGuideOverride.None;
         [UserSetting("小警察（开启后默语频道输出关键机制被点名玩家名字）")]
         public bool PoliceMode { get; set; } = false;
+        [UserSetting("蓝药检查范围（仅小队）")]
+        public bool Partycheck { get; set; } = false;
         [UserSetting("-----开发者设置----- (此设置无实际意义)")]
         public bool _____Developer_Settings_____ { get; set; } = true;
 
@@ -258,7 +260,9 @@ namespace KodakkuAssistXSZYYS
         // 用于记录扔钱次数的字典和锁
         private readonly Dictionary<string, Dictionary<string, int>> _moneyThrowCounts = new();
         private readonly object _moneyThrowLock = new();
-        
+        // 用于记录蓝药次数的字典和锁
+        private readonly Dictionary<string, Dictionary<string, int>> _bluePotionCounts = new();
+        private readonly object _bluePotionLock = new();
         
         
         public void Init(ScriptAccessory accessory)
@@ -288,6 +292,15 @@ namespace KodakkuAssistXSZYYS
             _puddles.Clear();
             // 尾王
             _holyWeaponType = HolyWeaponType.None;
+            // 小警察
+            lock(_moneyThrowLock)
+            {
+                _moneyThrowCounts.Clear();
+            }
+            lock(_bluePotionLock)
+            {
+                _bluePotionCounts.Clear();
+            }
         }
         #region 老一
         [ScriptMethod(
@@ -2874,10 +2887,9 @@ namespace KodakkuAssistXSZYYS
             foreach (var bossEntry in sortedData)
             {
                 accessory.Method.SendChat($"/e --- {bossEntry.Key} 扔钱统计 ---");
-                
                 foreach (var data in bossEntry.Value)
                 {
-                    await Task.Delay(50);
+                    await Task.Delay(100);
                     accessory.Method.SendChat($"/e {data.Key}: {data.Value} 次");
                 }
             }
@@ -2895,11 +2907,134 @@ namespace KodakkuAssistXSZYYS
             }
             accessory.Method.SendChat("/e 扔钱数据已清理。");
         }
-        
-        
-        
-        
-        
+        [ScriptMethod(
+            name: "记录蓝药次数",
+            eventType: EventTypeEnum.ActionEffect,
+            eventCondition: ["ActionId:41633"],
+            userControl: false
+        )]
+        public void RecordBluePotion(Event @event, ScriptAccessory accessory)
+        {
+            var source = accessory.Data.Objects.SearchById(@event.SourceId);
+            var target = accessory.Data.Objects.SearchById(@event.TargetId);
+
+            // 修正：确保来源和目标都是玩家
+            if (source == null || target == null || !(source is IPlayerCharacter) || !(target is IPlayerCharacter))
+                return;
+
+            string sourcePlayerName = source.Name.TextValue;
+            string targetPlayerName = target.Name.TextValue;
+
+            lock (_bluePotionLock)
+            {
+                // 外层Key是目标玩家，内层Key是来源玩家
+                if (!_bluePotionCounts.ContainsKey(targetPlayerName))
+                {
+                    _bluePotionCounts[targetPlayerName] = new Dictionary<string, int>();
+                }
+                if (!_bluePotionCounts[targetPlayerName].ContainsKey(sourcePlayerName))
+                {
+                    _bluePotionCounts[targetPlayerName][sourcePlayerName] = 0;
+                }
+                _bluePotionCounts[targetPlayerName][sourcePlayerName]++;
+            }
+        }
+        [ScriptMethod(
+            name: "检查蓝药",
+            eventType: EventTypeEnum.Chat,
+            eventCondition: ["Type:Echo", "Message:蓝药检查"]
+        )]
+        public async void CheckBluePotion(Event @event, ScriptAccessory accessory)
+        {
+            Dictionary<string, List<KeyValuePair<string, int>>> sortedData;
+            lock (_bluePotionLock)
+            {
+                if (_bluePotionCounts.Count == 0)
+                {
+                    accessory.Method.SendChat("/e 未记录到任何蓝药数据。");
+                    return;
+                }
+
+                var partyMemberNames = Partycheck ? 
+                    accessory.Data.PartyList.Select(id => accessory.Data.Objects.SearchById(id)?.Name.TextValue).Where(name => name != null).ToHashSet()
+                    : null;
+
+                sortedData = new Dictionary<string, List<KeyValuePair<string, int>>>();
+                foreach (var bossEntry in _bluePotionCounts)
+                {
+                    var filteredPlayers = Partycheck ? 
+                        bossEntry.Value.Where(kvp => partyMemberNames.Contains(kvp.Key) && partyMemberNames.Contains(bossEntry.Key)).ToList() 
+                        : bossEntry.Value.ToList();
+
+                    if(filteredPlayers.Count > 0)
+                    {
+                        sortedData[bossEntry.Key] = filteredPlayers.OrderBy(kvp => kvp.Value).ToList();
+                    }
+                }
+            }
+
+            if (sortedData.Count == 0)
+            {
+                accessory.Method.SendChat("/e 当前范围内未记录到符合条件的蓝药数据。");
+                return;
+            }
+
+            foreach (var bossEntry in sortedData)
+            {
+                accessory.Method.SendChat($"/e --- 对 {bossEntry.Key} 的蓝药统计 ---");
+
+                foreach (var data in bossEntry.Value)
+                {
+                    await Task.Delay(100);
+                    accessory.Method.SendChat($"/e {data.Key}: {data.Value} 次");
+                }
+            }
+        }
+        [ScriptMethod(
+            name: "清理蓝药数据",
+            eventType: EventTypeEnum.Chat,
+            eventCondition: ["Type:Echo", "Message:蓝药清理"]
+        )]
+        public void ClearBluePotionData(Event @event, ScriptAccessory accessory)
+        {
+            lock (_bluePotionLock)
+            {
+                _bluePotionCounts.Clear();
+            }
+            accessory.Method.SendChat("/e 蓝药数据已清理。");
+        }
+
+        [ScriptMethod(
+            name: "藏宝图",
+            eventType: EventTypeEnum.ObjectChanged,
+            eventCondition: ["Operate:Add", "DataId:regex:^(1754|1755)$"]
+        )]
+        public void CheckTreasureChest(Event @event, ScriptAccessory accessory)
+        {
+            accessory.Log.Debug("找到箱子");
+            var chestid = @event.SourceId;
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = $"Chest_{chestid}";
+            dp.Owner = accessory.Data.Me;
+            dp.TargetObject = @event.SourceId;
+            dp.Color = accessory.Data.DefaultSafeColor;
+            dp.ScaleMode = ScaleMode.YByDistance;
+            dp.Scale = new Vector2(1.5f);
+            dp.DestoryAt = 1000000;
+            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp);
+        }
+
+        [ScriptMethod(
+            name: "宝箱移除",
+            eventType: EventTypeEnum.ObjectChanged,
+            eventCondition: ["Operate:Remove", "DataId:regex:^(1754|1755)$"],
+            userControl: false
+        )]
+        public void RemoveTreasureChest(Event @event, ScriptAccessory accessory)
+        {
+            var chestid = @event.SourceId;
+            accessory.Method.RemoveDraw($"Chest_{chestid}");
+        }
         #region Helper_Functions
 
         private bool IsTank(int partyIndex)
