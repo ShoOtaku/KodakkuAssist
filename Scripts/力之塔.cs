@@ -61,7 +61,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.31",
+    version: "0.0.32",
     author: "XSZYYS",
     note: "更新内容\r\n藏宝图：1.5道中给箱子连线\r\n检查蓝药：输入【/e 蓝药检查】会输出药师蓝药使用情况，输入【/e 蓝药清理】会清理所有数据\r\n检查复活：输入【/e 复活检查 <数字>】，比如【/e 复活检查 1】会输出周围所有剩余1次复活的玩家\r\n检查扔钱：输入【/e 扔钱检查】会输出所有使用扔钱的玩家和扔钱次数，输入【/e 扔钱清理】会清理所有数据\r\n平台外战犯检查不太准确，仅供参考\r\n请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
@@ -3021,7 +3021,7 @@ namespace KodakkuAssistXSZYYS
             dp.ScaleMode = ScaleMode.YByDistance;
             dp.Scale = new Vector2(1.5f);
             dp.DestoryAt = 1000000;
-            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp);
+            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Line, dp);
         }
 
         [ScriptMethod(
