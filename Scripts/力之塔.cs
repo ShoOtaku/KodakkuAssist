@@ -61,7 +61,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.33",
+    version: "0.0.34",
     author: "XSZYYS",
     note: "更新内容\r\n尝试修复平台外警察报假警的问题\r\n藏宝图：1.5道中给箱子连线\r\n检查蓝药：输入【/e 蓝药检查】会输出药师蓝药使用情况，输入【/e 蓝药清理】会清理所有数据\r\n检查复活：输入【/e 复活检查 <数字>】，比如【/e 复活检查 1】会输出周围所有剩余1次复活的玩家\r\n检查扔钱：输入【/e 扔钱检查】会输出所有使用扔钱的玩家和扔钱次数，输入【/e 扔钱清理】会清理所有数据\r\n请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
@@ -242,6 +242,10 @@ namespace KodakkuAssistXSZYYS
         private HolyWeaponType _holyWeaponType = HolyWeaponType.None;
         // 用于记录已检查过猎物点名的玩家
         private readonly HashSet<ulong> _checkedPreyPlayers = new();
+        private readonly HashSet<ulong> _sacredBowPreyRecordedPlayers = new();
+        // 用于记录枪分摊玩家及其debuff持续时间的字典
+        private readonly Dictionary<int, List<(ulong PlayerId, float Duration)>> _lanceShareAssignments = new();
+        private readonly object _lanceShareLock = new();
         //辅助职业字典
         private static readonly Dictionary<uint, string> _supportJobStatus = new()
         {
@@ -294,6 +298,11 @@ namespace KodakkuAssistXSZYYS
             _puddles.Clear();
             // 尾王
             _holyWeaponType = HolyWeaponType.None;
+            _sacredBowPreyRecordedPlayers.Clear();
+            lock(_lanceShareLock)
+            {
+                _lanceShareAssignments.Clear(); // 重置枪分摊记录
+            }
             // 小警察
             lock(_moneyThrowLock)
             {
@@ -2016,6 +2025,11 @@ namespace KodakkuAssistXSZYYS
             if(Enable_Developer_Mode) accessory.Log.Debug("尾王初始化完成。");
             _holyWeaponType = HolyWeaponType.None;
             _checkedPreyPlayers.Clear();
+            lock(_lanceShareLock)
+            {
+                _lanceShareAssignments.Clear(); // 重置枪分摊记录
+            }
+            _sacredBowPreyRecordedPlayers.Clear();
         }
 
         [ScriptMethod(
@@ -2450,7 +2464,7 @@ namespace KodakkuAssistXSZYYS
                 }
             }
         }
-
+        /*
         [ScriptMethod(
             name: "圣枪分摊点名",
             eventType: EventTypeEnum.StatusAdd,
@@ -2487,6 +2501,7 @@ namespace KodakkuAssistXSZYYS
                 }
             }
         }
+        */
         [ScriptMethod(
             name: "圣枪（指路）",
             eventType: EventTypeEnum.StartCasting,
@@ -2494,6 +2509,7 @@ namespace KodakkuAssistXSZYYS
         )]
         public void HolyLanceGuide(Event @event, ScriptAccessory accessory)
         {
+            _sacredBowPreyRecordedPlayers.Clear();
             var path = new List<DisplacementContainer>();
             // 覆盖逻辑：仅当选择了“左上/右上/下”时，强制使用 A/B/C 的路径块；
             // 选择 None 时，保持原有 SelectedStrategy 的完整分支，不做任何改动。
@@ -2727,6 +2743,146 @@ namespace KodakkuAssistXSZYYS
             // 重置状态
             _holyWeaponType = HolyWeaponType.None;
         }
+        [ScriptMethod(
+            name: "圣枪分摊点名",
+            eventType: EventTypeEnum.StatusAdd,
+            eventCondition: ["StatusID:4338"]
+        )]
+        public void SacredBowPrey_RecordAndBroadcast(Event @event, ScriptAccessory accessory)
+        {
+            var player = accessory.Data.Objects.SearchById(@event.TargetId);
+            if (player == null) return;
+            if (_sacredBowPreyRecordedPlayers.Contains(player.EntityId)) return;
+            _sacredBowPreyRecordedPlayers.Add(player.EntityId);
+            if (float.TryParse(@event["Duration"], out var duration))
+            {
+                int platformIndex = -1;
+                lock (_lanceShareLock)
+                {
+                    bool alreadyRecorded = _lanceShareAssignments.Values.Any(list => list.Any(p => p.PlayerId == player.EntityId));
+                    if (!alreadyRecorded)
+                    {
+                        for (int i = 0; i < SquarePositions.Count; i++)
+                        {
+                            if (IsPointInRotatedRect(player.Position, SquarePositions[i], 20, 20, SquareAngles[i]))
+                            {
+                                platformIndex = i;
+                                break;
+                            }
+                        }
+
+                        if (platformIndex != -1)
+                        {
+                            if (!_lanceShareAssignments.ContainsKey(platformIndex))
+                            {
+                                _lanceShareAssignments[platformIndex] = new List<(ulong, float)>();
+                            }
+                            _lanceShareAssignments[platformIndex].Add((player.EntityId, duration));
+                            if (Enable_Developer_Mode)
+                            {
+                                accessory.Log.Debug($"圣枪分摊记录: {player.Name.TextValue} 在平台 {platformIndex + 1}，持续时间 {duration:F2}s");
+                            }
+                        }
+                        else
+                        {
+                            if (Enable_Developer_Mode)
+                            {
+                                 accessory.Log.Debug($"圣枪分摊记录: {player.Name.TextValue} 是战犯，不在任何平台。");
+                            }
+                        }
+                    }
+                }
+
+                if (PoliceMode)
+                {
+                    // 为播报再次检查平台位置
+                    int reportPlatformIndex = -1;
+                    for (int i = 0; i < SquarePositions.Count; i++)
+                    {
+                        if (IsPointInRotatedRect(player.Position, SquarePositions[i], 21, 21, SquareAngles[i]))
+                        {
+                            reportPlatformIndex = i;
+                            break;
+                        }
+                    }
+
+                    string platformName = reportPlatformIndex switch
+                    {
+                        0 => "下",
+                        1 => "右上",
+                        2 => "左上",
+                        _ => "战犯"
+                    };
+                    
+                    accessory.Method.SendChat($"/e 圣枪分摊点名: {player.Name.TextValue} - {platformName} ({duration:F1}s)");
+                }
+            }
+        }
+        [ScriptMethod(
+            name: "圣枪分摊 - 擦边检查",
+            eventType: EventTypeEnum.StatusRemove,
+            eventCondition: ["StatusID:4338"]
+        )]
+        public void SacredBowPrey_CheckOnExpire(Event @event, ScriptAccessory accessory)
+        {
+            // 检查buff是否为正常到期
+            if (!float.TryParse(@event["Duration"], out var remainingDuration) || remainingDuration > 0.1f)
+            {
+                return; // 如果持续时间不为0，说明是提前移除，不检查
+            }
+
+            var player = accessory.Data.Objects.SearchById(@event.TargetId);
+            if (player == null || player.IsDead) return;
+
+            lock (_lanceShareLock)
+            {
+                int initialPlatform = -1;
+                (ulong PlayerId, float Duration) assignment = (0, 0);
+
+                foreach (var entry in _lanceShareAssignments)
+                {
+                    var found = entry.Value.FirstOrDefault(p => p.PlayerId == player.EntityId);
+                    if (found.PlayerId != 0)
+                    {
+                        initialPlatform = entry.Key;
+                        assignment = found;
+                        break;
+                    }
+                }
+
+                if (initialPlatform == -1) return;
+
+                var sortedPlayers = _lanceShareAssignments[initialPlatform].OrderBy(p => p.Duration).ToList();
+                int orderIndex = sortedPlayers.FindIndex(p => p.PlayerId == player.EntityId);
+
+                bool shouldCheck = false;
+                switch (initialPlatform)
+                {
+                    case 0: // 平台1 (下)
+                        if (orderIndex == 0 || orderIndex == 2) shouldCheck = true;
+                        break;
+                    case 1: // 平台2 (右上)
+                        if (orderIndex == 1 || orderIndex == 2) shouldCheck = true;
+                        break;
+                    case 2: // 平台3 (左上)
+                        if (orderIndex == 0 || orderIndex == 1) shouldCheck = true;
+                        break;
+                }
+
+                if (shouldCheck)
+                {
+                    if (!IsCircleFullyContainedInAnyPlatform(player.Position))
+                    {
+                        if (PoliceMode) accessory.Method.SendChat($"/e 分摊擦边: {player.Name.TextValue}");
+                    }
+                }
+            }
+        }
+        
+        
+        
+        
+        
         private void CheckPreyPosition(ScriptAccessory accessory, ulong targetId)
         {
             // 如果已经检查过该玩家，则直接返回
@@ -2745,7 +2901,7 @@ namespace KodakkuAssistXSZYYS
             bool isInAnySquare = false;
             for (int i = 0; i < SquarePositions.Count; i++)
             {
-                if (IsPointInRotatedRect(player.Position, SquarePositions[i], 21, 21, SquareAngles[i]))
+                if (IsPointInRotatedRect(player.Position, SquarePositions[i], 20, 20, SquareAngles[i]))
                 {
                     isInAnySquare = true;
                     break;
@@ -2771,6 +2927,22 @@ namespace KodakkuAssistXSZYYS
 
 
             return (Math.Abs(rotatedX) <= rectWidth / 2) && (Math.Abs(rotatedZ) <= rectHeight / 2);
+        }
+        private bool IsCircleFullyContainedInAnyPlatform(Vector3 circleCenter)
+        {
+            const float circleRadius = 6f;
+            const float platformSize = 20f;
+            // 通过收缩平台来简化问题：如果圆心在一个更小的矩形内，那么整个圆就在原始矩形内
+            float shrunkenSize = platformSize - 2 * circleRadius;
+
+            for (int i = 0; i < SquarePositions.Count; i++)
+            {
+                if (IsPointInRotatedRect(circleCenter, SquarePositions[i], shrunkenSize, shrunkenSize, SquareAngles[i]))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
         #endregion
         [ScriptMethod(
@@ -3025,7 +3197,7 @@ namespace KodakkuAssistXSZYYS
             accessory.Log.Debug("找到箱子");
             var chestid = @event.SourceId;
             var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = $"Chest_{chestid}";
+            dp.Name = "Chest";
             dp.Owner = accessory.Data.Me;
             dp.TargetObject = @event.SourceId;
             dp.Color = accessory.Data.DefaultSafeColor;
@@ -3044,7 +3216,7 @@ namespace KodakkuAssistXSZYYS
         public void RemoveTreasureChest(Event @event, ScriptAccessory accessory)
         {
             var chestid = @event.SourceId;
-            accessory.Method.RemoveDraw($"Chest_{chestid}");
+            accessory.Method.RemoveDraw("Chest");
         }
         #region Helper_Functions
 
