@@ -42,7 +42,7 @@
   {
     "Name": "力之塔",
     "Guid": "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
-    "Version": "0.0.34",
+    "Version": "0.0.35",
     "Author": "XSZYYS",
     "TerritoryIds": [
       1252
@@ -64,7 +64,7 @@
   {
     "Name": "新月岛CE",
     "Guid": "15725518-8F8E-413A-BEA8-E19CC861CF93",
-    "Version": "0.1.9",
+    "Version": "0.1.10",
     "Author": "XSZYYS",
     "TerritoryIds": [
       1252
