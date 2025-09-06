@@ -22,7 +22,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.1.9",
+        version: "0.1.10",
         author: "XSZYYS",
         note: "新月岛CE绘制已完成"
     )]
@@ -2634,5 +2634,81 @@ namespace EurekaOrthosCeScripts
             accessory.Log.Debug($"绘制强制移动: Name={dp.Name}");
         }
         #endregion
+
+        #region Fate
+
+        [ScriptMethod(
+            name: "火基佬扇形",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex:^(30351|30353)$"]
+        )]
+        public void OnFluidSwingDraw(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "FluidSwing";
+            dp.Radian = 90 * MathF.PI / 180f;
+            dp.Scale = new Vector2(60);
+            dp.ScaleMode = ScaleMode.ByTime;
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.Owner = @event.SourceId;
+            dp.DestoryAt = 7000;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+        }
+        [ScriptMethod(
+            name: "火基佬钢铁",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex:^(30340)$"]
+        )]
+        public void OnHeatVortexDraw(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "HeatVortex";
+            dp.Scale = new Vector2(10);
+            dp.ScaleMode = ScaleMode.ByTime;
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.Owner = @event.SourceId;
+            dp.DestoryAt = 4000;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+        }
+        [ScriptMethod(
+            name: "火基佬矩形",
+            eventType: EventTypeEnum.StartCasting,
+            eventCondition: ["ActionId:regex:^(30341)$"]
+        )]
+        public void OnFireBlastDraw(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "FireBlast";
+            dp.Scale = new Vector2(6, 25);
+            dp.ScaleMode = ScaleMode.ByTime;
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.Owner = @event.SourceId;
+            dp.DestoryAt = 5000;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+        }
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        #endregion
+        
+        
+        
+        
+        
     }
 }
