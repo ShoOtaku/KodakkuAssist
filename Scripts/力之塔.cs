@@ -61,7 +61,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.35",
+    version: "0.0.36",
     author: "XSZYYS",
     note: "更新内容\r\n尝试修复平台外警察报假警的问题\r\n藏宝图：1.5道中给箱子连线\r\n检查蓝药：输入【/e 蓝药检查】会输出药师蓝药使用情况，输入【/e 蓝药清理】会清理所有数据\r\n检查复活：输入【/e 复活检查 <数字>】，比如【/e 复活检查 1】会输出周围所有剩余1次复活的玩家\r\n检查扔钱：输入【/e 扔钱检查】会输出所有使用扔钱的玩家和扔钱次数，输入【/e 扔钱清理】会清理所有数据\r\n请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
@@ -242,10 +242,13 @@ namespace KodakkuAssistXSZYYS
         private HolyWeaponType _holyWeaponType = HolyWeaponType.None;
         // 用于记录已检查过猎物点名的玩家
         private readonly HashSet<ulong> _checkedPreyPlayers = new();
+        private readonly object _preyCheckLock = new(); 
         private readonly HashSet<ulong> _sacredBowPreyRecordedPlayers = new();
+        private readonly object _sacredBowPreyLock = new();
         // 用于记录枪分摊玩家及其debuff持续时间的字典
         private readonly Dictionary<int, List<(ulong PlayerId, float Duration)>> _lanceShareAssignments = new();
         private readonly object _lanceShareLock = new();
+        
         //辅助职业字典
         private static readonly Dictionary<uint, string> _supportJobStatus = new()
         {
@@ -273,7 +276,7 @@ namespace KodakkuAssistXSZYYS
         
         public void Init(ScriptAccessory accessory)
         {
-            accessory.Log.Debug("力之塔脚本已加载。");
+            accessory.Log.Debug("力之塔0.0.36脚本已加载。");
             accessory.Method.RemoveDraw(".*");
 
             _turnLeftRightCount = 0;
@@ -298,7 +301,14 @@ namespace KodakkuAssistXSZYYS
             _puddles.Clear();
             // 尾王
             _holyWeaponType = HolyWeaponType.None;
-            _sacredBowPreyRecordedPlayers.Clear();
+            lock(_sacredBowPreyLock)
+            {
+                _sacredBowPreyRecordedPlayers.Clear(); // 重置圣枪记录
+            }
+            lock(_preyCheckLock)
+            {
+                _checkedPreyPlayers.Clear(); // 重置已检查列表
+            }
             lock(_lanceShareLock)
             {
                 _lanceShareAssignments.Clear(); // 重置枪分摊记录
@@ -312,7 +322,7 @@ namespace KodakkuAssistXSZYYS
             {
                 _bluePotionCounts.Clear();
             }
-            _checkedPreyPlayers.Clear();
+
         }
         #region 老一
         [ScriptMethod(
@@ -2024,7 +2034,10 @@ namespace KodakkuAssistXSZYYS
             accessory.Method.RemoveDraw(".*");
             if(Enable_Developer_Mode) accessory.Log.Debug("尾王初始化完成。");
             _holyWeaponType = HolyWeaponType.None;
-            _checkedPreyPlayers.Clear();
+            lock(_preyCheckLock)
+            {
+                _checkedPreyPlayers.Clear(); // 重置已检查列表
+            }
             lock(_lanceShareLock)
             {
                 _lanceShareAssignments.Clear(); // 重置枪分摊记录
@@ -2509,7 +2522,10 @@ namespace KodakkuAssistXSZYYS
         )]
         public void HolyLanceGuide(Event @event, ScriptAccessory accessory)
         {
-            _sacredBowPreyRecordedPlayers.Clear();
+            lock (_sacredBowPreyLock)
+            {
+                _sacredBowPreyRecordedPlayers.Clear(); // 新一轮圣枪机制开始，清空记录
+            }
             var path = new List<DisplacementContainer>();
             // 覆盖逻辑：仅当选择了“左上/右上/下”时，强制使用 A/B/C 的路径块；
             // 选择 None 时，保持原有 SelectedStrategy 的完整分支，不做任何改动。
@@ -2752,8 +2768,11 @@ namespace KodakkuAssistXSZYYS
         {
             var player = accessory.Data.Objects.SearchById(@event.TargetId);
             if (player == null) return;
-            if (_sacredBowPreyRecordedPlayers.Contains(player.EntityId)) return;
-            _sacredBowPreyRecordedPlayers.Add(player.EntityId);
+            lock (_sacredBowPreyLock)
+            {
+                if (_sacredBowPreyRecordedPlayers.Contains(player.EntityId)) return;
+                _sacredBowPreyRecordedPlayers.Add(player.EntityId);
+            }
             if (float.TryParse(@event["Duration"], out var duration))
             {
                 int platformIndex = -1;
@@ -2886,12 +2905,11 @@ namespace KodakkuAssistXSZYYS
         private void CheckPreyPosition(ScriptAccessory accessory, ulong targetId)
         {
             // 如果已经检查过该玩家，则直接返回
-            if (_checkedPreyPlayers.Contains(targetId))
+            lock (_preyCheckLock)
             {
-                return;
+                if (_checkedPreyPlayers.Contains(targetId)) return;
+                _checkedPreyPlayers.Add(targetId);
             }
-            // 将玩家ID加入已检查列表
-            _checkedPreyPlayers.Add(targetId);
             // 这个检查由小警察模式统一控制
             if (!PoliceMode) return;
         
