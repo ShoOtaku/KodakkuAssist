@@ -17,7 +17,9 @@ using System.Runtime.Intrinsics.Arm;
 using KodakkuAssist.Module.GameEvent.Struct;
 using KodakkuAssist.Module.GameOperate;
 using System.Collections.Concurrent;
+using ECommons.DalamudServices;
 using KodakkuAssist.Module.Draw.Manager;
+using Lumina.Excel;
 
 namespace KodakkuAssistXSZYYS
 {
@@ -26,7 +28,6 @@ namespace KodakkuAssistXSZYYS
         ABC_123,  // 代表 ABC / 123 分组攻略
         Pos_152463, // 代表 152463 分组攻略
         LemonCookie // 代表 柠檬烧饼 分组攻略
-
     }
 
     public enum TeamSelection
@@ -61,9 +62,9 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.37",
+    version: "0.0.38",
     author: "XSZYYS",
-    note: "更新内容\r\n修复老一分摊报反\r\n藏宝图：1.5道中给箱子连线\r\n检查蓝药：输入【/e 蓝药检查】会输出药师蓝药使用情况，输入【/e 蓝药清理】会清理所有数据\r\n检查复活：输入【/e 复活检查 <数字>】，比如【/e 复活检查 1】会输出周围所有剩余1次复活的玩家\r\n检查扔钱：输入【/e 扔钱检查】会输出所有使用扔钱的玩家和扔钱次数，输入【/e 扔钱清理】会清理所有数据\r\n请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
+    note: "更新内容\r\n直接根据职能而非小队位置指向老二火球站位\r\n标记药师：输入【/e 标记药师】即可标记周围所有药师玩家\r\n藏宝图：1.5道中给箱子连线\r\n检查蓝药：输入【/e 蓝药检查】会输出药师蓝药使用情况，输入【/e 蓝药清理】会清理所有数据\r\n检查复活：输入【/e 复活检查 <数字>】，比如【/e 复活检查 1】会输出周围所有剩余1次复活的玩家\r\n检查扔钱：输入【/e 扔钱检查】会输出所有使用扔钱的玩家和扔钱次数，输入【/e 扔钱清理】会清理所有数据\r\n请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
 
     public class 力之塔
@@ -1492,7 +1493,7 @@ namespace KodakkuAssistXSZYYS
 
             var directionToFireball = Vector3.Normalize(fireballPos - SnowballArenaCenter);
 
-            if (IsDps(myIndex))
+            if (IsDps(player))
             {
                 var safePos = fireballPos + directionToFireball * 6;
                 var dp = accessory.Data.GetDefaultDrawProperties();
@@ -1512,7 +1513,7 @@ namespace KodakkuAssistXSZYYS
                 dp2.TargetPosition = safePos;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp2);
             }
-            else if (IsHealer(myIndex))
+            else if (IsHealer(player))
             {
                 var perpendicularDir1 = new Vector3(-directionToFireball.Z, 0, directionToFireball.X);
                 var perpendicularDir2 = new Vector3(directionToFireball.Z, 0, -directionToFireball.X);
@@ -1546,7 +1547,7 @@ namespace KodakkuAssistXSZYYS
                 */
 
             }
-            else if (IsTank(myIndex))
+            else if (IsTank(player))
             {
                 var directionToCenter = Vector3.Normalize(SnowballArenaCenter - fireballPos);
                 var rotation = MathF.Atan2(directionToCenter.X, directionToCenter.Z);
@@ -3219,21 +3220,71 @@ namespace KodakkuAssistXSZYYS
             //var chestid = @event.SourceId;
             accessory.Method.RemoveDraw("Chest");
         }
+        [ScriptMethod(
+            name: "标记药师",
+            eventType: EventTypeEnum.Chat,
+            eventCondition: ["Type:Echo"]
+        )]
+        public async void MarkChemists(Event @event, ScriptAccessory accessory)
+        {
+            if (@event["Message"] != "标记药师") return;
+        
+            if (Enable_Developer_Mode) accessory.Log.Debug("检测到'标记药师'指令...");
+            accessory.Method.MarkClear();
+            await Task.Delay(1000); // 等待标记清除
+        
+            var markType = MarkType.Attack1;
+            int chemistsFound = 0;
+        
+            foreach (var gameObject in accessory.Data.Objects)
+            {
+                if (gameObject is IPlayerCharacter player)
+                {
+                    bool isChemist = false;
+                    foreach (var status in player.StatusList)
+                    {
+                        if (status.StatusId == 4367) // 辅助药剂师 Status ID
+                        {
+                            isChemist = true;
+                            break;
+                        }
+                    }
+        
+                    if (isChemist)
+                    {
+                        accessory.Method.Mark(player.EntityId, markType);
+                        chemistsFound++;
+                        if (markType < MarkType.Attack8)
+                        {
+                            markType++;
+                        }
+                    }
+                }
+            }
+        
+            accessory.Method.SendChat($"/e 已标记 {chemistsFound} 名药师。");
+        }
         #region Helper_Functions
 
-        private bool IsTank(int partyIndex)
+        private bool IsTank(IPlayerCharacter player)
         {
-            return partyIndex is 0 or 1;
+            if (player?.ClassJob.Value == null) return false;
+            // 坦克的职业 Role ID 为 1
+            return player.ClassJob.Value.Role == 1;
         }
 
-        private bool IsHealer(int partyIndex)
+        private bool IsHealer(IPlayerCharacter player)
         {
-            return partyIndex is 2 or 3;
+            if (player?.ClassJob.Value == null) return false;
+            // 治疗的职业 Role ID 为 4
+            return player.ClassJob.Value.Role == 4;
         }
 
-        private bool IsDps(int partyIndex)
+        private bool IsDps(IPlayerCharacter player)
         {
-            return partyIndex is >= 4 and <= 7;
+            if (player?.ClassJob.Value == null) return false;
+            // 只要不是坦克和治疗，就是DPS
+            return !IsTank(player) && !IsHealer(player);
         }
         private Vector3 RotatePoint(Vector3 point, Vector3 center, float angleRad)
         {
