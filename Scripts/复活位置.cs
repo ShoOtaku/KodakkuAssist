@@ -6,7 +6,6 @@ using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Threading.Tasks;
 using Dalamud.Interface.ManagedFontAtlas;
-using ECommons;
 using KodakkuAssist.Data;
 using KodakkuAssist.Module.Draw;
 using KodakkuAssist.Module.GameEvent;
@@ -25,7 +24,7 @@ namespace KodakkuAssistXSZYYS
         name: "复活位置",
         guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4809",
         territorys: [],
-        version: "0.0.1",
+        version: "0.0.2",
         author: "XSZYYS",
         note: "查看自己将会复活在哪里"
     )]

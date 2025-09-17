@@ -1,12 +1,22 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Numerics;
+using System.Linq;
+using System.Runtime.ConstrainedExecution;
+using System.Threading.Tasks;
+using Dalamud.Interface.ManagedFontAtlas;
 using KodakkuAssist.Data;
 using KodakkuAssist.Module.Draw;
-using KodakkuAssist.Module.Draw.Manager;
 using KodakkuAssist.Module.GameEvent;
 using KodakkuAssist.Script;
+using KodakkuAssist.Extensions;
+using Newtonsoft.Json;
+using System.Runtime.Intrinsics.Arm;
+using KodakkuAssist.Module.GameEvent.Struct;
+using KodakkuAssist.Module.GameOperate;
+using System.Collections.Concurrent;
+using KodakkuAssist.Module.Draw.Manager;
 
 namespace KodakkuDebugScript
 {
@@ -14,7 +24,7 @@ namespace KodakkuDebugScript
         name: "调试脚本 (By Chat Command)",
         guid: "B866F3EA-35A3-4BAA-8259-17A0D7608928",
         territorys: [],
-        version: "0.0.1",
+        version: "0.0.2",
         author: "XSZYYS",
         note: "在默语频道输入命令来动态绘图。\n用法:\n[目标] [形状] [参数...]\n\n目标 (可选, 默认为自己):\n- test ... (在自己身上绘制)\n- test eid=[实体ID] ... (在指定实体上绘制)\n\n形状和参数:\n- circle [半径]\n- fan [半径] [角度]\n- rect [宽度] [长度]\n- donut [外径] [内径]\n- straight [宽度] [长度]\n\n示例:\n- test circle 5\n- test eid=4000123A fan 10 90"
     )]
@@ -34,7 +44,58 @@ namespace KodakkuDebugScript
         {
             accessory.Log.Debug("通用调试脚本已加载。");
         }
+        [ScriptMethod(
+            name: "测试自身", 
+            eventType: EventTypeEnum.Chat, 
+            eventCondition: new string[] { "Type:Echo" }
+        )]
+        public async void TestSelf(Event @event, ScriptAccessory accessory)
+        {
+            string message = @event["Message"];
+            if (message.Trim().Equals("测试自身", StringComparison.OrdinalIgnoreCase))
+            {
+                accessory.Method.SendChat("/e --- 周围玩家列表 ---");
+                foreach (var obj in accessory.Data.Objects)
+                {
+                    if (obj is IPlayerCharacter player)
+                    {
+                        string playerName = player.Name.ToString();
+                        var playerJob = player.ClassJob.Value.Name;
+                        accessory.Method.SendChat($"/e 玩家: {playerName}, 职业: {playerJob}");
+                        await Task.Delay(10);
+                    }
+                }
+                accessory.Method.SendChat("/e --- 列表结束 ---");
+            }
+        }
+        [ScriptMethod(
+            name: "检测职业属性",
+            eventType: EventTypeEnum.Chat,
+            eventCondition: ["Type:Echo"]
+        )]
+        public void DebugClassJobProperties(Event @event, ScriptAccessory accessory)
+        {
+            if (@event["Message"] != "检测职业") return;
 
+            var player = accessory.Data.MyObject;
+            if (player?.ClassJob.Value == null)
+            {
+                accessory.Method.SendChat("/e 无法获取当前玩家的职业信息。");
+                return;
+            }
+
+            var classJob = player.ClassJob.Value;
+            string report = $"--- 职业信息 ---\n" +
+                            $"Name: {classJob.Name}\n" +
+                            $"Abbreviation: {classJob.Abbreviation}\n" +
+                            $"ID: {classJob.JobIndex}\n" +
+                            $"Role: {classJob.Role}\n" +
+                            $"IsTank: {IsTank(player)}\n" +
+                            $"IsHealer: {IsHealer(player)}\n" +
+                            $"IsDps: {IsDps(player)}";
+            
+            accessory.Method.SendChat($"/e {report}");
+        }
         [ScriptMethod(
             name: "聊天指令调试绘图",
             eventType: EventTypeEnum.Chat,
@@ -97,6 +158,9 @@ namespace KodakkuDebugScript
             }
         }
 
+
+
+
         private void ApplyOrigin(DrawPropertiesEdit dp, DrawOrigin origin)
         {
             dp.Owner = origin.OwnerId;
@@ -113,7 +177,7 @@ namespace KodakkuDebugScript
             dp.Scale = new Vector2(radius);
             dp.Color = new Vector4(0.1f, 0.8f, 0.8f, 1.0f); // 青色
             dp.DestoryAt = 5000;
-
+            dp.ScaleMode |= ScaleMode.ByTime; // 添加时间填充效果
             accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp);
             accessory.Method.SendChat($"/e [调试脚本] 已在 {origin.SourceName} 身上绘制半径为 {radius} 的圆形。");
         }
@@ -131,7 +195,7 @@ namespace KodakkuDebugScript
             dp.Radian = angleDegrees * MathF.PI / 180.0f;
             dp.Color = new Vector4(0.8f, 0.1f, 0.8f, 1.0f); // 紫色
             dp.DestoryAt = 5000;
-
+            dp.ScaleMode |= ScaleMode.ByTime; // 添加时间填充效果
             accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Fan, dp);
             accessory.Method.SendChat($"/e [调试脚本] 已在 {origin.SourceName} 身上绘制半径为 {radius}，角度为 {angleDegrees}° 的扇形。");
         }
@@ -147,7 +211,7 @@ namespace KodakkuDebugScript
             dp.Scale = new Vector2(width, length);
             dp.Color = new Vector4(0.8f, 0.4f, 0.1f, 1.0f); // 橙色
             dp.DestoryAt = 5000;
-
+            dp.ScaleMode |= ScaleMode.ByTime; // 添加时间填充效果
             accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Rect, dp);
             accessory.Method.SendChat($"/e [调试脚本] 已在 {origin.SourceName} 身上绘制宽度为 {width}，长度为 {length} 的矩形。");
         }
@@ -165,7 +229,7 @@ namespace KodakkuDebugScript
             dp.Radian = MathF.PI * 2;
             dp.Color = new Vector4(0.1f, 0.8f, 0.4f, 1.0f); // 绿色
             dp.DestoryAt = 5000;
-
+            dp.ScaleMode |= ScaleMode.ByTime; // 添加时间填充效果
             accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Donut, dp);
             accessory.Method.SendChat($"/e [调试脚本] 已在 {origin.SourceName} 身上绘制外径为 {outerRadius}，内径为 {innerRadius} 的圆环。");
         }
@@ -181,9 +245,55 @@ namespace KodakkuDebugScript
             dp.Scale = new Vector2(width, length);
             dp.Color = new Vector4(1.0f, 1.0f, 1.0f, 1.0f); // 白色
             dp.DestoryAt = 5000;
-
+            dp.ScaleMode |= ScaleMode.ByTime; // 添加时间填充效果
             accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Straight, dp);
             accessory.Method.SendChat($"/e [调试脚本] 已在 {origin.SourceName} 身上绘制宽度为 {width}，长度为 {length} 的直线。");
         }
+        #region Helper_Functions
+
+        private bool IsTank(IPlayerCharacter player)
+        {
+            if (player?.ClassJob.Value == null) return false;
+            // 坦克的职业 Role ID 为 1
+            return player.ClassJob.Value.Role == 1;
+        }
+
+        private bool IsHealer(IPlayerCharacter player)
+        {
+            if (player?.ClassJob.Value == null) return false;
+            // 治疗的职业 Role ID 为 4
+            return player.ClassJob.Value.Role == 4;
+        }
+
+        private bool IsDps(IPlayerCharacter player)
+        {
+            if (player?.ClassJob.Value == null) return false;
+            // 只要不是坦克和治疗，就是DPS
+            return !IsTank(player) && !IsHealer(player);
+        }
+        private Vector3 RotatePoint(Vector3 point, Vector3 center, float angleRad)
+        {
+            float s = MathF.Sin(angleRad);
+            float c = MathF.Cos(angleRad);
+
+            // Translate point back to origin
+            point.X -= center.X;
+            point.Z -= center.Z;
+
+            // Rotate point
+            float xnew = point.X * c - point.Z * s;
+            float znew = point.X * s + point.Z * c;
+
+            // Translate point back
+            point.X = xnew + center.X;
+            point.Z = znew + center.Z;
+            return point;
+        }
+        #endregion
+
+
+
     }
+
+
 }
