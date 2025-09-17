@@ -13,7 +13,7 @@
   {
     "Name": "调试脚本 (By Chat Command)",
     "Guid": "B866F3EA-35A3-4BAA-8259-17A0D7608928",
-    "Version": "0.0.1",
+    "Version": "0.0.2",
     "Author": "XSZYYS",
     "TerritoryIds": [],
     "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/main/Scripts/Debug.cs",
@@ -22,7 +22,7 @@
   {
     "Name": "力之塔排雷（塔内）",
     "Guid": "874D3ECF-BD6B-448F-BB42-AE7F082E4999",
-    "Version": "0.1.0",
+    "Version": "0.1.1",
     "Author": "XSZYYS",
     "TerritoryIds": [
       1252
@@ -33,7 +33,7 @@
   {
     "Name": "复活位置",
     "Guid": "874D3ECF-BD6B-448F-BB42-AE7F082E4809",
-    "Version": "0.0.1",
+    "Version": "0.0.2",
     "Author": "XSZYYS",
     "TerritoryIds": [],
     "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/main/Scripts/复活位置.cs",
@@ -42,7 +42,7 @@
   {
     "Name": "力之塔",
     "Guid": "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
-    "Version": "0.0.38",
+    "Version": "0.0.39",
     "Author": "XSZYYS",
     "TerritoryIds": [
       1252
@@ -64,7 +64,7 @@
   {
     "Name": "新月岛CE",
     "Guid": "15725518-8F8E-413A-BEA8-E19CC861CF93",
-    "Version": "0.1.10",
+    "Version": "0.1.11",
     "Author": "XSZYYS",
     "TerritoryIds": [
       1252
