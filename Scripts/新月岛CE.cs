@@ -6,7 +6,6 @@ using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Threading.Tasks;
 using Dalamud.Interface.ManagedFontAtlas;
-using ECommons;
 using KodakkuAssist.Data;
 using KodakkuAssist.Module.Draw;
 using KodakkuAssist.Module.GameEvent;
@@ -22,7 +21,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.1.10",
+        version: "0.1.11",
         author: "XSZYYS",
         note: "新月岛CE绘制已完成"
     )]

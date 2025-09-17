@@ -6,7 +6,6 @@ using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Threading.Tasks;
 using Dalamud.Interface.ManagedFontAtlas;
-using ECommons;
 using KodakkuAssist.Data;
 using KodakkuAssist.Module.Draw;
 using KodakkuAssist.Module.GameEvent;
@@ -262,7 +261,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔排雷（塔内）",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4999",
     territorys: [1252],
-    version: "0.1.0",
+    version: "0.1.1",
     author: "XSZYYS",
     note: "塔内在聊天栏输入[/e 新月排雷]即可开始排雷。再次输入可关闭显示。显示持续1800s，如果显示消失，则请重新输入。\n 重大更新：\n- 新增地图切换时自动显示/隐藏地雷标记的功能。\n- 数据按地图ID重构，确保只显示当前地图的地雷。"
     )]

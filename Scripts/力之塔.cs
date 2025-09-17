@@ -6,7 +6,6 @@ using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Threading.Tasks;
 using Dalamud.Interface.ManagedFontAtlas;
-using ECommons;
 using KodakkuAssist.Data;
 using KodakkuAssist.Module.Draw;
 using KodakkuAssist.Module.GameEvent;
@@ -17,7 +16,7 @@ using System.Runtime.Intrinsics.Arm;
 using KodakkuAssist.Module.GameEvent.Struct;
 using KodakkuAssist.Module.GameOperate;
 using System.Collections.Concurrent;
-using ECommons.DalamudServices;
+using FFXIVClientStructs.Havok.Animation.Rig;
 using KodakkuAssist.Module.Draw.Manager;
 using Lumina.Excel;
 
@@ -62,7 +61,7 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.38",
+    version: "0.0.39",
     author: "XSZYYS",
     note: "更新内容\r\n直接根据职能而非小队位置指向老二火球站位\r\n标记药师：输入【/e 标记药师】即可标记周围所有药师玩家\r\n藏宝图：1.5道中给箱子连线\r\n检查蓝药：输入【/e 蓝药检查】会输出药师蓝药使用情况，输入【/e 蓝药清理】会清理所有数据\r\n检查复活：输入【/e 复活检查 <数字>】，比如【/e 复活检查 1】会输出周围所有剩余1次复活的玩家\r\n检查扔钱：输入【/e 扔钱检查】会输出所有使用扔钱的玩家和扔钱次数，输入【/e 扔钱清理】会清理所有数据\r\n请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
@@ -1488,9 +1487,6 @@ namespace KodakkuAssistXSZYYS
         {
             var player = accessory.Data.MyObject;
             if (player == null) return;
-            int myIndex = accessory.Data.PartyList.IndexOf(player.EntityId);
-            if (myIndex == -1) return;
-
             var directionToFireball = Vector3.Normalize(fireballPos - SnowballArenaCenter);
 
             if (IsDps(player))
