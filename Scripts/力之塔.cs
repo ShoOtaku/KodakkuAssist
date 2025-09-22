@@ -24,7 +24,7 @@ namespace KodakkuAssistXSZYYS
 {
     public enum StrategySelection
     {
-        ABC_123,  // 代表 ABC / 123 分组攻略
+        ABC_123,  // 代表钰子烧分组攻略
         Pos_152463, // 代表 152463 分组攻略
         LemonCookie // 代表 柠檬烧饼 分组攻略
     }
