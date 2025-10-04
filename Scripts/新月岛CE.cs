@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
 using System.Linq;
-using System.Runtime.ConstrainedExecution;
+using System.Threading;
 using System.Threading.Tasks;
 using Dalamud.Interface.ManagedFontAtlas;
 using KodakkuAssist.Data;
@@ -11,7 +12,6 @@ using KodakkuAssist.Module.Draw;
 using KodakkuAssist.Module.GameEvent;
 using KodakkuAssist.Script;
 using Newtonsoft.Json;
-using System.Runtime.Intrinsics.Arm;
 using KodakkuAssist.Module.GameEvent.Struct;
 using KodakkuAssist.Module.GameOperate;
 
@@ -21,7 +21,7 @@ namespace EurekaOrthosCeScripts
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.1.11",
+        version: "0.2.0",
         author: "XSZYYS",
         note: "新月岛CE绘制已完成"
     )]
@@ -51,10 +51,10 @@ namespace EurekaOrthosCeScripts
         // ==================== 死亡爪 ====================
         private static readonly Vector3 DeathclawArenaCenter = new(681f, 74f, 534f);
         // ==================== 城塞守卫  ====================
-        private readonly List<IGameObject> _spheres = new(12);       // 存储所有未分类能量球的列表
-        private readonly List<IGameObject> _spheresStone = new(6);   // 专门存储“石”属性能量球的列表
-        private readonly List<IGameObject> _spheresWind = new(6);    // 专门存储“风”属性能量球的列表
-        private readonly List<(ulong ActorID, string DrawName)> _surgeAoes = new(); // 存储已绘制的能量球AOE，用于后续移除
+        private readonly List<ulong> _spheres = new(12);       // 存储所有未分类能量球的ID列表
+        private readonly List<ulong> _spheresStone = new(6);   // 专门存储"石"属性能量球的ID列表
+        private readonly List<ulong> _spheresWind = new(6);    // 专门存储"风"属性能量球的ID列表
+        private readonly Dictionary<ulong, string> _surgeAoes = new(); // 存储已绘制的能量球AOE (ActorID -> DrawName)，用于后续移除
         private bool _isHolyCasting; // Boss是否正在咏唱神圣(Holy)
 
         // ==================== 夺心魔  ====================
@@ -79,6 +79,62 @@ namespace EurekaOrthosCeScripts
         private static readonly Vector3 OnTheHuntAreaCenter = new Vector3(636f, 108f, -54f); // 跃立狮战斗场地中心
 
         // =================================================================================
+        // =============================== 辅助方法 ===================================
+        // =================================================================================
+
+        /// <summary>
+        /// 将角度转换为弧度
+        /// </summary>
+        /// <param name="degrees">角度值</param>
+        /// <returns>对应的弧度值</returns>
+        private static float DegToRad(float degrees) => degrees * MathF.PI / 180.0f;
+
+        /// <summary>
+        /// 安全地从JSON字符串反序列化Vector3
+        /// </summary>
+        private static bool TryDeserializeVector3(string json, out Vector3 result)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(json))
+                {
+                    result = default;
+                    return false;
+                }
+                var deserialized = JsonConvert.DeserializeObject<Vector3>(json);
+                result = deserialized;
+                return true;
+            }
+            catch
+            {
+                result = default;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 安全地从JSON字符串反序列化float
+        /// </summary>
+        private static bool TryDeserializeFloat(string json, out float result)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(json))
+                {
+                    result = default;
+                    return false;
+                }
+                result = JsonConvert.DeserializeObject<float>(json);
+                return true;
+            }
+            catch
+            {
+                result = default;
+                return false;
+            }
+        }
+
+        // =================================================================================
         // ================================= 脚本主体 =================================
         // =================================================================================
 
@@ -86,7 +142,9 @@ namespace EurekaOrthosCeScripts
         public void Init(ScriptAccessory accessory)
         {
             accessory.Log.Debug("新月岛CE脚本已加载。");
-            accessory.Method.RemoveDraw(".*"); // 清理所有旧的绘图
+            const string DrawPrefix = "CrescentIslandCE_";
+            accessory.Method.RemoveDraw($"{DrawPrefix}.*"); // 清理所有旧的绘图
+            // TODO: Consider using DrawPrefix for all draw names in future updates to avoid conflicts with other scripts
 
             // 初始化所有机制的状态变量
             _lightningIsCardinal = null;
@@ -191,17 +249,21 @@ namespace EurekaOrthosCeScripts
         )]
         public void ChocoSlaughterFirst(Event @event, ScriptAccessory accessory)
         {
-            var spos = JsonConvert.DeserializeObject<Vector3>(@event["SourcePosition"]);
-            var srot = JsonConvert.DeserializeObject<float>(@event["SourceRotation"]);
+            if (!TryDeserializeVector3(@event["SourcePosition"], out var spos)) return;
+            if (!TryDeserializeFloat(@event["SourceRotation"], out var srot)) return;
+
+            // Cache sin/cos outside the loop for performance
+            var sinRot = (float)Math.Sin(srot);
+            var cosRot = (float)Math.Cos(srot);
 
             var positions = new List<Vector3>();
             var currentPos = spos;
             for (int i = 0; i < 5; i++)
             {
                 currentPos = new Vector3(
-                    currentPos.X + (float)Math.Sin(srot) * 5,
+                    currentPos.X + sinRot * 5,
                     currentPos.Y,
-                    currentPos.Z + (float)Math.Cos(srot) * 5
+                    currentPos.Z + cosRot * 5
                 );
                 positions.Add(currentPos);
             }
@@ -241,7 +303,7 @@ namespace EurekaOrthosCeScripts
             dp.Name = "FromTimesBygone_MysticHeat_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(40);
-            dp.Radian = 60 * MathF.PI / 180.0f;
+            dp.Radian = DegToRad(60);
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 5000;
             dp.ScaleMode |= ScaleMode.ByTime;
@@ -281,7 +343,7 @@ namespace EurekaOrthosCeScripts
             dp.Name = "FromTimesBygone_DeathRay_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(60);
-            dp.Radian = 90 * MathF.PI / 180.0f;
+            dp.Radian = DegToRad(90);
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 8000;
             dp.ScaleMode |= ScaleMode.ByTime;
@@ -319,8 +381,9 @@ namespace EurekaOrthosCeScripts
         )]
         public void ArcaneOrbTelegraph(Event @event, ScriptAccessory accessory)
         {
+            if (!TryDeserializeVector3(@event["EffectPosition"], out var pos)) return;
+
             var dp = accessory.Data.GetDefaultDrawProperties();
-            var pos = JsonConvert.DeserializeObject<Vector3>(@event["EffectPosition"]);
 
             dp.Name = $"FromTimesBygone_ArcaneOrb_Danger_Zone_{pos.X}_{pos.Z}";
             dp.Position = pos;
@@ -436,9 +499,12 @@ namespace EurekaOrthosCeScripts
         {
             if (!_noiseComplaintCenterRecorded)
             {
-                _noiseComplaintArenaCenter = JsonConvert.DeserializeObject<Vector3>(@event["SourcePosition"]);
-                _noiseComplaintCenterRecorded = true;
-                accessory.Log.Debug($"进化加鲁拉 Arena Center recorded at: {_noiseComplaintArenaCenter}");
+                if (TryDeserializeVector3(@event["SourcePosition"], out var center))
+                {
+                    _noiseComplaintArenaCenter = center;
+                    _noiseComplaintCenterRecorded = true;
+                    accessory.Log.Debug($"进化加鲁拉 Arena Center recorded at: {_noiseComplaintArenaCenter}");
+                }
             }
         }
 
@@ -487,7 +553,7 @@ namespace EurekaOrthosCeScripts
             dp.Name = "NoiseComplaint_LightningCrossing_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(70);
-            dp.Radian = 45 * MathF.PI / 180.0f;
+            dp.Radian = DegToRad(45);
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 4000;
             dp.ScaleMode |= ScaleMode.ByTime;
@@ -505,7 +571,7 @@ namespace EurekaOrthosCeScripts
             dp.Name = $"NoiseComplaint_Heave_Danger_Zone_{@event.ActionId}";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(60);
-            dp.Radian = 120 * MathF.PI / 180.0f;
+            dp.Radian = DegToRad(120);
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = (@event.ActionId == 43262) ? 4000 : 2000;
             dp.ScaleMode |= ScaleMode.ByTime;
@@ -789,7 +855,7 @@ namespace EurekaOrthosCeScripts
             var initialAngle = MathF.Atan2(dirToBoss.X, dirToBoss.Z);
             if (_lightningIsCardinal == false) // 如果是斜角方向则调整
             {
-                initialAngle += 45 * MathF.PI / 180.0f;
+                initialAngle += DegToRad(45);
             }
             for (int i = 0; i < 4; i++)
             {
@@ -797,8 +863,8 @@ namespace EurekaOrthosCeScripts
                 dpCone.Name = $"NoiseComplaint_Cone_{bird.EntityId}_{i}";
                 dpCone.Position = destination;
                 dpCone.Scale = new Vector2(70);
-                dpCone.Radian = 45 * MathF.PI / 180.0f;
-                dpCone.Rotation = initialAngle + (i * 90 * MathF.PI / 180.0f);
+                dpCone.Radian = DegToRad(45);
+                dpCone.Rotation = initialAngle + (i * DegToRad(90));
                 dpCone.Color = accessory.Data.DefaultDangerColor;
                 dpCone.Delay = 0;
                 dpCone.DestoryAt = 10400;
@@ -829,7 +895,7 @@ namespace EurekaOrthosCeScripts
             dpCone.Owner = _bossId;
             dpCone.TargetObject = bird.EntityId;
             dpCone.Scale = new Vector2(60);
-            dpCone.Radian = 120 * MathF.PI / 180.0f;
+            dpCone.Radian = DegToRad(120);
             dpCone.Color = accessory.Data.DefaultDangerColor;
             dpCone.DestoryAt = 11000;
             dpCone.ScaleMode |= ScaleMode.ByTime;
@@ -881,7 +947,7 @@ namespace EurekaOrthosCeScripts
             var initialAngle = MathF.Atan2(chargeDirectionVector.X, chargeDirectionVector.Z);
             if (_lightningIsCardinal == false) // 如果是斜角方向则调整
             {
-                initialAngle += 45 * MathF.PI / 180.0f;
+                initialAngle += DegToRad(45);
             }
             for (int i = 0; i < 4; i++)
             {
@@ -889,8 +955,8 @@ namespace EurekaOrthosCeScripts
                 dpCone.Name = $"NoiseComplaint_Rampage_Cone_{chargeIndex}_{i}";
                 dpCone.Position = destination;
                 dpCone.Scale = new Vector2(70);
-                dpCone.Radian = 45 * MathF.PI / 180.0f;
-                dpCone.Rotation = initialAngle + (i * 90 * MathF.PI / 180.0f);
+                dpCone.Radian = DegToRad(45);
+                dpCone.Rotation = initialAngle + (i * DegToRad(90));
                 dpCone.Color = accessory.Data.DefaultDangerColor;
                 dpCone.Delay = 0;
                 dpCone.DestoryAt = 10400;
@@ -899,37 +965,6 @@ namespace EurekaOrthosCeScripts
             _rampageNextChargeStartPos = destination;
             _rampageChargeIndex++;
         }
-
-        /*
-                [ScriptMethod(
-                    name: "绘图移除 (进化加鲁拉)",
-                    eventType: EventTypeEnum.ActionEffect,
-                    eventCondition: ["ActionId:regex:^(41178|41180|41179|42984)$"],
-                    userControl: false
-                )]
-                public void RemoveRush(Event @event, ScriptAccessory accessory)
-                {
-                    switch (@event.ActionId)
-                    {
-                        case 41178:
-                            accessory.Method.RemoveDraw($"NoiseComplaint_BirdserkRush_Charge_{@event.SourceId}");
-                            accessory.Method.RemoveDraw($"NoiseComplaint_Rampage_Charge");
-                            break;
-                        case 41180:
-                            accessory.Method.RemoveDraw($"NoiseComplaint_BirdserkRush_Cone_{@event.SourceId}");
-                            break;
-                        case 41179:
-                            accessory.Method.RemoveDraw($"NoiseComplaint_Rush_Circle");
-                            break;
-                        case 42984:
-                            for (int i = 0; i < 4; i++)
-                            {
-                                accessory.Method.RemoveDraw($"NoiseComplaint_Cone_{i}");
-                            }
-                            break;
-                    }
-                }
-        */
         #endregion
 
         #region 死亡爪
@@ -988,7 +1023,7 @@ namespace EurekaOrthosCeScripts
                 dp.Name = $"死亡爪_Crosshatch_{names[i]}_{@event.SourceId}";
                 dp.Owner = @event.SourceId;
                 dp.Scale = new Vector2(50);
-                dp.Radian = 90 * MathF.PI / 180.0f;
+                dp.Radian = DegToRad(90);
                 dp.Rotation = rotations[i];
                 dp.Color = accessory.Data.DefaultDangerColor;
                 dp.Delay = delays[i];
@@ -1020,7 +1055,7 @@ namespace EurekaOrthosCeScripts
                 dp.Name = $"死亡爪_Crosshatch_{names[i]}_{@event.SourceId}";
                 dp.Owner = @event.SourceId;
                 dp.Scale = new Vector2(50);
-                dp.Radian = 90 * MathF.PI / 180.0f;
+                dp.Radian = DegToRad(90);
                 dp.Rotation = rotations[i];
                 dp.Color = accessory.Data.DefaultDangerColor;
                 dp.Delay = delays[i];
@@ -1053,7 +1088,7 @@ namespace EurekaOrthosCeScripts
                 dp.Name = $"死亡爪_Crosshatch_{names[i]}_{@event.SourceId}";
                 dp.Owner = @event.SourceId;
                 dp.Scale = new Vector2(50);
-                dp.Radian = 90 * MathF.PI / 180.0f;
+                dp.Radian = DegToRad(90);
                 dp.Rotation = rotations[i];
                 dp.Color = accessory.Data.DefaultDangerColor;
                 dp.Delay = delays[i];
@@ -1085,7 +1120,7 @@ namespace EurekaOrthosCeScripts
                 dp.Name = $"死亡爪_Crosshatch_{names[i]}_{@event.SourceId}";
                 dp.Owner = @event.SourceId;
                 dp.Scale = new Vector2(50);
-                dp.Radian = 90 * MathF.PI / 180.0f;
+                dp.Radian = DegToRad(90);
                 dp.Rotation = rotations[i];
                 dp.Color = accessory.Data.DefaultDangerColor;
                 dp.Delay = delays[i];
@@ -1114,32 +1149,12 @@ namespace EurekaOrthosCeScripts
             dp.Name = $"死亡爪_LethalClaw_{@event.SourceId}";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(50);
-            dp.Radian = 90 * MathF.PI / 180.0f;
+            dp.Radian = DegToRad(90);
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 10000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
             accessory.Log.Debug($"绘制死亡爪 利爪 AOE: {@event.SourceId}");
         }
-        /*
-        [ScriptMethod(
-            name: "Debug",
-            eventType: EventTypeEnum.ObjectEffect
-        )]
-        public void Debug(Event @event, ScriptAccessory accessory)
-        {
-            accessory.Log.Debug($"Debug Event: {@event["Id1"]},{@event["Id2"]}, SourceId: {@event.SourceId}");
-        }
-
-        [ScriptMethod(
-            name: "SkulkingOrders (死亡爪)(未完成)",
-            eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId: regex: ^(41326|41329)$"]
-        )]
-        public void SkulkingOrders(Event @event, ScriptAccessory accessory)
-        {
-
-        }
-        */
 
         #endregion
 
@@ -1185,7 +1200,7 @@ namespace EurekaOrthosCeScripts
                         dp.Owner = @event.SourceId;
                         dp.Scale = new Vector2(31, 31);
                         dp.InnerScale = new Vector2(5, 5);
-                        dp.Radian = 360 * MathF.PI / 180.0f;
+                        dp.Radian = DegToRad(360);
                         dp.Color = accessory.Data.DefaultDangerColor;
                         dp.DestoryAt = 7000;
                         accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -1198,7 +1213,7 @@ namespace EurekaOrthosCeScripts
                         dp.Owner = @event.SourceId;
                         dp.Scale = new Vector2(31, 31);
                         dp.InnerScale = new Vector2(5, 5);
-                        dp.Radian = 360 * MathF.PI / 180.0f;
+                        dp.Radian = DegToRad(360);
                         dp.Color = accessory.Data.DefaultDangerColor;
                         dp.DestoryAt = 4500;
                         accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -1230,7 +1245,7 @@ namespace EurekaOrthosCeScripts
                 case 42729:
                     dp.Scale = new Vector2(13, 13);
                     dp.InnerScale = new Vector2(7, 7);
-                    dp.Radian = 360 * MathF.PI / 180.0f;
+                    dp.Radian = DegToRad(360);
                     dp.Delay = 3000;
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -1238,7 +1253,7 @@ namespace EurekaOrthosCeScripts
                 case 42730:
                     dp.Scale = new Vector2(19, 19);
                     dp.InnerScale = new Vector2(13, 13);
-                    dp.Radian = 360 * MathF.PI / 180.0f;
+                    dp.Radian = DegToRad(360);
                     dp.Delay = 3000;
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -1246,7 +1261,7 @@ namespace EurekaOrthosCeScripts
                 case 42731:
                     dp.Scale = new Vector2(25, 25);
                     dp.InnerScale = new Vector2(19, 19);
-                    dp.Radian = 360 * MathF.PI / 180.0f;
+                    dp.Radian = DegToRad(360);
                     dp.Delay = 3000;
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -1262,7 +1277,7 @@ namespace EurekaOrthosCeScripts
                 case 42733:
                     dp.Scale = new Vector2(13, 13);
                     dp.InnerScale = new Vector2(7, 7);
-                    dp.Radian = 360 * MathF.PI / 180.0f;
+                    dp.Radian = DegToRad(360);
                     dp.Delay = 6000;
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -1270,7 +1285,7 @@ namespace EurekaOrthosCeScripts
                 case 42734:
                     dp.Scale = new Vector2(19, 19);
                     dp.InnerScale = new Vector2(13, 13);
-                    dp.Radian = 360 * MathF.PI / 180.0f;
+                    dp.Radian = DegToRad(360);
                     dp.Delay = 6000;
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -1278,7 +1293,7 @@ namespace EurekaOrthosCeScripts
                 case 42735:
                     dp.Scale = new Vector2(25, 25);
                     dp.InnerScale = new Vector2(19, 19);
-                    dp.Radian = 360 * MathF.PI / 180.0f;
+                    dp.Radian = DegToRad(360);
                     dp.Delay = 6000;
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -1293,21 +1308,21 @@ namespace EurekaOrthosCeScripts
                 case 41759:
                     dp.Scale = new Vector2(13, 13);
                     dp.InnerScale = new Vector2(7, 7);
-                    dp.Radian = 360 * MathF.PI / 180.0f;
+                    dp.Radian = DegToRad(360);
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
                     break;
                 case 41760:
                     dp.Scale = new Vector2(19, 19);
                     dp.InnerScale = new Vector2(13, 13);
-                    dp.Radian = 360 * MathF.PI / 180.0f;
+                    dp.Radian = DegToRad(360);
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
                     break;
                 case 41761:
                     dp.Scale = new Vector2(25, 25);
                     dp.InnerScale = new Vector2(19, 19);
-                    dp.Radian = 360 * MathF.PI / 180.0f;
+                    dp.Radian = DegToRad(360);
                     dp.DestoryAt = 4000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
                     break;
@@ -1357,7 +1372,7 @@ namespace EurekaOrthosCeScripts
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(8, 8);
             dp2.Color = new Vector4(1f, 0f, 0f, 1f);
-            dp2.Radian = 360 * MathF.PI / 180.0f;
+            dp2.Radian = DegToRad(360);
             dp2.Delay = 6500;
             dp2.DestoryAt = 3000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
@@ -1382,7 +1397,7 @@ namespace EurekaOrthosCeScripts
             dp2.Owner = @event.SourceId;
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(24, 24);
-            dp2.Radian = 360 * MathF.PI / 180.0f;
+            dp2.Radian = DegToRad(360);
             dp2.Color = new Vector4(1f, 0f, 0f, 1f);
             dp2.Delay = 7500;
             dp2.DestoryAt = 3000;
@@ -1409,7 +1424,7 @@ namespace EurekaOrthosCeScripts
             dp2.Owner = @event.SourceId;
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(16, 16);
-            dp2.Radian = 360 * MathF.PI / 180.0f;
+            dp2.Radian = DegToRad(360);
             dp2.Color = new Vector4(1f, 0f, 0f, 1f);
             dp2.Delay = 14000;
             dp2.DestoryAt = 3000;
@@ -1437,7 +1452,7 @@ namespace EurekaOrthosCeScripts
             dp2.Scale = new Vector2(60, 60);
             dp2.InnerScale = new Vector2(16, 16);
             dp2.Color = new Vector4(1f, 0f, 0f, 1f);
-            dp2.Radian = 360 * MathF.PI / 180.0f;
+            dp2.Radian = DegToRad(360);
             dp2.Delay = 21000;
             dp2.DestoryAt = 3000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp2);
@@ -1487,7 +1502,7 @@ namespace EurekaOrthosCeScripts
             dp.Name = "回廊恶魔_TidalBreath_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(40);
-            dp.Radian = 180 * MathF.PI / 180.0f;
+            dp.Radian = DegToRad(180);
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 7000;
             dp.ScaleMode |= ScaleMode.ByTime;
@@ -1510,7 +1525,7 @@ namespace EurekaOrthosCeScripts
             }
 
             // 获取初始位置和前进方向
-            var currentPos = JsonConvert.DeserializeObject<Vector3>(@event["EffectPosition"]);
+            if (!TryDeserializeVector3(@event["EffectPosition"], out var currentPos)) return;
             var direction = new Vector3(MathF.Sin(caster.Rotation), 0, MathF.Cos(caster.Rotation));
 
             // 定义技能参数
@@ -1572,7 +1587,7 @@ namespace EurekaOrthosCeScripts
             const float crossWidth = 6f;
             const int rotationInterval = 1700;  // 旋转间隔 1.7s
             const float rotationAngleDegrees = 9f; // 每次旋转 9 度
-            const float rotationAngleRad = rotationAngleDegrees * MathF.PI / 180.0f;
+            const float rotationAngleRad = DegToRad(rotationAngleDegrees);
             const int numberOfSteps = 6;
 
             // 3. 循环创建一系列延迟且旋转的十字AOE
@@ -1641,7 +1656,7 @@ namespace EurekaOrthosCeScripts
                     dp.Owner = @event.SourceId;
                     dp.Scale = new Vector2(50);
                     dp.InnerScale = new Vector2(7);
-                    dp.Radian = 360 * MathF.PI / 180.0f;
+                    dp.Radian = DegToRad(360);
                     dp.Color = accessory.Data.DefaultDangerColor;
                     dp.DestoryAt = 3000;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
@@ -1650,7 +1665,7 @@ namespace EurekaOrthosCeScripts
                 case 42035: // 十字
                     dp.Owner = @event.SourceId;
                     dp.Scale = new Vector2(15, 200);
-                    dp.Rotation = 90 * MathF.PI / 180.0f;
+                    dp.Rotation = DegToRad(90);
                     dp.Color = accessory.Data.DefaultDangerColor;
                     dp.DestoryAt = 3000;
                     dp2.Owner = @event.SourceId;
@@ -1687,7 +1702,7 @@ namespace EurekaOrthosCeScripts
                 dp.Name = "鬼火苗_Boss_Donut";
                 dp.Owner = @event.SourceId;
                 dp.Color = accessory.Data.DefaultDangerColor;
-                dp.Radian = 360 * MathF.PI / 180.0f;
+                dp.Radian = DegToRad(360);
                 dp.DestoryAt = 5800;
                 dp.Scale = new Vector2(50);
                 dp.InnerScale = new Vector2(7);
@@ -1735,7 +1750,7 @@ namespace EurekaOrthosCeScripts
             dp.Name = "SharkAttack_Hydrocleave_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(50);
-            dp.Radian = 60 * MathF.PI / 180.0f; 
+            dp.Radian = DegToRad(60); 
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 5000;
             dp.ScaleMode |= ScaleMode.ByTime;
@@ -1751,7 +1766,7 @@ namespace EurekaOrthosCeScripts
             // 清空旧的列表，开始新序列
             _tidalGuillotineAoes.Clear();
 
-            var pos = JsonConvert.DeserializeObject<Vector3>(@event["EffectPosition"]);
+            if (!TryDeserializeVector3(@event["EffectPosition"], out var pos)) return;
             var castTime = 8000;
             var name = $"TidalGuillotine_AOE_0";
 
@@ -1778,7 +1793,7 @@ namespace EurekaOrthosCeScripts
         {
             if (_tidalGuillotineAoes.Count >= 3) return; // 最多3个
 
-            var pos = JsonConvert.DeserializeObject<Vector3>(@event["EffectPosition"]);
+            if (!TryDeserializeVector3(@event["EffectPosition"], out var pos)) return;
             var index = _tidalGuillotineAoes.Count;
             var name = $"TidalGuillotine_AOE_{index}";
 
@@ -1823,14 +1838,14 @@ namespace EurekaOrthosCeScripts
             {
                 maxCasts = 35;
                 intervalMs = 1200;
-                rotationIncrementRad = 22.5f * MathF.PI / 180.0f;
+                rotationIncrementRad = DegToRad(22.5f);
                 aoeRadius = 4f;
             }
             else
             {
                 maxCasts = 59;
                 intervalMs = 690;
-                rotationIncrementRad = 12f * MathF.PI / 180.0f;
+                rotationIncrementRad = DegToRad(12f);
                 aoeRadius = 4f;
             }
 
@@ -1844,10 +1859,13 @@ namespace EurekaOrthosCeScripts
             for (int i = 0; i < maxCasts; i++)
             {
                 var rotationAngle = signedRotationIncrement * i;
+                // Cache cos/sin for this iteration
+                var cosAngle = MathF.Cos(rotationAngle);
+                var sinAngle = MathF.Sin(rotationAngle);
                 var rotatedDir = new Vector3(
-                    dirToCaster.X * MathF.Cos(rotationAngle) - dirToCaster.Z * MathF.Sin(rotationAngle),
+                    dirToCaster.X * cosAngle - dirToCaster.Z * sinAngle,
                     dirToCaster.Y,
-                    dirToCaster.X * MathF.Sin(rotationAngle) + dirToCaster.Z * MathF.Cos(rotationAngle)
+                    dirToCaster.X * sinAngle + dirToCaster.Z * cosAngle
                 );
                 aoePositions.Add(SharkArenaCenter + rotatedDir);
             }
@@ -1919,7 +1937,7 @@ namespace EurekaOrthosCeScripts
             {
                 lock (_surgeLock)
                 {
-                    _spheres.Add(sphere);
+                    _spheres.Add(sphere.EntityId);
                 }
                 accessory.Log.Debug($"记录一个新的能量球: {sphere.Name}, ID: {sphere.EntityId}");
             }
@@ -1940,18 +1958,18 @@ namespace EurekaOrthosCeScripts
 
             lock (_surgeLock)
             {
-                if (!_spheres.Contains(sphere)) return; // 在锁内检查
+                if (!_spheres.Contains(sphere.EntityId)) return; // 在锁内检查
 
-                if (statusParam == "548") 
+                if (statusParam == "548")
                 {
-                    _spheresWind.Add(sphere);
-                    _spheres.Remove(sphere);
+                    _spheresWind.Add(sphere.EntityId);
+                    _spheres.Remove(sphere.EntityId);
                     accessory.Log.Debug($"能量球 {sphere.EntityId} 被分类为 [风]");
                 }
-                else if (statusParam == "549") 
+                else if (statusParam == "549")
                 {
-                    _spheresStone.Add(sphere);
-                    _spheres.Remove(sphere);
+                    _spheresStone.Add(sphere.EntityId);
+                    _spheres.Remove(sphere.EntityId);
                     accessory.Log.Debug($"能量球 {sphere.EntityId} 被分类为 [石]");
                 }
             }
@@ -1968,7 +1986,7 @@ namespace EurekaOrthosCeScripts
             if (caster == null) return;
 
             // 根据ActionId判断技能类型(风/石)和咏唱时间
-            List<IGameObject> originalSphereList;
+            List<ulong> originalSphereList;
             int castTimeMs;
 
             switch (@event.ActionId)
@@ -1996,20 +2014,23 @@ namespace EurekaOrthosCeScripts
             accessory.Log.Debug($"检测到BOSS咏唱 {@event.ActionId} (咏唱时间: {castTimeMs}ms), 开始检测范围内的能量球。");
 
             // 在锁内创建列表副本以进行安全的迭代
-            List<IGameObject> spheresToCheck;
+            List<ulong> sphereIdsToCheck;
             lock (_surgeLock)
             {
                 if (originalSphereList.Count == 0) return;
-                spheresToCheck = new List<IGameObject>(originalSphereList);
+                sphereIdsToCheck = new List<ulong>(originalSphereList);
             }
 
             // 定义一个前方的锥形判定区 (40码长, 60度角)
-            var coneAngle = 60 * MathF.PI / 180.0f;
+            var coneAngle = DegToRad(60);
             var coneLength = 40f;
 
             // 遍历副本，避免在迭代时修改集合
-            foreach (var sphere in spheresToCheck)
+            foreach (var sphereId in sphereIdsToCheck)
             {
+                var sphere = accessory.Data.Objects.SearchById(sphereId);
+                if (sphere == null) continue;
+
                 // --- 锥形范围检测逻辑 ---
                 var vectorToSphere = sphere.Position - caster.Position;
                 var distance = vectorToSphere.Length();
@@ -2023,10 +2044,10 @@ namespace EurekaOrthosCeScripts
                     if (Math.Abs(angleToSphere) < coneAngle / 2)
                     {
                         // 球在锥形范围内，绘制AOE
-                        accessory.Log.Debug($"能量球 {sphere.EntityId} 在攻击范围内，准备绘制AOE。");
+                        accessory.Log.Debug($"能量球 {sphereId} 在攻击范围内，准备绘制AOE。");
 
                         var dp = accessory.Data.GetDefaultDrawProperties();
-                        var drawName = $"Surge_AOE_{sphere.EntityId}";
+                        var drawName = $"Surge_AOE_{sphereId}";
 
                         dp.Name = drawName;
                         dp.Position = sphere.Position;
@@ -2041,8 +2062,8 @@ namespace EurekaOrthosCeScripts
                         // 在锁内修改原始列表
                         lock (_surgeLock)
                         {
-                            _surgeAoes.Add((sphere.EntityId, drawName));
-                            originalSphereList.Remove(sphere);
+                            _surgeAoes[sphereId] = drawName;
+                            originalSphereList.Remove(sphereId);
                         }
                     }
                 }
@@ -2070,7 +2091,7 @@ namespace EurekaOrthosCeScripts
 
             accessory.Log.Debug("神圣咏唱完成，开始处理剩余的光球。");
 
-            List<IGameObject> lightSpheres;
+            List<ulong> lightSphereIds;
             lock (_surgeLock)
             {
                 if (_spheres.Count == 0)
@@ -2078,18 +2099,21 @@ namespace EurekaOrthosCeScripts
                     _isHolyCasting = false; // 重置标记
                     return;
                 }
-                lightSpheres = new List<IGameObject>(_spheres);
+                lightSphereIds = new List<ulong>(_spheres);
             }
 
             // 爆炸发生在咏唱完成后约2.4秒
             const int explosionDelay = 2400;
 
-            foreach (var sphere in lightSpheres)
+            foreach (var sphereId in lightSphereIds)
             {
-                accessory.Log.Debug($"光球 {sphere.EntityId} 将在 {explosionDelay}ms 后爆炸。");
+                var sphere = accessory.Data.Objects.SearchById(sphereId);
+                if (sphere == null) continue;
+
+                accessory.Log.Debug($"光球 {sphereId} 将在 {explosionDelay}ms 后爆炸。");
 
                 var dp = accessory.Data.GetDefaultDrawProperties();
-                var drawName = $"Surge_AOE_Light_{sphere.EntityId}";
+                var drawName = $"Surge_AOE_Light_{sphereId}";
 
                 dp.Name = drawName;
                 dp.Position = sphere.Position;
@@ -2102,7 +2126,7 @@ namespace EurekaOrthosCeScripts
 
                 lock (_surgeLock)
                 {
-                    _surgeAoes.Add((sphere.EntityId, drawName));
+                    _surgeAoes[sphereId] = drawName;
                 }
             }
 
@@ -2158,7 +2182,7 @@ namespace EurekaOrthosCeScripts
             dp.Name = "夺心魔_昏暗_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(65);
-            dp.Radian = 90 * MathF.PI / 180.0f;
+            dp.Radian = DegToRad(90);
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 6000;
             dp.ScaleMode |= ScaleMode.ByTime;
@@ -2338,19 +2362,19 @@ namespace EurekaOrthosCeScripts
             accessory.Method.RemoveDraw("FireIceTrap_.*");
         }
 
-        private async void DrawFireIceTraps(ScriptAccessory accessory)
+        private void DrawFireIceTraps(ScriptAccessory accessory)
         {
             // 【关键修正】在重绘前，先移除所有旧的同名绘图
             accessory.Method.RemoveDraw("FireIceTrap_.*");
 
             // 【关键修正】加入一个短暂的延迟，确保移除指令被处理完毕
-            await Task.Delay(50); // 延迟50毫秒
+            Thread.Sleep(50); // 延迟50毫秒
             List<FireIceTrapInfo> trapsCopy;
             Dictionary<ulong, bool> playerElementsCopy;
             lock (_trapLock)
             {
-                trapsCopy = new List<FireIceTrapInfo>(_fireIceTraps);
-                playerElementsCopy = new Dictionary<ulong, bool>(_playerElements);
+                trapsCopy = _fireIceTraps.ToList();
+                playerElementsCopy = _playerElements.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
             }
             // 2. 获取当前玩家的元素状态
             _playerElements.TryGetValue(accessory.Data.Me, out var playerIsFire);
@@ -2415,39 +2439,6 @@ namespace EurekaOrthosCeScripts
                 }
             }
         }
-
-/*
-        /// <summary>
-        /// 【调试模式】核心绘制函数：无论如何都在陷阱位置绘制一个黄色圆圈
-        /// </summary>
-        private void DrawFireIceTraps(ScriptAccessory accessory)
-        {
-            // 1. 清除所有旧的绘图
-            accessory.Method.RemoveDraw("FireIceTrap_.*");
-
-            // 2. 在锁的保护下，创建陷阱列表的本地副本
-            List<FireIceTrapInfo> trapsCopy;
-            lock (_trapLock)
-            {
-                trapsCopy = new List<FireIceTrapInfo>(_fireIceTraps);
-            }
-
-            accessory.Log.Debug($"[调试模式] 准备为 {trapsCopy.Count} 个陷阱绘制测试圆圈。");
-
-            // 3. 遍历副本，为每个陷阱绘制一个醒目的黄色圆圈
-            foreach (var trap in trapsCopy)
-            {
-                accessory.Log.Debug($"[调试模式] 正在为陷阱 {trap.NpcId} 在位置 {trap.Position} 绘制测试圆圈。");
-                var dp = accessory.Data.GetDefaultDrawProperties();
-                dp.Name = $"FireIceTrap_Test_Circle_{trap.NpcId}";
-                dp.Position = trap.Position;
-                dp.Scale = new Vector2(10); // 一个容易看到的尺寸
-                dp.Color = new Vector4(1.0f, 1.0f, 0.0f, 1.0f); // 亮黄色
-                dp.DestoryAt = 15000; // 显示15秒
-                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
-            }
-        }
-        */
         #endregion
         #region 跃立狮OnTheHuntAreaCenter
 
@@ -2462,7 +2453,7 @@ namespace EurekaOrthosCeScripts
             dp.Name = "跃立狮_恐怖闪光_Danger_Zone";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(60);
-            dp.Radian = 90 * MathF.PI / 180.0f;
+            dp.Radian = DegToRad(90);
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 6000;
             dp.ScaleMode |= ScaleMode.ByTime;
@@ -2506,7 +2497,7 @@ namespace EurekaOrthosCeScripts
 
             // 将向量转换为角度，并加上固定的200度旋转
             var angle = MathF.Atan2(directionVector.X, directionVector.Z);
-            var finalRotation = angle + (200 * MathF.PI / 180.0f);
+            var finalRotation = angle + DegToRad(200);
 
             var dp = accessory.Data.GetDefaultDrawProperties();
             dp.Name = $"CrystalDragon_AetherialRay_{target.EntityId}";
@@ -2550,7 +2541,7 @@ namespace EurekaOrthosCeScripts
             }
 
             // 4. 计算最终AOE位置
-            var angleRadians = angleDegrees * MathF.PI / 180.0f;
+            var angleRadians = DegToRad(angleDegrees);
             var rotatedDir = new Vector3(
                 dir.X * MathF.Cos(angleRadians) - dir.Z * MathF.Sin(angleRadians),
                 dir.Y,
@@ -2685,29 +2676,8 @@ namespace EurekaOrthosCeScripts
             dp.DestoryAt = 5000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
         }
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
         #endregion
-        
-        
-        
-        
-        
+
     }
 }
