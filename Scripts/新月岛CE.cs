@@ -78,66 +78,14 @@ namespace EurekaOrthosCeScripts
         // ==================== 跃立狮 ====================
         private static readonly Vector3 OnTheHuntAreaCenter = new Vector3(636f, 108f, -54f); // 跃立狮战斗场地中心
 
-        // =================================================================================
-        // =============================== 辅助方法 ===================================
-        // =================================================================================
-
-        /// <summary>
-        /// 将角度转换为弧度
-        /// </summary>
-        /// <param name="degrees">角度值</param>
-        /// <returns>对应的弧度值</returns>
-        private static float DegToRad(float degrees) => degrees * MathF.PI / 180.0f;
-
-        /// <summary>
-        /// 安全地从JSON字符串反序列化Vector3
-        /// </summary>
-        private static bool TryDeserializeVector3(string json, out Vector3 result)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(json))
-                {
-                    result = default;
-                    return false;
-                }
-                var deserialized = JsonConvert.DeserializeObject<Vector3>(json);
-                result = deserialized;
-                return true;
-            }
-            catch
-            {
-                result = default;
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// 安全地从JSON字符串反序列化float
-        /// </summary>
-        private static bool TryDeserializeFloat(string json, out float result)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(json))
-                {
-                    result = default;
-                    return false;
-                }
-                result = JsonConvert.DeserializeObject<float>(json);
-                return true;
-            }
-            catch
-            {
-                result = default;
-                return false;
-            }
-        }
-
-        // =================================================================================
-        // ================================= 脚本主体 =================================
-        // =================================================================================
-
+        // 进化加鲁拉常量
+        private const float GARULA_ARENA_RADIUS = 23f;
+        private const int GARULA_CHARGE_WIDTH = 8;
+        private const int GARULA_CIRCLE_RADIUS = 30;
+        private const int GARULA_FAN_RADIUS = 70;
+        private const int ACTION_RUSHING_RUMBLE = 41175;
+        private const int ACTION_BIRDSERK_RUSH = 41176;
+        private const int ACTION_RAMPAGE = 41177;
 
         public void Init(ScriptAccessory accessory)
         {
@@ -638,7 +586,7 @@ namespace EurekaOrthosCeScripts
         )]
         public void OnRushingRumbleStart(Event @event, ScriptAccessory accessory)
         {
-            _activeMechanicId = 41175;
+            _activeMechanicId = ACTION_RUSHING_RUMBLE;
             _bossId = @event.SourceId;
             TryDrawMechanics(accessory);
         }
@@ -652,7 +600,7 @@ namespace EurekaOrthosCeScripts
         )]
         public void OnBirdserkRushStart(Event @event, ScriptAccessory accessory)
         {
-            _activeMechanicId = 41176;
+            _activeMechanicId = ACTION_BIRDSERK_RUSH;
             _bossId = @event.SourceId;
             TryDrawMechanics(accessory);
         }
@@ -664,10 +612,13 @@ namespace EurekaOrthosCeScripts
         )]
         public void OnRampageStart(Event @event, ScriptAccessory accessory)
         {
-            _activeMechanicId = 41177;
+            _activeMechanicId = ACTION_RAMPAGE;
             _bossId = @event.SourceId;
             TryDrawMechanics(accessory);
         }
+
+        // --- 进化加鲁拉辅助方法 ---
+
         private void TryDrawMechanics(ScriptAccessory accessory)
         {
             // 如果一个连续冲锋已经开始(即不是第一次冲锋)，则由图标事件处理，这里直接返回
@@ -678,21 +629,21 @@ namespace EurekaOrthosCeScripts
             switch (_activeMechanicId)
             {
                 // RushingRumble (单次冲锋): 需要方向和小鸟
-                case 41175 when _lightningIsCardinal != null && _activeBirds.Count > 0:
+                case ACTION_RUSHING_RUMBLE when _lightningIsCardinal != null && _activeBirds.Count > 0:
                     accessory.Log.Debug("条件满足，绘制 RushingRumble。");
                     DrawRushingRumble(accessory);
                     ResetState();
                     break;
 
                 // BirdserkRush (狂鸟冲锋): 只需要小鸟
-                case 41176 when _activeBirds.Count > 0:
+                case ACTION_BIRDSERK_RUSH when _activeBirds.Count > 0:
                     accessory.Log.Debug("条件满足，绘制 BirdserkRush。");
                     DrawBirdserkRush(accessory);
                     ResetState();
                     break;
 
                 // Rushing Rumble Rampage (连续冲锋) 的启动: 需要方向和小鸟
-                case 41177 when _lightningIsCardinal != null && _activeBirds.Count > 0:
+                case ACTION_RAMPAGE when _lightningIsCardinal != null && _activeBirds.Count > 0:
                     accessory.Log.Debug("条件满足，启动 Rushing Rumble Rampage 序列。");
                     var boss = accessory.Data.Objects.SearchById(_bossId);
                     if (boss == null) { ResetState(); return; }
@@ -715,6 +666,7 @@ namespace EurekaOrthosCeScripts
                     break;
             }
         }
+
         private void ResetState()
         {
             _lightningIsCardinal = null;
@@ -724,33 +676,97 @@ namespace EurekaOrthosCeScripts
             _isRampageSequenceRunning = false;
             _rampageChargeIndex = 0;
         }
+
+        /// <summary>
+        /// 绘制进化加鲁拉的四向扇形AOE
+        /// </summary>
+        private void DrawGarulaFourFans(ScriptAccessory accessory, Vector3 position, Vector3 directionFrom, ulong uniqueId, int chargeIndex = -1)
+        {
+            var initialAngle = MathF.Atan2(directionFrom.X, directionFrom.Z);
+            if (_lightningIsCardinal == false) // 斜角方向调整
+            {
+                initialAngle += DegToRad(45);
+            }
+
+            for (int i = 0; i < 4; i++)
+            {
+                var dpCone = accessory.Data.GetDefaultDrawProperties();
+                string nameSuffix = chargeIndex >= 0 ? $"_{chargeIndex}_{i}" : $"_{i}";
+                dpCone.Name = $"NoiseComplaint_Cone_{uniqueId}{nameSuffix}";
+                dpCone.Position = position;
+                dpCone.Scale = new Vector2(GARULA_FAN_RADIUS);
+                dpCone.Radian = DegToRad(45);
+                dpCone.Rotation = initialAngle + (i * DegToRad(90));
+                dpCone.Color = accessory.Data.DefaultDangerColor;
+                dpCone.Delay = 0;
+                dpCone.DestoryAt = 10400;
+                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
+            }
+        }
+
+        /// <summary>
+        /// 绘制冲锋直线+落地圆形的组合
+        /// </summary>
+        private void DrawGarulaChargeWithCircle(ScriptAccessory accessory, Vector3 startPos, Vector3 endPos, string namePrefix, ulong? ownerId = null, ulong? targetId = null)
+        {
+            // 冲锋直线
+            var dpCharge = accessory.Data.GetDefaultDrawProperties();
+            dpCharge.Name = $"{namePrefix}_Charge";
+            dpCharge.Scale = new Vector2(GARULA_CHARGE_WIDTH, 100);
+            dpCharge.ScaleMode |= ScaleMode.YByDistance;
+            dpCharge.Color = accessory.Data.DefaultDangerColor;
+            dpCharge.DestoryAt = 6300;
+
+            if (ownerId.HasValue)
+            {
+                dpCharge.Owner = ownerId.Value;
+                if (targetId.HasValue)
+                    dpCharge.TargetObject = targetId.Value;
+                else
+                    dpCharge.TargetPosition = endPos;
+            }
+            else
+            {
+                dpCharge.Position = startPos;
+                dpCharge.TargetPosition = endPos;
+            }
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
+
+            // 落地大圈
+            var dpCircle = accessory.Data.GetDefaultDrawProperties();
+            dpCircle.Name = $"{namePrefix}_Circle";
+            dpCircle.Position = endPos;
+            dpCircle.Scale = new Vector2(GARULA_CIRCLE_RADIUS);
+            dpCircle.Color = accessory.Data.DefaultDangerColor;
+            dpCircle.DestoryAt = 10400;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
+        }
+
         private Vector3 GetArenaEdgePosition(Vector3 destination)
         {
-            const float arenaRadius = 23f;
             if (_noiseComplaintArenaCenter == null) return destination;
 
             var vectorFromCenter = destination - _noiseComplaintArenaCenter.Value;
-            if (vectorFromCenter.LengthSquared() <= arenaRadius * arenaRadius)
+            if (vectorFromCenter.LengthSquared() <= GARULA_ARENA_RADIUS * GARULA_ARENA_RADIUS)
             {
                 return destination;
             }
             else
             {
                 var direction = Vector3.Normalize(vectorFromCenter);
-                return _noiseComplaintArenaCenter.Value + direction * arenaRadius;
+                return _noiseComplaintArenaCenter.Value + direction * GARULA_ARENA_RADIUS;
             }
         }
 
         private Vector3 GetLineArenaIntersection(Vector3 start, Vector3 end, ScriptAccessory accessory)
         {
-            const float arenaRadius = 23f;
             if (_noiseComplaintArenaCenter == null) return GetArenaEdgePosition(end);
 
             Vector2 center = new Vector2(_noiseComplaintArenaCenter.Value.X, _noiseComplaintArenaCenter.Value.Z);
             Vector2 p1 = new Vector2(start.X, start.Z);
             Vector2 p2 = new Vector2(end.X, end.Z);
 
-            if (Vector2.DistanceSquared(p2, center) <= arenaRadius * arenaRadius)
+            if (Vector2.DistanceSquared(p2, center) <= GARULA_ARENA_RADIUS * GARULA_ARENA_RADIUS)
             {
                 return end;
             }
@@ -760,7 +776,7 @@ namespace EurekaOrthosCeScripts
 
             float a = Vector2.Dot(d, d);
             float b = 2 * Vector2.Dot(f, d);
-            float c = Vector2.Dot(f, f) - arenaRadius * arenaRadius;
+            float c = Vector2.Dot(f, f) - GARULA_ARENA_RADIUS * GARULA_ARENA_RADIUS;
 
             float discriminant = b * b - 4 * a * c;
 
@@ -773,8 +789,6 @@ namespace EurekaOrthosCeScripts
             float t1 = (-b - sqrtDiscriminant) / (2 * a);
             float t2 = (-b + sqrtDiscriminant) / (2 * a);
 
-            accessory.Log.Debug($"[交点计算] t1: {t1:F3}, t2: {t2:F3}");
-
             var validIntersections = new List<Vector3>();
 
             if (t1 >= 0 && t1 <= 1)
@@ -782,44 +796,28 @@ namespace EurekaOrthosCeScripts
                 Vector2 intersection2D = p1 + t1 * d;
                 var point = new Vector3(intersection2D.X, start.Y, intersection2D.Y);
                 validIntersections.Add(point);
-                accessory.Log.Debug($"[交点计算] 候选点 1 (来自 t1): {point}");
             }
             if (t2 >= 0 && t2 <= 1)
             {
                 Vector2 intersection2D = p1 + t2 * d;
                 var point = new Vector3(intersection2D.X, start.Y, intersection2D.Y);
                 validIntersections.Add(point);
-                accessory.Log.Debug($"[交点计算] 候选点 2 (来自 t2): {point}");
             }
 
             if (validIntersections.Count == 0)
             {
-                accessory.Log.Debug("[交点计算] 路径上无有效交点，启用备用方案。");
                 return GetArenaEdgePosition(end);
             }
             if (validIntersections.Count == 1)
             {
-                accessory.Log.Debug($"[交点计算] 找到一个有效交点，使用: {validIntersections[0]}");
                 return validIntersections[0];
             }
 
             var dist1 = Vector3.DistanceSquared(validIntersections[0], end);
             var dist2 = Vector3.DistanceSquared(validIntersections[1], end);
 
-            accessory.Log.Debug($"[交点计算] 找到两个有效交点。候选点1到终点距离: {dist1:F2}, 候选点2到终点距离: {dist2:F2}");
-
-            if (dist1 <= dist2)
-            {
-                accessory.Log.Debug($"[交点计算] 选择候选点 1，因为它更接近终点。");
-                return validIntersections[0];
-            }
-            else
-            {
-                accessory.Log.Debug($"[交点计算] 选择候选点 2，因为它更接近终点。");
-                return validIntersections[1];
-            }
+            return dist1 <= dist2 ? validIntersections[0] : validIntersections[1];
         }
-
 
         private void DrawRushingRumble(ScriptAccessory accessory)
         {
@@ -828,48 +826,14 @@ namespace EurekaOrthosCeScripts
             var boss = accessory.Data.Objects.SearchById(_bossId);
             if (bird == null || boss == null) return;
 
-            var birdPos = bird.Position;
-            var destination = GetArenaEdgePosition(birdPos);
-            // 1. 从Boss到小鸟的直线冲锋
-            var dpRumble = accessory.Data.GetDefaultDrawProperties();
-            dpRumble.Name = $"NoiseComplaint_Rumble_{bird.EntityId}";
-            dpRumble.Owner = _bossId;
-            dpRumble.TargetPosition = destination;
-            dpRumble.Scale = new Vector2(8, 100); // 使用一个足够大的基础长度
-            dpRumble.ScaleMode |= ScaleMode.YByDistance; // 让矩形长度自动匹配距离
-            dpRumble.Color = accessory.Data.DefaultDangerColor;
-            dpRumble.DestoryAt = 6300;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpRumble);
+            var destination = GetArenaEdgePosition(bird.Position);
 
-            // 2. 落地大圈
-            var dpCircle = accessory.Data.GetDefaultDrawProperties();
-            dpCircle.Name = $"NoiseComplaint_Rush_Circle_{bird.EntityId}";
-            dpCircle.Position = destination;
-            dpCircle.Scale = new Vector2(30);
-            dpCircle.Color = accessory.Data.DefaultDangerColor;
-            dpCircle.DestoryAt = 10400;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
+            // 绘制冲锋+落地圈
+            DrawGarulaChargeWithCircle(accessory, boss.Position, destination, $"NoiseComplaint_Rumble_{bird.EntityId}", _bossId);
 
-            // 3. 四连扇形
+            // 绘制四向扇形
             var dirToBoss = boss.Position - destination;
-            var initialAngle = MathF.Atan2(dirToBoss.X, dirToBoss.Z);
-            if (_lightningIsCardinal == false) // 如果是斜角方向则调整
-            {
-                initialAngle += DegToRad(45);
-            }
-            for (int i = 0; i < 4; i++)
-            {
-                var dpCone = accessory.Data.GetDefaultDrawProperties();
-                dpCone.Name = $"NoiseComplaint_Cone_{bird.EntityId}_{i}";
-                dpCone.Position = destination;
-                dpCone.Scale = new Vector2(70);
-                dpCone.Radian = DegToRad(45);
-                dpCone.Rotation = initialAngle + (i * DegToRad(90));
-                dpCone.Color = accessory.Data.DefaultDangerColor;
-                dpCone.Delay = 0;
-                dpCone.DestoryAt = 10400;
-                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
-            }
+            DrawGarulaFourFans(accessory, destination, dirToBoss, bird.EntityId);
         }
 
         private void DrawBirdserkRush(ScriptAccessory accessory)
@@ -878,13 +842,13 @@ namespace EurekaOrthosCeScripts
             var bird = accessory.Data.Objects.SearchById(birdId);
             if (bird == null) return;
 
-            // 从Boss到小鸟的直线冲锋
+            // 从Boss到小鸟的直线冲锋 (使用辅助方法绘制冲锋部分，无落地圈)
             var dpCharge = accessory.Data.GetDefaultDrawProperties();
             dpCharge.Name = $"NoiseComplaint_BirdserkRush_Charge_{_bossId}";
             dpCharge.Owner = _bossId;
             dpCharge.TargetObject = bird.EntityId;
-            dpCharge.Scale = new Vector2(8, 100); // 使用一个足够大的基础长度
-            dpCharge.ScaleMode |= ScaleMode.YByDistance; // 让矩形长度自动匹配距离
+            dpCharge.Scale = new Vector2(GARULA_CHARGE_WIDTH, 100);
+            dpCharge.ScaleMode |= ScaleMode.YByDistance;
             dpCharge.Color = accessory.Data.DefaultDangerColor;
             dpCharge.DestoryAt = 6300;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
@@ -901,6 +865,7 @@ namespace EurekaOrthosCeScripts
             dpCone.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
         }
+
         private void DrawRampageCharge(ScriptAccessory accessory, Vector3 chargeStartPos, IGameObject bird, int chargeIndex)
         {
             if (_lightningIsCardinal == null)
@@ -909,62 +874,20 @@ namespace EurekaOrthosCeScripts
                 return;
             }
 
-            var birdPos = bird.Position;
-            Vector3 destination;
+            // 计算目标位置：所有冲锋的终点都是小鸟与场地中心连线与场边的交点
+            var destination = GetArenaEdgePosition(bird.Position);
 
-            if (chargeIndex == 0)
-            {
-                destination = GetArenaEdgePosition(birdPos);
-            }
-            else
-            {
-                destination = GetLineArenaIntersection(chargeStartPos, birdPos, accessory);
-            }
+            // 绘制冲锋+落地圈
+            DrawGarulaChargeWithCircle(accessory, chargeStartPos, destination, $"NoiseComplaint_Rampage_{chargeIndex}");
 
-
-            // 1. 直线冲锋
-            var dpCharge = accessory.Data.GetDefaultDrawProperties();
-            dpCharge.Name = $"NoiseComplaint_Rampage_Charge_{chargeIndex}";
-            dpCharge.Position = chargeStartPos;
-            dpCharge.TargetPosition = destination;
-            dpCharge.Scale = new Vector2(8, 100); // 使用一个足够大的基础长度
-            dpCharge.ScaleMode |= ScaleMode.YByDistance; // 让矩形长度自动匹配距离
-            dpCharge.Color = accessory.Data.DefaultDangerColor;
-            dpCharge.DestoryAt = 6300;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpCharge);
-
-            // 2. 目标点的大圆形AOE
-            var dpCircle = accessory.Data.GetDefaultDrawProperties();
-            dpCircle.Name = $"NoiseComplaint_Rampage_Circle_{chargeIndex}";
-            dpCircle.Position = destination;
-            dpCircle.Scale = new Vector2(30);
-            dpCircle.Color = accessory.Data.DefaultDangerColor;
-            dpCircle.DestoryAt = 10400;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
-
-            // 3. 从目标点发出的四个扇形AOE
+            // 绘制四向扇形
             var chargeDirectionVector = destination - chargeStartPos;
-            var initialAngle = MathF.Atan2(chargeDirectionVector.X, chargeDirectionVector.Z);
-            if (_lightningIsCardinal == false) // 如果是斜角方向则调整
-            {
-                initialAngle += DegToRad(45);
-            }
-            for (int i = 0; i < 4; i++)
-            {
-                var dpCone = accessory.Data.GetDefaultDrawProperties();
-                dpCone.Name = $"NoiseComplaint_Rampage_Cone_{chargeIndex}_{i}";
-                dpCone.Position = destination;
-                dpCone.Scale = new Vector2(70);
-                dpCone.Radian = DegToRad(45);
-                dpCone.Rotation = initialAngle + (i * DegToRad(90));
-                dpCone.Color = accessory.Data.DefaultDangerColor;
-                dpCone.Delay = 0;
-                dpCone.DestoryAt = 10400;
-                accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dpCone);
-            }
+            DrawGarulaFourFans(accessory, destination, chargeDirectionVector, bird.EntityId, chargeIndex);
+
             _rampageNextChargeStartPos = destination;
             _rampageChargeIndex++;
         }
+
         #endregion
 
         #region 死亡爪
@@ -1154,6 +1077,33 @@ namespace EurekaOrthosCeScripts
             dp.DestoryAt = 10000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
             accessory.Log.Debug($"绘制死亡爪 利爪 AOE: {@event.SourceId}");
+        }
+
+        // --- 死亡爪辅助方法 ---
+
+        private void DrawCrossAOE(ScriptAccessory accessory, string baseName, Vector3 position, float rotation, int delay, int duration)
+        {
+            // 水平部分
+            var dp1 = accessory.Data.GetDefaultDrawProperties();
+            dp1.Name = $"{baseName}_1";
+            dp1.Position = position;
+            dp1.Rotation = rotation;
+            dp1.Scale = new Vector2(15, 200); // 宽度15, 长度 200
+            dp1.Color = accessory.Data.DefaultDangerColor;
+            dp1.Delay = delay;
+            dp1.DestoryAt = duration;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp1);
+
+            // 垂直部分
+            var dp2 = accessory.Data.GetDefaultDrawProperties();
+            dp2.Name = $"{baseName}_2";
+            dp2.Position = position;
+            dp2.Rotation = rotation + MathF.PI / 2; // 旋转90度
+            dp2.Scale = new Vector2(15, 100);
+            dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.Delay = delay;
+            dp2.DestoryAt = duration;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
         }
 
         #endregion
@@ -1709,32 +1659,6 @@ namespace EurekaOrthosCeScripts
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
                 accessory.Log.Debug($"绘制Boss直接月环AOE: {dp.Name}");
             }
-        }
-
-
-        private void DrawCrossAOE(ScriptAccessory accessory, string baseName, Vector3 position, float rotation, int delay, int duration)
-        {
-            // 水平部分
-            var dp1 = accessory.Data.GetDefaultDrawProperties();
-            dp1.Name = $"{baseName}_1";
-            dp1.Position = position;
-            dp1.Rotation = rotation;
-            dp1.Scale = new Vector2(15, 200); // 宽度15, 长度 200
-            dp1.Color = accessory.Data.DefaultDangerColor;
-            dp1.Delay = delay;
-            dp1.DestoryAt = duration;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp1);
-
-            // 垂直部分
-            var dp2 = accessory.Data.GetDefaultDrawProperties();
-            dp2.Name = $"{baseName}_2";
-            dp2.Position = position;
-            dp2.Rotation = rotation + MathF.PI / 2; // 旋转90度
-            dp2.Scale = new Vector2(15, 100);
-            dp2.Color = accessory.Data.DefaultDangerColor;
-            dp2.Delay = delay;
-            dp2.DestoryAt = duration;
-            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
         }
 
         #endregion
@@ -2362,6 +2286,8 @@ namespace EurekaOrthosCeScripts
             accessory.Method.RemoveDraw("FireIceTrap_.*");
         }
 
+        // --- 夺心魔辅助方法 ---
+
         private void DrawFireIceTraps(ScriptAccessory accessory)
         {
             // 【关键修正】在重绘前，先移除所有旧的同名绘图
@@ -2433,12 +2359,13 @@ namespace EurekaOrthosCeScripts
                     dp.Name = $"FireIceTrap_Small_Safe_{trap.NpcId}";
                     dp.Position = trap.Position;
                     dp.Scale = new Vector2(8);
-                    dp.Color = new Vector4(1.0f, 0.2f, 0.2f, 0.6f); 
+                    dp.Color = new Vector4(1.0f, 0.2f, 0.2f, 0.6f);
                     dp.DestoryAt = trapWarningDurationMs;
                     accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
                 }
             }
         }
+
         #endregion
         #region 跃立狮OnTheHuntAreaCenter
 
@@ -2675,6 +2602,66 @@ namespace EurekaOrthosCeScripts
             dp.Owner = @event.SourceId;
             dp.DestoryAt = 5000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
+        }
+
+        #endregion
+
+        #region Helper
+
+        // =================================================================================
+        // =============================== 通用辅助方法 ===================================
+        // =================================================================================
+
+        /// <summary>
+        /// 将角度转换为弧度
+        /// </summary>
+        /// <param name="degrees">角度值</param>
+        /// <returns>对应的弧度值</returns>
+        private static float DegToRad(float degrees) => degrees * MathF.PI / 180.0f;
+
+        /// <summary>
+        /// 安全地从JSON字符串反序列化Vector3
+        /// </summary>
+        private static bool TryDeserializeVector3(string json, out Vector3 result)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(json))
+                {
+                    result = default;
+                    return false;
+                }
+                var deserialized = JsonConvert.DeserializeObject<Vector3>(json);
+                result = deserialized;
+                return true;
+            }
+            catch
+            {
+                result = default;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 安全地从JSON字符串反序列化float
+        /// </summary>
+        private static bool TryDeserializeFloat(string json, out float result)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(json))
+                {
+                    result = default;
+                    return false;
+                }
+                result = JsonConvert.DeserializeObject<float>(json);
+                return true;
+            }
+            catch
+            {
+                result = default;
+                return false;
+            }
         }
 
         #endregion
