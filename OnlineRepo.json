@@ -1,5 +1,14 @@
 [
   {
+    "Name": "调试脚本 (By Chat Command)",
+    "Guid": "B866F3EA-35A3-4BAA-8259-17A0D7608928",
+    "Version": "0.0.2",
+    "Author": "XSZYYS",
+    "TerritoryIds": [],
+    "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/main/Scripts/Debug.cs",
+    "UpdateInfo": ""
+  },
+  {
     "Name": "亚历山大零式机神城 天动之章4",
     "Guid": "3A494EDE-416B-4878-B8A5-3322EE5F8843",
     "Version": "0.0.1",
@@ -8,15 +17,6 @@
       587
     ],
     "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/main/Scripts/A12S.cs",
-    "UpdateInfo": ""
-  },
-  {
-    "Name": "调试脚本 (By Chat Command)",
-    "Guid": "B866F3EA-35A3-4BAA-8259-17A0D7608928",
-    "Version": "0.0.2",
-    "Author": "XSZYYS",
-    "TerritoryIds": [],
-    "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/main/Scripts/Debug.cs",
     "UpdateInfo": ""
   },
   {
@@ -31,18 +31,9 @@
     "UpdateInfo": ""
   },
   {
-    "Name": "复活位置",
-    "Guid": "874D3ECF-BD6B-448F-BB42-AE7F082E4809",
-    "Version": "0.0.2",
-    "Author": "XSZYYS",
-    "TerritoryIds": [],
-    "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/main/Scripts/复活位置.cs",
-    "UpdateInfo": ""
-  },
-  {
     "Name": "力之塔",
     "Guid": "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
-    "Version": "0.0.39",
+    "Version": "0.0.40",
     "Author": "XSZYYS",
     "TerritoryIds": [
       1252
@@ -51,14 +42,12 @@
     "UpdateInfo": ""
   },
   {
-    "Name": "亚历山大零式机神城 律动之章4",
-    "Guid": "2113EAA7-0C90-4802-AA48-C9CFF30BFBEA",
-    "Version": "0.0.1",
+    "Name": "复活位置",
+    "Guid": "874D3ECF-BD6B-448F-BB42-AE7F082E4809",
+    "Version": "0.0.2",
     "Author": "XSZYYS",
-    "TerritoryIds": [
-      532
-    ],
-    "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/main/Scripts/A8S.cs",
+    "TerritoryIds": [],
+    "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/main/Scripts/复活位置.cs",
     "UpdateInfo": ""
   },
   {
@@ -70,6 +59,17 @@
       1252
     ],
     "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/main/Scripts/新月岛CE.cs",
+    "UpdateInfo": ""
+  },
+  {
+    "Name": "亚历山大零式机神城 律动之章4",
+    "Guid": "2113EAA7-0C90-4802-AA48-C9CFF30BFBEA",
+    "Version": "0.0.1",
+    "Author": "XSZYYS",
+    "TerritoryIds": [
+      532
+    ],
+    "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/main/Scripts/A8S.cs",
     "UpdateInfo": ""
   }
 ]
