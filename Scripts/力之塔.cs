@@ -61,9 +61,9 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.39",
+    version: "0.0.40",
     author: "XSZYYS",
-    note: "更新内容\r\n直接根据职能而非小队位置指向老二火球站位\r\n标记药师：输入【/e 标记药师】即可标记周围所有药师玩家\r\n藏宝图：1.5道中给箱子连线\r\n检查蓝药：输入【/e 蓝药检查】会输出药师蓝药使用情况，输入【/e 蓝药清理】会清理所有数据\r\n检查复活：输入【/e 复活检查 <数字>】，比如【/e 复活检查 1】会输出周围所有剩余1次复活的玩家\r\n检查扔钱：输入【/e 扔钱检查】会输出所有使用扔钱的玩家和扔钱次数，输入【/e 扔钱清理】会清理所有数据\r\n请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
+    note: "更新内容\r\n直接根据职能而非小队位置指向老二火球站位\r\n标记药师：输入【/e 标记药师】即可标记周围所有药师玩家\r\n藏宝图：1.5道中给箱子连线\r\n\r\n------------以下功能默认仅支持默语，可配置响应来自小队的检查指令并在小队频道输出------------\r\n检查蓝药：输入【/e 蓝药检查】会输出药师蓝药使用情况，输入【/e 蓝药清理】会清理所有数据\r\n检查复活：输入【/e 复活检查 <数字>】，比如【/e 复活检查 1】会输出周围所有剩余1次复活的玩家\r\n检查扔钱：输入【/e 扔钱检查】会输出所有使用扔钱的玩家和扔钱次数，输入【/e 扔钱清理】会清理所有数据\r\n------------------------------------------------------------\r\n请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
 
     public class 力之塔
@@ -91,6 +91,8 @@ namespace KodakkuAssistXSZYYS
         public LanceGuideOverride HolyLanceGroupOverride { get; set; } = LanceGuideOverride.None;
         [UserSetting("小警察（开启后默语频道输出关键机制被点名玩家名字）")]
         public bool PoliceMode { get; set; } = false;
+        [UserSetting("接收小队内的扔钱/复活/蓝药检查请求")]
+        public bool ReceivePartyCheckRequest { get; set; } = false;
         [UserSetting("蓝药检查范围（仅小队）")]
         public bool Partycheck { get; set; } = false;
         [UserSetting("-----开发者设置----- (此设置无实际意义)")]
@@ -2946,10 +2948,13 @@ namespace KodakkuAssistXSZYYS
         [ScriptMethod(
             name: "检查复活",
             eventType: EventTypeEnum.Chat,
-            eventCondition: ["Type:Echo"]
+            eventCondition: ["Type:regex:^(Echo|Party)$"]
         )]
         public async void CheckResurrection(Event @event, ScriptAccessory accessory)
         {
+            string channel = @event["Type"].ToLower();
+            if (!ReceivePartyCheckRequest && channel == "party") return;
+
             string message = @event["Message"];
             if (!message.StartsWith("复活检查")) return;
             string[] parts = message.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -2996,19 +3001,19 @@ namespace KodakkuAssistXSZYYS
                 var sortedData = filteredData.OrderBy(t => t.Item4).ToList();
 
                 string title = targetCount.HasValue ? $"--- 复活次数为 {targetCount.Value} 的玩家 ---" : "--- 复活次数检查 ---";
-                accessory.Method.SendChat($"/e {title}");
-                
+                accessory.Method.SendChat($"/{channel} {title}");
+
                 foreach (var data in sortedData)
                 {
                     await Task.Delay(10);
-                    accessory.Method.SendChat($"/e {data.Item1} ({data.Item2} | {data.Item3}): {data.Item4}");
+                    accessory.Method.SendChat($"/{channel} {data.Item1} ({data.Item2} | {data.Item3}): {data.Item4}");
                 }
             }
             else
             {
                 await Task.Delay(10);
                 string notFoundMessage = targetCount.HasValue ? $"未找到复活次数为 {targetCount.Value} 的玩家。" : "未找到有限制复活的玩家。";
-                accessory.Method.SendChat($"/e {notFoundMessage}");
+                accessory.Method.SendChat($"/{channel} {notFoundMessage}");
             }
         }
         [ScriptMethod(
@@ -3045,48 +3050,54 @@ namespace KodakkuAssistXSZYYS
         [ScriptMethod(
             name: "检查扔钱",
             eventType: EventTypeEnum.Chat,
-            eventCondition: ["Type:Echo", "Message:扔钱检查"]
+            eventCondition: ["Type:regex:^(Echo|Party)$", "Message:扔钱检查"]
         )]
         public async void CheckMoneyThrow(Event @event, ScriptAccessory accessory)
         {
+            string channel = @event["Type"].ToLower();
+            if (!ReceivePartyCheckRequest && channel == "party") return;
+
             Dictionary<string, List<KeyValuePair<string, int>>> sortedData;
             lock (_moneyThrowLock)
             {
                 if (_moneyThrowCounts.Count == 0)
                 {
-                    accessory.Method.SendChat("/e 未记录到任何扔钱数据。");
+                    accessory.Method.SendChat($"/{channel} 未记录到任何扔钱数据。");
                     return;
                 }
-                
+
                 sortedData = new Dictionary<string, List<KeyValuePair<string, int>>>();
                 foreach (var bossEntry in _moneyThrowCounts)
                 {
                     sortedData[bossEntry.Key] = bossEntry.Value.OrderBy(kvp => kvp.Value).ToList();
                 }
             }
-            
+
             foreach (var bossEntry in sortedData)
             {
-                accessory.Method.SendChat($"/e --- {bossEntry.Key} 扔钱统计 ---");
+                accessory.Method.SendChat($"/{channel} --- {bossEntry.Key} 扔钱统计 ---");
                 foreach (var data in bossEntry.Value)
                 {
                     await Task.Delay(100);
-                    accessory.Method.SendChat($"/e {data.Key}: {data.Value} 次");
+                    accessory.Method.SendChat($"/{channel} {data.Key}: {data.Value} 次");
                 }
             }
         }
         [ScriptMethod(
             name: "清理扔钱数据",
             eventType: EventTypeEnum.Chat,
-            eventCondition: ["Type:Echo", "Message:扔钱清理"]
+            eventCondition: ["Type:regex:^(Echo|Party)$", "Message:扔钱清理"]
         )]
         public void ClearMoneyThrowData(Event @event, ScriptAccessory accessory)
         {
+            string channel = @event["Type"].ToLower();
+            if (!ReceivePartyCheckRequest && channel == "party") return;
+
             lock (_moneyThrowLock)
             {
                 _moneyThrowCounts.Clear();
             }
-            accessory.Method.SendChat("/e 扔钱数据已清理。");
+            accessory.Method.SendChat($"/{channel} 扔钱数据已清理。");
         }
         [ScriptMethod(
             name: "记录蓝药次数",
@@ -3123,16 +3134,19 @@ namespace KodakkuAssistXSZYYS
         [ScriptMethod(
             name: "检查蓝药",
             eventType: EventTypeEnum.Chat,
-            eventCondition: ["Type:Echo", "Message:蓝药检查"]
+            eventCondition: ["Type:regex:^(Echo|Party)$", "Message:蓝药检查"]
         )]
         public async void CheckBluePotion(Event @event, ScriptAccessory accessory)
         {
+            string channel = @event["Type"].ToLower();            
+            if (!ReceivePartyCheckRequest && channel == "party") return;
+
             Dictionary<string, List<KeyValuePair<string, int>>> sortedData;
             lock (_bluePotionLock)
             {
                 if (_bluePotionCounts.Count == 0)
                 {
-                    accessory.Method.SendChat("/e 未记录到任何蓝药数据。");
+                    accessory.Method.SendChat($"/{channel} 未记录到任何蓝药数据。");
                     return;
                 }
 
@@ -3156,33 +3170,36 @@ namespace KodakkuAssistXSZYYS
 
             if (sortedData.Count == 0)
             {
-                accessory.Method.SendChat("/e 当前范围内未记录到符合条件的蓝药数据。");
+                accessory.Method.SendChat($"/{channel} 当前范围内未记录到符合条件的蓝药数据。");
                 return;
             }
 
             foreach (var bossEntry in sortedData)
             {
-                accessory.Method.SendChat($"/e --- 对 {bossEntry.Key} 的蓝药统计 ---");
+                accessory.Method.SendChat($"/{channel} --- 对 {bossEntry.Key} 的蓝药统计 ---");
 
                 foreach (var data in bossEntry.Value)
                 {
                     await Task.Delay(100);
-                    accessory.Method.SendChat($"/e {data.Key}: {data.Value} 次");
+                    accessory.Method.SendChat($"/{channel} {data.Key}: {data.Value} 次");
                 }
             }
         }
         [ScriptMethod(
             name: "清理蓝药数据",
             eventType: EventTypeEnum.Chat,
-            eventCondition: ["Type:Echo", "Message:蓝药清理"]
+            eventCondition: ["Type:regex:^(Echo|Party)$", "Message:蓝药清理"]
         )]
         public void ClearBluePotionData(Event @event, ScriptAccessory accessory)
         {
+            string channel = @event["Type"].ToLower();
+            if (!ReceivePartyCheckRequest && channel == "party") return;
+            
             lock (_bluePotionLock)
             {
                 _bluePotionCounts.Clear();
             }
-            accessory.Method.SendChat("/e 蓝药数据已清理。");
+            accessory.Method.SendChat($"/{channel} 蓝药数据已清理。");
         }
 
         [ScriptMethod(
