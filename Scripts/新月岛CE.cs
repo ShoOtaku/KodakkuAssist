@@ -21,7 +21,7 @@ namespace KodakkuAssistXSZYYS
         name: "新月岛CE",
         guid: "15725518-8F8E-413A-BEA8-E19CC861CF93",
         territorys: [1252],
-        version: "0.2.0",
+        version: "0.2.1",
         author: "XSZYYS",
         note: "新月岛CE绘制已完成"
     )]
@@ -1537,7 +1537,7 @@ namespace KodakkuAssistXSZYYS
             const float crossWidth = 6f;
             const int rotationInterval = 1700;  // 旋转间隔 1.7s
             const float rotationAngleDegrees = 9f; // 每次旋转 9 度
-            const float rotationAngleRad = DegToRad(rotationAngleDegrees);
+            float rotationAngleRad = DegToRad(rotationAngleDegrees);
             const int numberOfSteps = 6;
 
             // 3. 循环创建一系列延迟且旋转的十字AOE
@@ -2074,12 +2074,11 @@ namespace KodakkuAssistXSZYYS
             var explodingSphereId = @event.SourceId;
 
             // 查找并移除与爆炸能量球匹配的绘图
-            var aoeToRemove = _surgeAoes.FirstOrDefault(aoe => aoe.ActorID == explodingSphereId);
-            if (aoeToRemove != default)
+            if (_surgeAoes.TryGetValue(explodingSphereId, out var drawName))
             {
-                accessory.Method.RemoveDraw(aoeToRemove.DrawName);
-                _surgeAoes.Remove(aoeToRemove);
-                accessory.Log.Debug($"清理AOE绘制: {aoeToRemove.DrawName}");
+                accessory.Method.RemoveDraw(drawName);
+                _surgeAoes.Remove(explodingSphereId);
+                accessory.Log.Debug($"清理AOE绘制: {drawName}");
             }
         }
         public void ResetWindStoneLightSurgeState()
