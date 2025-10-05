@@ -15,7 +15,7 @@ using Newtonsoft.Json;
 using KodakkuAssist.Module.GameEvent.Struct;
 using KodakkuAssist.Module.GameOperate;
 
-namespace EurekaOrthosCeScripts
+namespace KodakkuAssistXSZYYS
 {
     [ScriptType(
         name: "新月岛CE",
