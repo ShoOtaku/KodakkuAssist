@@ -51,17 +51,6 @@
     "UpdateInfo": ""
   },
   {
-    "Name": "力之塔（警察）",
-    "Guid": "9F8E7D6C-5B4A-3C2D-1E0F-9A8B7C6D5E4F",
-    "Version": "0.0.1",
-    "Author": "XSZYYS",
-    "TerritoryIds": [
-      1252
-    ],
-    "DownloadUrl": "https://raw.githubusercontent.com/ShoOtaku/KodakkuAssist/main/Scripts/力之塔（警察）.cs",
-    "UpdateInfo": ""
-  },
-  {
     "Name": "新月岛CE",
     "Guid": "15725518-8F8E-413A-BEA8-E19CC861CF93",
     "Version": "0.2.1",
