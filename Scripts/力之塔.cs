@@ -280,9 +280,6 @@ namespace KodakkuAssistXSZYYS
         // 用于记录扔钱次数的字典和锁
         private readonly Dictionary<string, Dictionary<string, int>> _moneyThrowCounts = new();
         private readonly object _moneyThrowLock = new();
-        // 用于记录居合次数的字典和锁
-        private readonly Dictionary<string, Dictionary<string, int>> _iaidoCounts = new();
-        private readonly object _iaidoLock = new();
         // 用于记录蓝药次数的字典和锁
         private readonly Dictionary<string, Dictionary<string, int>> _bluePotionCounts = new();
         private readonly object _bluePotionLock = new();
@@ -3170,105 +3167,6 @@ namespace KodakkuAssistXSZYYS
             }
             accessory.Method.SendChat($"/{channel} 扔钱数据已清理。");
         }
-
-       // [ScriptMethod(
-       //    name: "记录居合次数",
-       //    eventType: EventTypeEnum.ActionEffect,
-       //    eventCondition: ["ActionId:41605"],
-       //    userControl: false
-       //)]
-       // public void RecordIaido(Event @event, ScriptAccessory accessory)
-       // {
-       //     var source = accessory.Data.Objects.SearchById(@event.SourceId);
-       //     var target = accessory.Data.Objects.SearchById(@event.TargetId);
-
-       //     accessory.Log.Debug($"居合记录:{@event.SourceId} -> {@event.TargetId}");
-
-       //     // 确保来源和目标都存在，且目标不是玩家
-       //     if (source == null || target == null || !(source is IBattleChara) || !(target is IBattleChara))
-       //         return;
-
-       //     string playerName = source.Name.TextValue;
-       //     string bossName = target.Name.TextValue;
-
-       //     lock (_iaidoLock)
-       //     {
-       //         if (!_iaidoCounts.ContainsKey(bossName))
-       //         {
-       //             _iaidoCounts[bossName] = new Dictionary<string, int>();
-       //         }
-       //         if (!_iaidoCounts[bossName].ContainsKey(playerName))
-       //         {
-       //             _iaidoCounts[bossName][playerName] = 0;
-       //         }
-       //         _iaidoCounts[bossName][playerName]++;
-       //     }
-       // }
-       // [ScriptMethod(
-       //     name: "检查居合",
-       //     eventType: EventTypeEnum.Chat,
-       //     eventCondition: ["Type:regex:^(Echo|Party)$", "Message:居合检查"]
-       // )]
-       // public async void CheckIaido(Event @event, ScriptAccessory accessory)
-       // {
-       //     string channel = @event["Type"].ToLower();
-       //     if (!ReceivePartyCheckRequest && channel == "party") return;
-
-       //     Dictionary<string, List<KeyValuePair<string, int>>> sortedData;
-       //     lock (_iaidoLock)
-       //     {
-       //         if (_iaidoCounts.Count == 0)
-       //         {
-       //             accessory.Method.SendChat($"/{channel} 未记录到任何居合数据。");
-       //             return;
-       //         }
-
-       //         sortedData = new Dictionary<string, List<KeyValuePair<string, int>>>();
-       //         foreach (var bossEntry in _iaidoCounts)
-       //         {
-       //             sortedData[bossEntry.Key] = bossEntry.Value.OrderBy(kvp => kvp.Value).ToList();
-       //         }
-       //     }
-
-       //     foreach (var bossEntry in sortedData)
-       //     {
-       //         accessory.Method.SendChat($"/{channel} --- {bossEntry.Key} 居合统计 ---");
-       //         foreach (var data in bossEntry.Value)
-       //         {
-       //             await Task.Delay(100);
-       //             accessory.Method.SendChat($"/{channel} {data.Key}: {data.Value} 次");
-       //         }
-       //     }
-       // }
-       // [ScriptMethod(
-       //     name: "清理居合数据",
-       //     eventType: EventTypeEnum.Chat,
-       //     eventCondition: ["Type:regex:^(Echo|Party)$", "Message:居合清理"]
-       // )]
-       // public void ClearIaido(Event @event, ScriptAccessory accessory)
-       // {
-       //     string channel = @event["Type"].ToLower();
-       //     if (!ReceivePartyCheckRequest && channel == "party") return;
-
-       //     lock (_iaidoLock)
-       //     {
-       //         _iaidoCounts.Clear();
-       //     }
-       //     accessory.Method.SendChat($"/{channel} 居合数据已清理。");
-       // }
-       // [ScriptMethod(
-       //     name: "test顺序输出",
-       //     eventType: EventTypeEnum.Chat,
-       //     eventCondition: ["Type:regex:^(Echo|Party)$", "Message:测试"]
-       // )]
-       // public async void Test(Event @event, ScriptAccessory accessory)
-       // {
-       //     foreach (var value in Enumerable.Range(0,50))
-       //     {
-       //         await Task.Delay(100);
-       //         accessory.Method.SendChat($"/e {value} 次");
-       //     }
-       // }
         [ScriptMethod(
             name: "记录蓝药次数",
             eventType: EventTypeEnum.ActionEffect,
