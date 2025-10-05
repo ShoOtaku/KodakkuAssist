@@ -144,15 +144,15 @@ namespace KodakkuAssistXSZYYS
         // 定义两组火球的固定坐标
         private static readonly List<Vector3> LetterGroupFireballCoords = new()
         {
-            new Vector3(-817.32f, -876.00f, 350.00f),
-            new Vector3(-817.32f, -876.00f, 370.00f),
-            new Vector3(-800.00f, -876.00f, 380.00f)
+            new Vector3(-817.32f, -876.00f, 350.00f), 
+            new Vector3(-817.32f, -876.00f, 370.00f), 
+            new Vector3(-800.00f, -876.00f, 380.00f) 
         };
         private static readonly List<Vector3> NumberGroupFireballCoords = new()
         {
-            new Vector3(-782.68f, -876.00f, 350.00f),
-            new Vector3(-800.00f, -876.00f, 340.00f),
-            new Vector3(-782.68f, -876.00f, 370.00f)
+            new Vector3(-782.68f, -876.00f, 350.00f), 
+            new Vector3(-800.00f, -876.00f, 340.00f), 
+            new Vector3(-782.68f, -876.00f, 370.00f)  
         };
         //老三
         private static readonly Vector3 Boss3ArenaCenter = new(-337.00f, -840.00f, 157.00f); // Boss3场地中心位置
@@ -2744,7 +2744,7 @@ namespace KodakkuAssistXSZYYS
                     accessory.Log.Error("神圣机制：未能获取到武器类型。");
                     return;
             }
-            if (EnableTextBanner) accessory.Method.TextInfo(hintText, 5000);
+            if(EnableTextBanner) accessory.Method.TextInfo(hintText, 5000);
             if (EnableTTS)
             {
                 accessory.Method.EdgeTTS(hintText);
@@ -3057,13 +3057,13 @@ namespace KodakkuAssistXSZYYS
 
                     var foodStatus = player.StatusList.FirstOrDefault(s => s.StatusId == 48);
 
-                    if (foodStatus != null && foodStatus.RemainingTime <= FoodRemainingTimeThreshold * 60)
-                    {
-                        foodStatusData.Add(new Tuple<string, string, string, string>(playerName, classJob, supportJob, $"食物剩余时间不足{Math.Ceiling(foodStatus.RemainingTime / 60)}分钟"));
-                    }
-                    else if (foodStatus == null)
+                    if(foodStatus == null)
                     {
                         foodStatusData.Add(new Tuple<string, string, string, string>(playerName, classJob, supportJob, "未进食"));
+                    }
+                    else if(foodStatus.RemainingTime <= FoodRemainingTimeThreshold * 60)
+                    {
+                        foodStatusData.Add(new Tuple<string, string, string, string>(playerName, classJob, supportJob, $"食物剩余时间不足{Math.Ceiling(foodStatus.RemainingTime / 60)}分钟"));
                     }
                 }
             }
@@ -3379,7 +3379,7 @@ namespace KodakkuAssistXSZYYS
         )]
         public void CheckTreasureChest(Event @event, ScriptAccessory accessory)
         {
-            if (Enable_Developer_Mode) accessory.Log.Debug("找到箱子");
+            if(Enable_Developer_Mode) accessory.Log.Debug("找到箱子");
             //var chestid = @event.SourceId;
             var dp = accessory.Data.GetDefaultDrawProperties();
             dp.Name = "Chest";
