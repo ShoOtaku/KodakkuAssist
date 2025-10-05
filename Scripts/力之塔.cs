@@ -575,11 +575,11 @@ namespace KodakkuAssistXSZYYS
         }
 
         [ScriptMethod(
-            name: "分摊点名（北侧）",
+            name: "分摊点名（南侧）",
             eventType: EventTypeEnum.TargetIcon,
             eventCondition: ["Id:023E"]
         )]
-        public void OnNorthStack(Event @event, ScriptAccessory accessory)
+        public void OnSouthStack(Event @event, ScriptAccessory accessory)
         {
             if (PoliceMode)
             {
@@ -591,7 +591,7 @@ namespace KodakkuAssistXSZYYS
             }
             if (@event.TargetId != accessory.Data.Me) return;
             var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = "North_Stack";
+            dp.Name = "South_Stack";
             dp.Position = Boss1ArenaCenter;
             dp.Rotation = MathF.PI;
             dp.Scale = new Vector2(30, 33);
@@ -605,11 +605,11 @@ namespace KodakkuAssistXSZYYS
         }
 
         [ScriptMethod(
-            name: "分摊点名（南侧）",
+            name: "分摊点名（北侧）",
             eventType: EventTypeEnum.TargetIcon,
             eventCondition: ["Id:023F"]
         )]
-        public void OnSouthStack(Event @event, ScriptAccessory accessory)
+        public void OnNorthStack(Event @event, ScriptAccessory accessory)
         {
             if (PoliceMode)
             {
@@ -621,7 +621,7 @@ namespace KodakkuAssistXSZYYS
             }
             if (@event.TargetId != accessory.Data.Me) return;
             var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = "South_Stack";
+            dp.Name = "North_Stack";
             dp.Position = Boss1ArenaCenter;
             dp.Rotation = 0;
             dp.Scale = new Vector2(30, 33);
