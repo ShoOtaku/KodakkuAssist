@@ -51,9 +51,9 @@ namespace KodakkuAssistXSZYYS
     // 圣枪专用：分组覆盖（None=不变；左上=A；右上=C；下=B）
     public enum LanceGuideOverride
     {
-        None, 
-        左上, 
-        右上, 
+        None,
+        左上,
+        右上,
         下
     }
 
@@ -246,13 +246,13 @@ namespace KodakkuAssistXSZYYS
         private HolyWeaponType _holyWeaponType = HolyWeaponType.None;
         // 用于记录已检查过猎物点名的玩家
         private readonly HashSet<ulong> _checkedPreyPlayers = new();
-        private readonly object _preyCheckLock = new(); 
+        private readonly object _preyCheckLock = new();
         private readonly HashSet<ulong> _sacredBowPreyRecordedPlayers = new();
         private readonly object _sacredBowPreyLock = new();
         // 用于记录枪分摊玩家及其debuff持续时间的字典
         private readonly Dictionary<int, List<(ulong PlayerId, float Duration)>> _lanceShareAssignments = new();
         private readonly object _lanceShareLock = new();
-        
+
         //辅助职业字典
         private static readonly Dictionary<uint, string> _supportJobStatus = new()
         {
@@ -273,7 +273,7 @@ namespace KodakkuAssistXSZYYS
         // 获取玩家的辅助职业
         private string GetSupportJob(IPlayerCharacter player)
         {
-            if (player == null) return "无";
+            if(player == null) return "无";
             var status = player.StatusList.FirstOrDefault(s => _supportJobStatus.ContainsKey(s.StatusId));
             return status != null ? _supportJobStatus[status.StatusId] : "无";
         }
@@ -286,8 +286,8 @@ namespace KodakkuAssistXSZYYS
         // 用于记录蓝药次数的字典和锁
         private readonly Dictionary<string, Dictionary<string, int>> _bluePotionCounts = new();
         private readonly object _bluePotionLock = new();
-        
-        
+
+
         public void Init(ScriptAccessory accessory)
         {
             accessory.Log.Debug("力之塔0.0.36脚本已加载。");
@@ -370,7 +370,7 @@ namespace KodakkuAssistXSZYYS
             var dp = accessory.Data.GetDefaultDrawProperties();
             dp.Name = "Landing_Danger_Zone";
             dp.Owner = @event.SourceId;
-            switch (ActionId)
+            switch(ActionId)
             {
                 case 41812: //降落
                     dp.Scale = new Vector2(30, 6);
@@ -402,7 +402,7 @@ namespace KodakkuAssistXSZYYS
         )]
         public void OnLandingTTS(Event @event, ScriptAccessory accessory)
         {
-            if (EnableTTS)
+            if(EnableTTS)
             {
                 accessory.Method.EdgeTTS("钢铁");
             }
@@ -416,7 +416,7 @@ namespace KodakkuAssistXSZYYS
         )]
         public void OnLandingKnockbackTTS(Event @event, ScriptAccessory accessory)
         {
-            if (EnableTTS)
+            if(EnableTTS)
             {
                 accessory.Method.EdgeTTS("击退");
             }
@@ -449,10 +449,10 @@ namespace KodakkuAssistXSZYYS
             Vector3 targetPosition = new Vector3(); // Default value
 
             // 根据用户设置选择目标坐标
-            switch (SelectedStrategy)
+            switch(SelectedStrategy)
             {
                 case StrategySelection.ABC_123:
-                    switch (MyTeam)
+                    switch(MyTeam)
                     {
                         case TeamSelection.A: targetPosition = Pos_A; break;
                         case TeamSelection.B: targetPosition = Pos_B; break;
@@ -463,7 +463,7 @@ namespace KodakkuAssistXSZYYS
                     }
                     break;
                 case StrategySelection.Pos_152463:
-                    switch (MyPosition)
+                    switch(MyPosition)
                     {
                         case PositionSelection.Pos2: targetPosition = Pos_A; break;
                         case PositionSelection.Pos5: targetPosition = Pos_B; break;
@@ -476,7 +476,7 @@ namespace KodakkuAssistXSZYYS
                 case StrategySelection.LemonCookie:
                     // 柠檬烧饼分组攻略
                     // 152463组号到柠檬烧饼组号的映射：1->3, 2->1, 3->6, 4->4, 5->2, 6->5
-                    switch (MyLemonCookiePosition) // 使用152463的位置选择器来表示柠檬烧饼的组号
+                    switch(MyLemonCookiePosition) // 使用152463的位置选择器来表示柠檬烧饼的组号
                     {
                         case PositionSelection.Pos1: // 柠檬烧饼1组 -> 对应152463的2组位置
                             targetPosition = Pos_A; // 152463的2组对应Pos_A
@@ -516,9 +516,9 @@ namespace KodakkuAssistXSZYYS
             dp2.DestoryAt = 15000;
             dp2.Position = targetPosition;
             accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp);
-            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp2 );
+            accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp2);
 
-            if (Enable_Developer_Mode)
+            if(Enable_Developer_Mode)
             {
                 accessory.Log.Debug($"为队伍 {MyTeam} 绘制站位指引，指向坐标 {targetPosition}");
             }
@@ -562,7 +562,7 @@ namespace KodakkuAssistXSZYYS
             dp2.Rotation = MathF.PI / 2f;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp1);
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
-            if (_turnLeftRightCount == 2 || _turnLeftRightCount == 4)
+            if(_turnLeftRightCount == 2 || _turnLeftRightCount == 4)
             {
                 var dpNorth = accessory.Data.GetDefaultDrawProperties();
                 dpNorth.Name = $"TurnLeftRight_North_Danger_Zone_{_turnLeftRightCount}";
@@ -573,7 +573,7 @@ namespace KodakkuAssistXSZYYS
                 dpNorth.DestoryAt = 8800;
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dpNorth);
             }
-            else if (_turnLeftRightCount == 6)
+            else if(_turnLeftRightCount == 6)
             {
                 var dpSouth = accessory.Data.GetDefaultDrawProperties();
                 dpSouth.Name = "TurnLeftRight_South_Danger_Zone";
@@ -593,15 +593,15 @@ namespace KodakkuAssistXSZYYS
         )]
         public void OnNorthStack(Event @event, ScriptAccessory accessory)
         {
-            if (PoliceMode)
+            if(PoliceMode)
             {
                 var target = accessory.Data.Objects.SearchById(@event.TargetId);
-                if (target != null)
+                if(target != null)
                 {
                     accessory.Method.SendChat($"/e 分摊（南侧）点名: {target.Name}");
                 }
             }
-            if (@event.TargetId != accessory.Data.Me) return;
+            if(@event.TargetId != accessory.Data.Me) return;
             var dp = accessory.Data.GetDefaultDrawProperties();
             dp.Name = "North_Stack";
             dp.Position = Boss1ArenaCenter;
@@ -610,7 +610,7 @@ namespace KodakkuAssistXSZYYS
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 12000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
-            if (EnableTTS)
+            if(EnableTTS)
             {
                 accessory.Method.EdgeTTS("分摊去南侧");
             }
@@ -623,15 +623,15 @@ namespace KodakkuAssistXSZYYS
         )]
         public void OnSouthStack(Event @event, ScriptAccessory accessory)
         {
-            if (PoliceMode)
+            if(PoliceMode)
             {
                 var target = accessory.Data.Objects.SearchById(@event.TargetId);
-                if (target != null)
+                if(target != null)
                 {
                     accessory.Method.SendChat($"/e 分摊（北侧）点名: {target.Name}");
                 }
             }
-            if (@event.TargetId != accessory.Data.Me) return;
+            if(@event.TargetId != accessory.Data.Me) return;
             var dp = accessory.Data.GetDefaultDrawProperties();
             dp.Name = "South_Stack";
             dp.Position = Boss1ArenaCenter;
@@ -640,7 +640,7 @@ namespace KodakkuAssistXSZYYS
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 12000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
-            if (EnableTTS)
+            if(EnableTTS)
             {
                 accessory.Method.EdgeTTS("分摊去北侧");
             }
@@ -652,21 +652,21 @@ namespace KodakkuAssistXSZYYS
         )]
         public void OnCometeorStatusAdd(Event @event, ScriptAccessory accessory)
         {
-            if (PoliceMode)
+            if(PoliceMode)
             {
                 var target = accessory.Data.Objects.SearchById(@event.TargetId);
-                if (target != null)
+                if(target != null)
                 {
                     accessory.Method.SendChat($"/e 陨石点名: {target.Name}");
                 }
             }
-            if (@event.TargetId != accessory.Data.Me) return;
+            if(@event.TargetId != accessory.Data.Me) return;
             _hasCometeorStatus = true;
-            if (EnableTTS)
+            if(EnableTTS)
             {
                 accessory.Method.EdgeTTS("陨石点名");
             }
-            if (Enable_Developer_Mode) accessory.Log.Debug("陨石机制：玩家获得状态。");
+            if(Enable_Developer_Mode) accessory.Log.Debug("陨石机制：玩家获得状态。");
             TryDrawCometeorGuide(accessory);
         }
         [ScriptMethod(
@@ -677,10 +677,10 @@ namespace KodakkuAssistXSZYYS
         )]
         public void OnCometeorStatusRemove(Event @event, ScriptAccessory accessory)
         {
-            if (@event.TargetId != accessory.Data.Me) return;
+            if(@event.TargetId != accessory.Data.Me) return;
             _hasCometeorStatus = false;
             accessory.Method.RemoveDraw("Cometeor_Guide");
-            if (Enable_Developer_Mode) accessory.Log.Debug("陨石机制：玩家状态消失，移除指路。");
+            if(Enable_Developer_Mode) accessory.Log.Debug("陨石机制：玩家状态消失，移除指路。");
         }
 
         [ScriptMethod(
@@ -691,15 +691,15 @@ namespace KodakkuAssistXSZYYS
         public void OnCometeorTargetSpawn(Event @event, ScriptAccessory accessory)
         {
             _cometeorTargetId = @event.SourceId;
-            if (Enable_Developer_Mode) accessory.Log.Debug($"陨石机制：目标单位(PortentousCometeor)出现，ID: {@event.SourceId}。");
+            if(Enable_Developer_Mode) accessory.Log.Debug($"陨石机制：目标单位(PortentousCometeor)出现，ID: {@event.SourceId}。");
             TryDrawCometeorGuide(accessory);
         }
         private void TryDrawCometeorGuide(ScriptAccessory accessory)
         {
             // 只有当玩家有状态且目标存在时，才绘制
-            if (_hasCometeorStatus && _cometeorTargetId != 0)
+            if(_hasCometeorStatus && _cometeorTargetId != 0)
             {
-                if (Enable_Developer_Mode) accessory.Log.Debug("陨石机制：条件满足，开始绘制指路。");
+                if(Enable_Developer_Mode) accessory.Log.Debug("陨石机制：条件满足，开始绘制指路。");
 
                 var dp = accessory.Data.GetDefaultDrawProperties();
                 dp.Name = "Cometeor_Guide";
@@ -736,10 +736,10 @@ namespace KodakkuAssistXSZYYS
             var letterGroupPos = new Vector3(700.24f, -481.00f, 360.46f);
             var numberGroupPos = new Vector3(700.02f, -481.00f, 398.08f);
 
-            switch (SelectedStrategy)
+            switch(SelectedStrategy)
             {
                 case StrategySelection.ABC_123:
-                    if (MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C)
+                    if(MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C)
                     {
                         targetPosition = letterGroupPos;
                     }
@@ -749,7 +749,7 @@ namespace KodakkuAssistXSZYYS
                     }
                     break;
                 case StrategySelection.Pos_152463:
-                    switch (MyPosition)
+                    switch(MyPosition)
                     {
                         case PositionSelection.Pos1:
                         case PositionSelection.Pos5:
@@ -764,7 +764,7 @@ namespace KodakkuAssistXSZYYS
                     }
                     break;
                 case StrategySelection.LemonCookie:
-                    switch (MyLemonCookiePosition)
+                    switch(MyLemonCookiePosition)
                     {
                         case PositionSelection.Pos1:
                         case PositionSelection.Pos2:
@@ -791,7 +791,7 @@ namespace KodakkuAssistXSZYYS
             dp.DestoryAt = 10000;
             accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp);
 
-            if (Enable_Developer_Mode)
+            if(Enable_Developer_Mode)
             {
                 accessory.Log.Debug($"为队伍 {MyTeam} 绘制召唤集合点，指向 {targetPosition}");
             }
@@ -806,11 +806,11 @@ namespace KodakkuAssistXSZYYS
         public void HalfArenaRecord(Event @event, ScriptAccessory accessory)
         {
             var caster = accessory.Data.Objects.SearchById(@event.SourceId);
-            if (caster == null) return;
+            if(caster == null) return;
 
             _isCasterInUpperHalf = caster.Position.Z > ArenaCenterZ;
 
-            if (Enable_Developer_Mode)
+            if(Enable_Developer_Mode)
             {
                 accessory.Log.Debug($"半场记录: 施法者位于 {(_isCasterInUpperHalf.Value ? "上半场" : "下半场")}");
             }
@@ -823,22 +823,22 @@ namespace KodakkuAssistXSZYYS
         )]
         public void FloatingTowerGuide(Event @event, ScriptAccessory accessory)
         {
-            if (_isCasterInUpperHalf == null)
+            if(_isCasterInUpperHalf == null)
             {
-                if (Enable_Developer_Mode) accessory.Log.Error("浮空塔指路: 未能获取到之前的半场信息。");
+                if(Enable_Developer_Mode) accessory.Log.Error("浮空塔指路: 未能获取到之前的半场信息。");
                 return;
             }
 
             Vector3 targetPosition = new Vector3();
             bool shouldDraw = false;
 
-            switch (SelectedStrategy)
+            switch(SelectedStrategy)
             {
                 case StrategySelection.ABC_123:
-                    if (MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C)
+                    if(MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C)
                     {
                         shouldDraw = true;
-                        switch (MyTeam)
+                        switch(MyTeam)
                         {
                             case TeamSelection.A: targetPosition = _isCasterInUpperHalf.Value ? Pos_One : Pos_A; break;
                             case TeamSelection.B: targetPosition = _isCasterInUpperHalf.Value ? Pos_Two : Pos_B; break;
@@ -848,7 +848,7 @@ namespace KodakkuAssistXSZYYS
                     break;
 
                 case StrategySelection.Pos_152463:
-                    switch (MyPosition)
+                    switch(MyPosition)
                     {
                         case PositionSelection.Pos2: // Corresponds to A
                             shouldDraw = true;
@@ -865,7 +865,7 @@ namespace KodakkuAssistXSZYYS
                     }
                     break;
                 case StrategySelection.LemonCookie:
-                    switch (MyLemonCookiePosition)
+                    switch(MyLemonCookiePosition)
                     {
                         case PositionSelection.Pos1: // Corresponds to A
                             shouldDraw = true;
@@ -883,7 +883,7 @@ namespace KodakkuAssistXSZYYS
                     break;
             }
 
-            if (shouldDraw)
+            if(shouldDraw)
             {
                 var dpGuide = accessory.Data.GetDefaultDrawProperties();
                 dpGuide.Name = $"Floating_Tower_Guide_Arrow";
@@ -915,19 +915,19 @@ namespace KodakkuAssistXSZYYS
         public void GroundTowerGuide(Event @event, ScriptAccessory accessory)
         {
             var caster = accessory.Data.Objects.SearchById(@event.SourceId);
-            if (caster == null) return;
+            if(caster == null) return;
 
             bool isCasterInUpperHalf = caster.Position.Z > ArenaCenterZ;
             Vector3 targetPosition = new Vector3();
             bool shouldDraw = false;
 
-            switch (SelectedStrategy)
+            switch(SelectedStrategy)
             {
                 case StrategySelection.ABC_123:
-                    if (MyTeam == TeamSelection.One || MyTeam == TeamSelection.Two || MyTeam == TeamSelection.Three)
+                    if(MyTeam == TeamSelection.One || MyTeam == TeamSelection.Two || MyTeam == TeamSelection.Three)
                     {
                         shouldDraw = true;
-                        switch (MyTeam)
+                        switch(MyTeam)
                         {
                             case TeamSelection.One: targetPosition = isCasterInUpperHalf ? Pos_One : Pos_A; break;
                             case TeamSelection.Two: targetPosition = isCasterInUpperHalf ? Pos_Two : Pos_B; break;
@@ -936,10 +936,10 @@ namespace KodakkuAssistXSZYYS
                     }
                     break;
                 case StrategySelection.Pos_152463:
-                    if (MyPosition == PositionSelection.Pos3 || MyPosition == PositionSelection.Pos4 || MyPosition == PositionSelection.Pos6)
+                    if(MyPosition == PositionSelection.Pos3 || MyPosition == PositionSelection.Pos4 || MyPosition == PositionSelection.Pos6)
                     {
                         shouldDraw = true;
-                        switch (MyPosition)
+                        switch(MyPosition)
                         {
                             case PositionSelection.Pos4: targetPosition = isCasterInUpperHalf ? Pos_One : Pos_A; break;
                             case PositionSelection.Pos6: targetPosition = isCasterInUpperHalf ? Pos_Two : Pos_B; break;
@@ -948,12 +948,12 @@ namespace KodakkuAssistXSZYYS
                     }
                     break;
                 case StrategySelection.LemonCookie:
-                    if (MyLemonCookiePosition == PositionSelection.Pos4 ||
+                    if(MyLemonCookiePosition == PositionSelection.Pos4 ||
                         MyLemonCookiePosition == PositionSelection.Pos5 ||
                         MyLemonCookiePosition == PositionSelection.Pos6)
                     {
                         shouldDraw = true;
-                        switch (MyLemonCookiePosition)
+                        switch(MyLemonCookiePosition)
                         {
                             case PositionSelection.Pos4: targetPosition = isCasterInUpperHalf ? Pos_One : Pos_A; break;
                             case PositionSelection.Pos5: targetPosition = isCasterInUpperHalf ? Pos_Two : Pos_B; break;
@@ -963,7 +963,7 @@ namespace KodakkuAssistXSZYYS
                     break;
             }
 
-            if (shouldDraw)
+            if(shouldDraw)
             {
                 var dpGuide = accessory.Data.GetDefaultDrawProperties();
                 dpGuide.Name = $"Ground_Tower_Guide_Arrow";
@@ -992,32 +992,32 @@ namespace KodakkuAssistXSZYYS
         public void AbcTeamSafeZone(Event @event, ScriptAccessory accessory)
         {
             bool shouldDraw = false;
-            switch (SelectedStrategy)
+            switch(SelectedStrategy)
             {
                 case StrategySelection.ABC_123:
-                    if (MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C)
+                    if(MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C)
                     {
                         shouldDraw = true;
                     }
                     break;
                 case StrategySelection.Pos_152463:
-                    if (MyPosition == PositionSelection.Pos1 || MyPosition == PositionSelection.Pos2 || MyPosition == PositionSelection.Pos5)
+                    if(MyPosition == PositionSelection.Pos1 || MyPosition == PositionSelection.Pos2 || MyPosition == PositionSelection.Pos5)
                     {
                         shouldDraw = true;
                     }
                     break;
                 case StrategySelection.LemonCookie:
-                    if (MyLemonCookiePosition == PositionSelection.Pos1 || MyLemonCookiePosition == PositionSelection.Pos2 || MyLemonCookiePosition == PositionSelection.Pos3)
+                    if(MyLemonCookiePosition == PositionSelection.Pos1 || MyLemonCookiePosition == PositionSelection.Pos2 || MyLemonCookiePosition == PositionSelection.Pos3)
                     {
                         shouldDraw = true;
                     }
                     break;
             }
 
-            if (!shouldDraw) return;
+            if(!shouldDraw) return;
 
             var caster = accessory.Data.Objects.SearchById(@event.SourceId);
-            if (caster == null) return;
+            if(caster == null) return;
 
             var dp = accessory.Data.GetDefaultDrawProperties();
             dp.Name = "Abc_Safe_Zone";
@@ -1028,7 +1028,7 @@ namespace KodakkuAssistXSZYYS
 
             accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Circle, dp);
 
-            if (Enable_Developer_Mode)
+            if(Enable_Developer_Mode)
             {
                 accessory.Log.Debug("为浮空塔组绘制安全区。");
             }
@@ -1103,13 +1103,13 @@ namespace KodakkuAssistXSZYYS
         public void PrimordialChaosTelegraph(Event @event, ScriptAccessory accessory)
         {
             // 使用锁来确保线程安全
-            lock (_iceFireLock)
+            lock(_iceFireLock)
             {
                 bool isBlue = @event.ActionId == 42464;
                 var position = @event.EffectPosition;
 
                 // 根据颜色将位置存入对应的列表
-                if (isBlue)
+                if(isBlue)
                 {
                     _blueCircles.Add(position);
                 }
@@ -1126,7 +1126,7 @@ namespace KodakkuAssistXSZYYS
         private void ProcessAoePairs(ScriptAccessory accessory)
         {
             // 只要两个列表都有圈，就说明可以凑成一对
-            while (_blueCircles.Count > 0 && _redCircles.Count > 0)
+            while(_blueCircles.Count > 0 && _redCircles.Count > 0)
             {
                 // 取出各自列表中的第一个圈
                 var bluePos = _blueCircles[0];
@@ -1140,7 +1140,7 @@ namespace KodakkuAssistXSZYYS
                 int triggerTime = _pairsProcessed * 2500;
                 // 计算绘图需要延迟的时间
                 int delay = (explosionTime - displayDuration) - triggerTime;
-                if (delay < 0) delay = 0; // 确保延迟不是负数
+                if(delay < 0) delay = 0; // 确保延迟不是负数
                 var dpBlue = accessory.Data.GetDefaultDrawProperties();
                 dpBlue.Name = $"PrimordialChaos_Blue_{_pairsProcessed}";
                 dpBlue.Position = bluePos;
@@ -1176,7 +1176,7 @@ namespace KodakkuAssistXSZYYS
         )]
         public void SnowballRush(Event @event, ScriptAccessory accessory)
         {
-            lock (_snowballLock)
+            lock(_snowballLock)
             {
                 var sourcePos = @event.SourcePosition;
                 var nextPos = @event.EffectPosition;
@@ -1185,9 +1185,9 @@ namespace KodakkuAssistXSZYYS
                 int currentGroupRushCount = 0;
 
                 // 第一次（前两个）读条，用于分组
-                if (_snowballRushCastCount < 2)
+                if(_snowballRushCastCount < 2)
                 {
-                    if (Vector3.DistanceSquared(sourcePos, InitialPosLetterGroup) < Vector3.DistanceSquared(sourcePos, InitialPosNumberGroup))
+                    if(Vector3.DistanceSquared(sourcePos, InitialPosLetterGroup) < Vector3.DistanceSquared(sourcePos, InitialPosNumberGroup))
                     {
                         isLetterGroup = true;
                         _letterGroupNextPos = nextPos;
@@ -1205,14 +1205,14 @@ namespace KodakkuAssistXSZYYS
                 // 后续读条，用于追踪路径
                 else
                 {
-                    if (_letterGroupNextPos.HasValue && Vector3.DistanceSquared(sourcePos, _letterGroupNextPos.Value) < 1.0f)
+                    if(_letterGroupNextPos.HasValue && Vector3.DistanceSquared(sourcePos, _letterGroupNextPos.Value) < 1.0f)
                     {
                         isLetterGroup = true;
                         _letterGroupNextPos = nextPos;
                         currentGroupRushCount = _letterGroupRushCount++;
                         if(Enable_Developer_Mode) accessory.Log.Debug("雪球狂奔: 字母组路径更新。");
                     }
-                    else if (_numberGroupNextPos.HasValue && Vector3.DistanceSquared(sourcePos, _numberGroupNextPos.Value) < 1.0f)
+                    else if(_numberGroupNextPos.HasValue && Vector3.DistanceSquared(sourcePos, _numberGroupNextPos.Value) < 1.0f)
                     {
                         isLetterGroup = false;
                         _numberGroupNextPos = nextPos;
@@ -1230,12 +1230,12 @@ namespace KodakkuAssistXSZYYS
                 // --- 颜色判断逻辑 ---
                 bool isSafe = false;
                 // currentGroupRushCount 是从0开始计数的 (0=第1次, 1=第2次, 2=第3次)
-                switch (SelectedStrategy)
+                switch(SelectedStrategy)
                 {
                     case StrategySelection.ABC_123:
-                        if (isLetterGroup)
+                        if(isLetterGroup)
                         {
-                            if ((MyTeam == TeamSelection.A && currentGroupRushCount == 0) ||
+                            if((MyTeam == TeamSelection.A && currentGroupRushCount == 0) ||
                                 (MyTeam == TeamSelection.B && currentGroupRushCount == 1) ||
                                 (MyTeam == TeamSelection.C && currentGroupRushCount == 2))
                             {
@@ -1244,7 +1244,7 @@ namespace KodakkuAssistXSZYYS
                         }
                         else // isNumberGroup
                         {
-                            if ((MyTeam == TeamSelection.One && currentGroupRushCount == 0) ||
+                            if((MyTeam == TeamSelection.One && currentGroupRushCount == 0) ||
                                 (MyTeam == TeamSelection.Two && currentGroupRushCount == 1) ||
                                 (MyTeam == TeamSelection.Three && currentGroupRushCount == 2))
                             {
@@ -1254,9 +1254,9 @@ namespace KodakkuAssistXSZYYS
                         break;
 
                     case StrategySelection.Pos_152463:
-                        if (isLetterGroup) // 1组(A), 2组(B), 3组(C)
+                        if(isLetterGroup) // 1组(A), 2组(B), 3组(C)
                         {
-                            if ((MyPosition == PositionSelection.Pos1 && currentGroupRushCount == 0) || // 1组对应A组(第1次)
+                            if((MyPosition == PositionSelection.Pos1 && currentGroupRushCount == 0) || // 1组对应A组(第1次)
                                 (MyPosition == PositionSelection.Pos2 && currentGroupRushCount == 1) || // 2组对应B组(第2次)
                                 (MyPosition == PositionSelection.Pos3 && currentGroupRushCount == 2))   // 3组对应C组(第3次)
                             {
@@ -1265,7 +1265,7 @@ namespace KodakkuAssistXSZYYS
                         }
                         else // isNumberGroup 4组(One), 5组(Two), 6组(Three)
                         {
-                            if ((MyPosition == PositionSelection.Pos4 && currentGroupRushCount == 0) || // 4组对应One组(第1次)
+                            if((MyPosition == PositionSelection.Pos4 && currentGroupRushCount == 0) || // 4组对应One组(第1次)
                                 (MyPosition == PositionSelection.Pos5 && currentGroupRushCount == 1) || // 5组对应Two组(第2次)
                                 (MyPosition == PositionSelection.Pos6 && currentGroupRushCount == 2))   // 6组对应Three组(第3次)
                             {
@@ -1274,9 +1274,9 @@ namespace KodakkuAssistXSZYYS
                         }
                         break;
                     case StrategySelection.LemonCookie:
-                        if (isLetterGroup) // 1组(A), 2组(B), 3组(C)
+                        if(isLetterGroup) // 1组(A), 2组(B), 3组(C)
                         {
-                            if ((MyLemonCookiePosition == PositionSelection.Pos1 && currentGroupRushCount == 0) || // 1组对应A组(第1次)
+                            if((MyLemonCookiePosition == PositionSelection.Pos1 && currentGroupRushCount == 0) || // 1组对应A组(第1次)
                                 (MyLemonCookiePosition == PositionSelection.Pos2 && currentGroupRushCount == 1) || // 2组对应B组(第2次)
                                 (MyLemonCookiePosition == PositionSelection.Pos3 && currentGroupRushCount == 2))   // 3组对应C组(第3次)
                             {
@@ -1285,7 +1285,7 @@ namespace KodakkuAssistXSZYYS
                         }
                         else // isNumberGroup 4组(One), 5组(Two), 6组(Three)
                         {
-                            if ((MyLemonCookiePosition == PositionSelection.Pos4 && currentGroupRushCount == 0) || // 4组对应One组(第1次)
+                            if((MyLemonCookiePosition == PositionSelection.Pos4 && currentGroupRushCount == 0) || // 4组对应One组(第1次)
                                 (MyLemonCookiePosition == PositionSelection.Pos5 && currentGroupRushCount == 1) || // 5组对应Two组(第2次)
                                 (MyLemonCookiePosition == PositionSelection.Pos6 && currentGroupRushCount == 2))   // 6组对应Three组(第3次)
                             {
@@ -1319,15 +1319,15 @@ namespace KodakkuAssistXSZYYS
         )]
         public void OnGlacialImpactTether(Event @event, ScriptAccessory accessory)
         {
-            if (PoliceMode)
+            if(PoliceMode)
             {
                 var target = accessory.Data.Objects.SearchById(@event.TargetId);
-                if (target != null)
+                if(target != null)
                 {
                     accessory.Method.SendChat($"/e 雪球连线点名: {target.Name}");
                 }
             }
-            if (@event.TargetId == accessory.Data.Me)
+            if(@event.TargetId == accessory.Data.Me)
             {
                 _tetherSourceId = @event.SourceId;
                 if(Enable_Developer_Mode) accessory.Log.Debug($"凝冰冲击: 玩家被连线，来源ID: {_tetherSourceId}");
@@ -1353,10 +1353,10 @@ namespace KodakkuAssistXSZYYS
             Vector3? finalDropPos = null;
 
             // 优先处理连线情况
-            if (_tetherSourceId != 0)
+            if(_tetherSourceId != 0)
             {
                 var tetherSource = accessory.Data.Objects.SearchById(_tetherSourceId);
-                if (tetherSource != null)
+                if(tetherSource != null)
                 {
                     var direction = Vector3.Normalize(SnowballArenaCenter - tetherSource.Position);
                     safePosition = SnowballArenaCenter + direction * 5;
@@ -1369,7 +1369,7 @@ namespace KodakkuAssistXSZYYS
             }
             else // 如果没有被连线，则执行分组逻辑
             {
-                switch (SelectedStrategy)
+                switch(SelectedStrategy)
                 {
                     case StrategySelection.ABC_123:
                         bool isUserInLetterGroup = MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C;
@@ -1386,7 +1386,7 @@ namespace KodakkuAssistXSZYYS
                         break;
                 }
 
-                if (finalDropPos != null)
+                if(finalDropPos != null)
                 {
                     var direction = Vector3.Normalize(finalDropPos.Value - SnowballArenaCenter);
                     safePosition = SnowballArenaCenter - direction * 5;
@@ -1398,7 +1398,7 @@ namespace KodakkuAssistXSZYYS
             }
 
             // 如果成功计算出安全点，则绘制指路
-            if (safePosition.HasValue)
+            if(safePosition.HasValue)
             {
                 var dp = accessory.Data.GetDefaultDrawProperties();
                 dp.Name = "GlacialImpact_Guide";
@@ -1435,13 +1435,13 @@ namespace KodakkuAssistXSZYYS
         public void FireballPrePosition(Event @event, ScriptAccessory accessory)
         {
             // 使用锁来确保线程安全
-            lock (_fireballLock)
+            lock(_fireballLock)
             {
                 _fireballPositions.Clear();
                 var fireballs = accessory.Data.Objects.Where(o => o.DataId == 2014637).ToList();
-                if (!fireballs.Any()) return;
+                if(!fireballs.Any()) return;
 
-                foreach (var fireball in fireballs)
+                foreach(var fireball in fireballs)
                 {
                     _fireballPositions.Add(fireball.Position);
                 }
@@ -1461,7 +1461,7 @@ namespace KodakkuAssistXSZYYS
         public void RedrawFireballGuides(Event @event, ScriptAccessory accessory)
         {
             // 使用第一次事件中储存的位置信息进行重绘
-            if (!_fireballPositions.Any())
+            if(!_fireballPositions.Any())
             {
                 if(Enable_Developer_Mode) accessory.Log.Error("火球重绘: 找不到第一轮的火球坐标。");
                 return;
@@ -1471,7 +1471,7 @@ namespace KodakkuAssistXSZYYS
         private void ProcessFireballs(ScriptAccessory accessory)
         {
             bool isUserInLetterGroup = MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C;
-            switch (SelectedStrategy)
+            switch(SelectedStrategy)
             {
                 case StrategySelection.ABC_123:
                     isUserInLetterGroup = MyTeam == TeamSelection.A || MyTeam == TeamSelection.B || MyTeam == TeamSelection.C;
@@ -1484,12 +1484,12 @@ namespace KodakkuAssistXSZYYS
                     break;
             }
             int fireballIndex = 0;
-            foreach (var fireballPos in _fireballPositions)
+            foreach(var fireballPos in _fireballPositions)
             {
                 bool isLetterFireball = LetterGroupFireballCoords.Any(coord => Vector3.DistanceSquared(fireballPos, coord) < 1.0f);
                 bool isNumberFireball = NumberGroupFireballCoords.Any(coord => Vector3.DistanceSquared(fireballPos, coord) < 1.0f);
 
-                if ((isUserInLetterGroup && isLetterFireball) || (!isUserInLetterGroup && isNumberFireball))
+                if((isUserInLetterGroup && isLetterFireball) || (!isUserInLetterGroup && isNumberFireball))
                 {
                     DrawPrePositionGuides(accessory, fireballPos, fireballIndex);
                 }
@@ -1500,10 +1500,10 @@ namespace KodakkuAssistXSZYYS
         private void DrawPrePositionGuides(ScriptAccessory accessory, Vector3 fireballPos, int uniqueId)
         {
             var player = accessory.Data.MyObject;
-            if (player == null) return;
+            if(player == null) return;
             var directionToFireball = Vector3.Normalize(fireballPos - SnowballArenaCenter);
 
-            if (IsDps(player))
+            if(IsDps(player))
             {
                 var safePos = fireballPos + directionToFireball * 6;
                 var dp = accessory.Data.GetDefaultDrawProperties();
@@ -1523,7 +1523,7 @@ namespace KodakkuAssistXSZYYS
                 dp2.TargetPosition = safePos;
                 accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp2);
             }
-            else if (IsHealer(player))
+            else if(IsHealer(player))
             {
                 var perpendicularDir1 = new Vector3(-directionToFireball.Z, 0, directionToFireball.X);
                 var perpendicularDir2 = new Vector3(directionToFireball.Z, 0, -directionToFireball.X);
@@ -1557,7 +1557,7 @@ namespace KodakkuAssistXSZYYS
                 */
 
             }
-            else if (IsTank(player))
+            else if(IsTank(player))
             {
                 var directionToCenter = Vector3.Normalize(SnowballArenaCenter - fireballPos);
                 var rotation = MathF.Atan2(directionToCenter.X, directionToCenter.Z);
@@ -1589,7 +1589,7 @@ namespace KodakkuAssistXSZYYS
         )]
         public void GeothermalRupture(Event @event, ScriptAccessory accessory)
         {
-            if (_fireballPositions.Count == 0)
+            if(_fireballPositions.Count == 0)
             {
                 if(Enable_Developer_Mode) accessory.Log.Error("地热破裂: 未能获取到火球位置信息。");
                 return;
@@ -1598,7 +1598,7 @@ namespace KodakkuAssistXSZYYS
             int pathIndex = 0;
 
             // 为每个记录的DPS位置绘制路径
-            foreach (var fireballPos in _fireballPositions)
+            foreach(var fireballPos in _fireballPositions)
             {
                 var directionToFireball = Vector3.Normalize(fireballPos - SnowballArenaCenter);
                 var startPos = fireballPos + directionToFireball * 6;
@@ -1716,7 +1716,7 @@ namespace KodakkuAssistXSZYYS
             dp.ScaleMode = ScaleMode.ByTime;
             dp.DestoryAt = 8000;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Rect, dp);
-            if (EnableTTS)
+            if(EnableTTS)
             {
                 accessory.Method.EdgeTTS("俯冲");
             }
@@ -1732,11 +1732,11 @@ namespace KodakkuAssistXSZYYS
             var id = @event.SourceId;
             var dataId = uint.Parse(@event["DataId"]);
 
-            if (dataId == 2014546)
+            if(dataId == 2014546)
             {
                 _puddles[id] = PuddleType.Circle;
             }
-            else if (dataId == 2014547)
+            else if(dataId == 2014547)
             {
                 _puddles[id] = PuddleType.Cross;
             }
@@ -1762,14 +1762,14 @@ namespace KodakkuAssistXSZYYS
             var source = accessory.Data.Objects.SearchById(sourceId);
 
             // 检查单位是否存在，是否在场地内，以及是否是我们记录的水滩
-            if (source == null ||
+            if(source == null ||
                 Vector3.Distance(source.Position, Boss3ArenaCenter) > 30 ||
                 !_puddles.TryGetValue(sourceId, out var type))
             {
                 return;
             }
 
-            switch (type)
+            switch(type)
             {
                 case PuddleType.Circle:
                     var dpCircle = accessory.Data.GetDefaultDrawProperties();
@@ -1824,7 +1824,7 @@ namespace KodakkuAssistXSZYYS
             dp.Color = accessory.Data.DefaultSafeColor;
             dp.DestoryAt = 8000;
             accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp);
-            if (EnableTTS)
+            if(EnableTTS)
             {
                 accessory.Method.EdgeTTS("预站位");
             }
@@ -1837,10 +1837,10 @@ namespace KodakkuAssistXSZYYS
         public void OnIceTowerSpawn(Event @event, ScriptAccessory accessory)
         {
             var tower = accessory.Data.Objects.SearchById(@event.SourceId);
-            if (tower == null) return;
+            if(tower == null) return;
 
             List<Vector3> teamTowerCoords = new();
-            switch (SelectedStrategy)
+            switch(SelectedStrategy)
             {
                 case StrategySelection.ABC_123:
                     TowerPositions_ABC123.TryGetValue(MyTeam, out teamTowerCoords);
@@ -1853,12 +1853,12 @@ namespace KodakkuAssistXSZYYS
                     break;
             }
 
-            if (teamTowerCoords != null)
+            if(teamTowerCoords != null)
             {
                 // 检查出现的塔是否是自己队伍的塔
-                foreach (var coord in teamTowerCoords)
+                foreach(var coord in teamTowerCoords)
                 {
-                    if (Vector3.DistanceSquared(tower.Position, coord) < 1.0f)
+                    if(Vector3.DistanceSquared(tower.Position, coord) < 1.0f)
                     {
                         // 是自己的塔，进行绘制
                         var dpCircle = accessory.Data.GetDefaultDrawProperties();
@@ -1883,10 +1883,10 @@ namespace KodakkuAssistXSZYYS
         {
             var tower = accessory.Data.Objects.SearchById(@event.SourceId);
 
-            if (tower == null || tower.DataId != 2014548) return;
+            if(tower == null || tower.DataId != 2014548) return;
 
             List<Vector3> teamTowerCoords = null;
-            switch (SelectedStrategy)
+            switch(SelectedStrategy)
             {
                 case StrategySelection.ABC_123:
                     TowerPositions_ABC123.TryGetValue(MyTeam, out teamTowerCoords);
@@ -1899,11 +1899,11 @@ namespace KodakkuAssistXSZYYS
                     break;
             }
 
-            if (teamTowerCoords != null)
+            if(teamTowerCoords != null)
             {
-                foreach (var coord in teamTowerCoords)
+                foreach(var coord in teamTowerCoords)
                 {
-                    if (Vector3.DistanceSquared(tower.Position, coord) < 1.0f)
+                    if(Vector3.DistanceSquared(tower.Position, coord) < 1.0f)
                     {
                         var dpGuide = accessory.Data.GetDefaultDrawProperties();
                         dpGuide.Name = $"IceTower_Guide_{tower.EntityId}";
@@ -1927,69 +1927,69 @@ namespace KodakkuAssistXSZYYS
         public void OnGroupMarkerSpawn(Event @event, ScriptAccessory accessory)
         {
             var marker = accessory.Data.Objects.SearchById(@event.SourceId);
-            if (marker == null) return;
+            if(marker == null) return;
 
             TeamSelection targetGroup = MyTeam; // Default for ABC_123
             bool shouldDraw = false;
 
 
-        switch (SelectedStrategy)
-        {
-            case StrategySelection.ABC_123:
-                shouldDraw = true;
-                targetGroup = MyTeam;
-                break;
-                
-            case StrategySelection.Pos_152463:
-                shouldDraw = true;
-                switch (MyPosition)
-                {
-                    case PositionSelection.Pos1: targetGroup = TeamSelection.A; break;
-                    case PositionSelection.Pos5: targetGroup = TeamSelection.B; break;
-                    case PositionSelection.Pos2: targetGroup = TeamSelection.C; break;
-                    case PositionSelection.Pos3: targetGroup = TeamSelection.One; break;
-                    case PositionSelection.Pos6: targetGroup = TeamSelection.Two; break;
-                    case PositionSelection.Pos4: targetGroup = TeamSelection.Three; break;
-                }
-                break;
-                
-            case StrategySelection.LemonCookie:
-                shouldDraw = true;
-                // 柠檬松饼分组攻略
-                // 152463组号到柠檬松饼组号的映射：1->1, 2->3, 3->6, 4->4, 5->2, 6->5
-                // 这里需要反向映射：柠檬松饼组号 -> 对应的152463位置 -> 对应的TeamSelection
-                switch (MyLemonCookiePosition)
-                {
-                    case PositionSelection.Pos1: // 柠檬松饼1组 -> 152463的1组 -> TeamSelection.A
-                        targetGroup = TeamSelection.A; 
-                        break;
-                    case PositionSelection.Pos2: // 柠檬松饼2组 -> 152463的5组 -> TeamSelection.B  
-                        targetGroup = TeamSelection.B;
-                        break;
-                    case PositionSelection.Pos3: // 柠檬松饼3组 -> 152463的2组 -> TeamSelection.C
-                        targetGroup = TeamSelection.C;
-                        break;
-                    case PositionSelection.Pos4: // 柠檬松饼4组 -> 152463的4组 -> TeamSelection.Three
-                        targetGroup = TeamSelection.Three;
-                        break;
-                    case PositionSelection.Pos5: // 柠檬松饼5组 -> 152463的6组 -> TeamSelection.Two  
-                        targetGroup = TeamSelection.Two;
-                        break;
-                    case PositionSelection.Pos6: // 柠檬松饼6组 -> 152463的3组 -> TeamSelection.One
-                        targetGroup = TeamSelection.One;
-                        break;
-                }
-                break;
-        }
-
-
-            if (shouldDraw)
+            switch(SelectedStrategy)
             {
-                foreach (var groupEntry in GroupMarkerPositions)
-                {
-                    if (Vector3.DistanceSquared(marker.Position, groupEntry.Value) < 1.0f)
+                case StrategySelection.ABC_123:
+                    shouldDraw = true;
+                    targetGroup = MyTeam;
+                    break;
+
+                case StrategySelection.Pos_152463:
+                    shouldDraw = true;
+                    switch(MyPosition)
                     {
-                        if (groupEntry.Key == targetGroup)
+                        case PositionSelection.Pos1: targetGroup = TeamSelection.A; break;
+                        case PositionSelection.Pos5: targetGroup = TeamSelection.B; break;
+                        case PositionSelection.Pos2: targetGroup = TeamSelection.C; break;
+                        case PositionSelection.Pos3: targetGroup = TeamSelection.One; break;
+                        case PositionSelection.Pos6: targetGroup = TeamSelection.Two; break;
+                        case PositionSelection.Pos4: targetGroup = TeamSelection.Three; break;
+                    }
+                    break;
+
+                case StrategySelection.LemonCookie:
+                    shouldDraw = true;
+                    // 柠檬松饼分组攻略
+                    // 152463组号到柠檬松饼组号的映射：1->1, 2->3, 3->6, 4->4, 5->2, 6->5
+                    // 这里需要反向映射：柠檬松饼组号 -> 对应的152463位置 -> 对应的TeamSelection
+                    switch(MyLemonCookiePosition)
+                    {
+                        case PositionSelection.Pos1: // 柠檬松饼1组 -> 152463的1组 -> TeamSelection.A
+                            targetGroup = TeamSelection.A;
+                            break;
+                        case PositionSelection.Pos2: // 柠檬松饼2组 -> 152463的5组 -> TeamSelection.B  
+                            targetGroup = TeamSelection.B;
+                            break;
+                        case PositionSelection.Pos3: // 柠檬松饼3组 -> 152463的2组 -> TeamSelection.C
+                            targetGroup = TeamSelection.C;
+                            break;
+                        case PositionSelection.Pos4: // 柠檬松饼4组 -> 152463的4组 -> TeamSelection.Three
+                            targetGroup = TeamSelection.Three;
+                            break;
+                        case PositionSelection.Pos5: // 柠檬松饼5组 -> 152463的6组 -> TeamSelection.Two  
+                            targetGroup = TeamSelection.Two;
+                            break;
+                        case PositionSelection.Pos6: // 柠檬松饼6组 -> 152463的3组 -> TeamSelection.One
+                            targetGroup = TeamSelection.One;
+                            break;
+                    }
+                    break;
+            }
+
+
+            if(shouldDraw)
+            {
+                foreach(var groupEntry in GroupMarkerPositions)
+                {
+                    if(Vector3.DistanceSquared(marker.Position, groupEntry.Value) < 1.0f)
+                    {
+                        if(groupEntry.Key == targetGroup)
                         {
                             var dpCircle = accessory.Data.GetDefaultDrawProperties();
                             dpCircle.Name = $"GroupMarker_Circle_{marker.EntityId}";
@@ -2047,10 +2047,10 @@ namespace KodakkuAssistXSZYYS
         public void UnsealAlert(Event @event, ScriptAccessory accessory)
         {
             var ActionId = @event.ActionId;
-            if (ActionId == 41538) //枪
+            if(ActionId == 41538) //枪
             {
                 if(EnableTextBanner) accessory.Method.TextInfo("枪，远平A", 5000);
-                if (EnableTTS)
+                if(EnableTTS)
                 {
                     accessory.Method.EdgeTTS("远平A，3下");
                 }
@@ -2058,7 +2058,7 @@ namespace KodakkuAssistXSZYYS
             else
             {
                 if(EnableTextBanner) accessory.Method.TextInfo("斧，近平A", 5000);
-                if (EnableTTS)
+                if(EnableTTS)
                 {
                     accessory.Method.EdgeTTS("近平A，3下");
                 }
@@ -2072,7 +2072,7 @@ namespace KodakkuAssistXSZYYS
         public void OnForkedFuryAlert(Event @event, ScriptAccessory accessory)
         {
             if(EnableTextBanner) accessory.Method.TextInfo("远近死刑", 5000);
-            if (EnableTTS)
+            if(EnableTTS)
             {
                 accessory.Method.EdgeTTS("远近死刑，然后两下平A");
             }
@@ -2080,12 +2080,12 @@ namespace KodakkuAssistXSZYYS
         [ScriptMethod(
             name: "暗杀短剑",
             eventType: EventTypeEnum.StartCasting,
-            eventCondition: ["ActionId:41569"] 
+            eventCondition: ["ActionId:41569"]
         )]
         public void AssassinsDagger(Event @event, ScriptAccessory accessory)
         {
             var caster = accessory.Data.Objects.SearchById(@event.SourceId);
-            if (caster == null) return;
+            if(caster == null) return;
 
 
             var directionVector = @event.EffectPosition - caster.Position;
@@ -2093,7 +2093,7 @@ namespace KodakkuAssistXSZYYS
             var distance = directionVector.Length();
             var rotationOffset = -50 * MathF.PI / 180.0f;
 
-            for (int i = 0; i < 6; i++)
+            for(int i = 0; i < 6; i++)
             {
                 var currentAngle = initialAngle + i * rotationOffset;
                 var delay = 1100 + (long)(i * 3900);
@@ -2119,7 +2119,7 @@ namespace KodakkuAssistXSZYYS
         public void CriticalBlow(Event @event, ScriptAccessory accessory)
         {
             var caster = accessory.Data.Objects.SearchById(@event.SourceId);
-            if (caster == null) return;
+            if(caster == null) return;
 
             bool isLance = @event.ActionId == 41547; // 枪
 
@@ -2127,7 +2127,7 @@ namespace KodakkuAssistXSZYYS
             var squareColor = isLance ? accessory.Data.DefaultDangerColor : new Vector4(0f, 0.6f, 0f, 0.8f);
 
             // 绘制主AOE (月环或钢铁)
-            if (isLance)
+            if(isLance)
             {
                 var dpDonut = accessory.Data.GetDefaultDrawProperties();
                 dpDonut.Name = "CriticalLanceblow_Donut";
@@ -2140,21 +2140,21 @@ namespace KodakkuAssistXSZYYS
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dpDonut);
                 // 为枪击绘制指路
                 var player = accessory.Data.MyObject;
-                if (player != null)
+                if(player != null)
                 {
                     Vector3 closestPos = CriticalLanceSafePositions[0];
                     float minDistanceSq = Vector3.DistanceSquared(player.Position, closestPos);
-                    for (int i = 1; i < CriticalLanceSafePositions.Count; i++)
+                    for(int i = 1; i < CriticalLanceSafePositions.Count; i++)
                     {
                         float distSq = Vector3.DistanceSquared(player.Position, CriticalLanceSafePositions[i]);
-                        if (distSq < minDistanceSq)
+                        if(distSq < minDistanceSq)
                         {
                             minDistanceSq = distSq;
                             closestPos = CriticalLanceSafePositions[i];
                         }
                     }
                 }
-                if (EnableTTS)
+                if(EnableTTS)
                 {
                     accessory.Method.EdgeTTS("月环");
                 }
@@ -2170,27 +2170,27 @@ namespace KodakkuAssistXSZYYS
                 accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dpCircle);
                 // 为斧击绘制指路
                 var player = accessory.Data.MyObject;
-                if (player != null)
+                if(player != null)
                 {
                     Vector3 closestPos = CriticalAxeSafePositions[0];
                     float minDistanceSq = Vector3.DistanceSquared(player.Position, closestPos);
-                    for (int i = 1; i < CriticalAxeSafePositions.Count; i++)
+                    for(int i = 1; i < CriticalAxeSafePositions.Count; i++)
                     {
                         float distSq = Vector3.DistanceSquared(player.Position, CriticalAxeSafePositions[i]);
-                        if (distSq < minDistanceSq)
+                        if(distSq < minDistanceSq)
                         {
                             minDistanceSq = distSq;
                             closestPos = CriticalAxeSafePositions[i];
                         }
                     }
                 }
-                if (EnableTTS)
+                if(EnableTTS)
                 {
                     accessory.Method.EdgeTTS("钢铁");
                 }
             }
             // 绘制三个方形AOE
-            for (int i = 0; i < SquarePositions.Count; i++)
+            for(int i = 0; i < SquarePositions.Count; i++)
             {
                 var dpSquare = accessory.Data.GetDefaultDrawProperties();
                 dpSquare.Name = $"Square_AOE_{i}";
@@ -2247,34 +2247,34 @@ namespace KodakkuAssistXSZYYS
         )]
         public void GreatAxePrey(Event @event, ScriptAccessory accessory)
         {
-            if (PoliceMode)
+            if(PoliceMode)
             {
-                if (float.TryParse(@event["Duration"], out var duration1) && Math.Abs(duration1 - 9.0f) < 0.1f)
+                if(float.TryParse(@event["Duration"], out var duration1) && Math.Abs(duration1 - 9.0f) < 0.1f)
                 {
                     var target = accessory.Data.Objects.SearchById(@event.TargetId);
-                    if (target != null)
+                    if(target != null)
                     {
                         accessory.Method.SendChat($"/e 大圈（9秒）点名: {target.Name}");
                     }
                 }
             }
             // 确认是自己获得了这个状态
-            if (@event.TargetId != accessory.Data.Me) return;
+            if(@event.TargetId != accessory.Data.Me) return;
 
             // 检查buff持续时间是否为9秒
-            if (float.TryParse(@event["Duration"], out var duration) && Math.Abs(duration - 9.0f) < 0.1f)
+            if(float.TryParse(@event["Duration"], out var duration) && Math.Abs(duration - 9.0f) < 0.1f)
             {
                 var player = accessory.Data.MyObject;
-                if (player == null) return;
+                if(player == null) return;
 
                 // 找到最近的坐标点
                 Vector3 closestPos = GreataxePreyPositions[0];
                 float minDistanceSq = Vector3.DistanceSquared(player.Position, closestPos);
 
-                for (int i = 1; i < GreataxePreyPositions.Count; i++)
+                for(int i = 1; i < GreataxePreyPositions.Count; i++)
                 {
                     float distSq = Vector3.DistanceSquared(player.Position, GreataxePreyPositions[i]);
-                    if (distSq < minDistanceSq)
+                    if(distSq < minDistanceSq)
                     {
                         minDistanceSq = distSq;
                         closestPos = GreataxePreyPositions[i];
@@ -2300,35 +2300,35 @@ namespace KodakkuAssistXSZYYS
         )]
         public async void GreatAxePreyLong(Event @event, ScriptAccessory accessory)
         {
-            if (PoliceMode)
+            if(PoliceMode)
             {
                 CheckPreyPosition(accessory, @event.TargetId);
-                if (float.TryParse(@event["Duration"], out var duration1) && Math.Abs(duration1 - 21.0f) < 0.1f)
+                if(float.TryParse(@event["Duration"], out var duration1) && Math.Abs(duration1 - 21.0f) < 0.1f)
                 {
                     var target = accessory.Data.Objects.SearchById(@event.TargetId);
-                    if (target != null)
+                    if(target != null)
                     {
                         accessory.Method.SendChat($"/e 大圈（21秒）点名: {target.Name}");
                     }
                 }
             }
             // 确认是自己获得了这个状态
-            if (@event.TargetId != accessory.Data.Me) return;
+            if(@event.TargetId != accessory.Data.Me) return;
 
             // 检查buff持续时间是否为9秒
-            if (float.TryParse(@event["Duration"], out var duration) && Math.Abs(duration - 21.0f) < 0.1f)
+            if(float.TryParse(@event["Duration"], out var duration) && Math.Abs(duration - 21.0f) < 0.1f)
             {
                 var player = accessory.Data.MyObject;
-                if (player == null) return;
+                if(player == null) return;
                 await Task.Delay(15000);
                 // 找到最近的坐标点
                 Vector3 closestPos = GreataxePreyPositions[0];
                 float minDistanceSq = Vector3.DistanceSquared(player.Position, closestPos);
 
-                for (int i = 1; i < GreataxePreyPositions.Count; i++)
+                for(int i = 1; i < GreataxePreyPositions.Count; i++)
                 {
                     float distSq = Vector3.DistanceSquared(player.Position, GreataxePreyPositions[i]);
-                    if (distSq < minDistanceSq)
+                    if(distSq < minDistanceSq)
                     {
                         minDistanceSq = distSq;
                         closestPos = GreataxePreyPositions[i];
@@ -2354,47 +2354,47 @@ namespace KodakkuAssistXSZYYS
         )]
         public void LesserAxePrey(Event @event, ScriptAccessory accessory)
         {
-            if (PoliceMode)
+            if(PoliceMode)
             {
                 CheckPreyPosition(accessory, @event.TargetId);
-                if (float.TryParse(@event["Duration"], out var duration1) && Math.Abs(duration1 - 13.0f) < 0.1f)
+                if(float.TryParse(@event["Duration"], out var duration1) && Math.Abs(duration1 - 13.0f) < 0.1f)
                 {
                     var target = accessory.Data.Objects.SearchById(@event.TargetId);
-                    if (target != null)
+                    if(target != null)
                     {
                         accessory.Method.SendChat($"/e 小圈（13秒）点名: {target.Name}");
                     }
                 }
-                else if (Math.Abs(duration1 - 21.0f) < 0.1f)
+                else if(Math.Abs(duration1 - 21.0f) < 0.1f)
                 {
                     var target = accessory.Data.Objects.SearchById(@event.TargetId);
-                    if (target != null)
+                    if(target != null)
                     {
                         accessory.Method.SendChat($"/e 小圈（21秒）点名: {target.Name}");
                     }
                 }
             }
             // 确认是自己获得了这个状态
-            if (@event.TargetId != accessory.Data.Me) return;
+            if(@event.TargetId != accessory.Data.Me) return;
             var player = accessory.Data.MyObject;
-            if (float.TryParse(@event["Duration"], out var duration))
+            if(float.TryParse(@event["Duration"], out var duration))
             {
                 // 检查buff持续时间是否为13秒
-                if (Math.Abs(duration - 13.0f) < 0.1f)
+                if(Math.Abs(duration - 13.0f) < 0.1f)
                 {
                     // 找到最近的坐标点
                     Vector3 closestPos = SquarePositions[0];
                     float minDistanceSq = Vector3.DistanceSquared(player.Position, closestPos);
 
-                    for (int i = 1; i < SquarePositions.Count; i++)
+                    for(int i = 1; i < SquarePositions.Count; i++)
                     {
                         float distSq = Vector3.DistanceSquared(player.Position, SquarePositions[i]);
-                        if (distSq < minDistanceSq)
+                        if(distSq < minDistanceSq)
                         {
                             minDistanceSq = distSq;
                             closestPos = SquarePositions[i];
                         }
-                    }                    
+                    }
                     // 绘制指路
                     var dp = accessory.Data.GetDefaultDrawProperties();
                     dp.Name = "LesseraxePrey_Guide";
@@ -2404,8 +2404,8 @@ namespace KodakkuAssistXSZYYS
                     dp.ScaleMode |= ScaleMode.YByDistance;
                     dp.Color = accessory.Data.DefaultSafeColor;
                     dp.DestoryAt = 13000;
-                    accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp);                    
-                    
+                    accessory.Method.SendDraw(DrawModeEnum.Imgui, DrawTypeEnum.Displacement, dp);
+
                     /*
                     // 在三个方形AOE中心点绘制绿色安全圈
                     for (int i = 0; i < SquarePositions.Count; i++)
@@ -2421,9 +2421,9 @@ namespace KodakkuAssistXSZYYS
                     */
                 }
                 // 检查buff持续时间是否为21秒
-                else if (Math.Abs(duration - 21.0f) < 0.1f)
+                else if(Math.Abs(duration - 21.0f) < 0.1f)
                 {
-                    if (LongPointName)
+                    if(LongPointName)
                     {
                         var dp1 = accessory.Data.GetDefaultDrawProperties();
                         dp1.Name = "LittleAxePrey_SafeZone_21s_2";
@@ -2516,24 +2516,24 @@ namespace KodakkuAssistXSZYYS
         )]
         public void HolyLanceGuide(Event @event, ScriptAccessory accessory)
         {
-            lock (_sacredBowPreyLock)
+            lock(_sacredBowPreyLock)
             {
                 _sacredBowPreyRecordedPlayers.Clear(); // 新一轮圣枪机制开始，清空记录
             }
             var path = new List<DisplacementContainer>();
             // 覆盖逻辑：仅当选择了“左上/右上/下”时，强制使用 A/B/C 的路径块；
             // 选择 None 时，保持原有 SelectedStrategy 的完整分支，不做任何改动。
-            if (HolyLanceGroupOverride != LanceGuideOverride.None)
+            if(HolyLanceGroupOverride != LanceGuideOverride.None)
             {
                 TeamSelection forcedTeam = TeamSelection.A;
-                switch (HolyLanceGroupOverride)
+                switch(HolyLanceGroupOverride)
                 {
                     case LanceGuideOverride.左上: forcedTeam = TeamSelection.A; break;
                     case LanceGuideOverride.右上: forcedTeam = TeamSelection.B; break;
-                    case LanceGuideOverride.下:   forcedTeam = TeamSelection.C; break;
+                    case LanceGuideOverride.下: forcedTeam = TeamSelection.C; break;
                 }
 
-                switch (forcedTeam)
+                switch(forcedTeam)
                 {
                     case TeamSelection.A:
                         path.Add(new DisplacementContainer(SquarePositions[2], 0, 10000));
@@ -2563,10 +2563,10 @@ namespace KodakkuAssistXSZYYS
             {
                 // None：保留原有策略分支（SelectedStrategy 完整生效）
                 // 根据分组确定路径
-                switch (SelectedStrategy)
+                switch(SelectedStrategy)
                 {
                     case StrategySelection.ABC_123:
-                        switch (MyTeam)
+                        switch(MyTeam)
                         {
                             case TeamSelection.A:
                             case TeamSelection.One:
@@ -2596,7 +2596,7 @@ namespace KodakkuAssistXSZYYS
                         }
                         break;
                     case StrategySelection.Pos_152463:
-                        switch (MyPosition)
+                        switch(MyPosition)
                         {
                             case PositionSelection.Pos1:
                             case PositionSelection.Pos2:
@@ -2626,7 +2626,7 @@ namespace KodakkuAssistXSZYYS
                         }
                         break;
                     case StrategySelection.LemonCookie:
-                        switch (MyLemonCookiePosition)
+                        switch(MyLemonCookiePosition)
                         {
                             case PositionSelection.Pos1:
                             case PositionSelection.Pos2:
@@ -2654,14 +2654,13 @@ namespace KodakkuAssistXSZYYS
                                 path.Add(new DisplacementContainer(SquarePositions[0], 0, 6000));
                                 break;
                         }
-                        break;                        
+                        break;
                 }
             }
 
-            if (path.Count > 0)
+            if(path.Count > 0)
             {
-                var props = new MultiDisDrawProp
-                {
+                var props = new MultiDisDrawProp {
                     Color_GoNow = new Vector4(0, 1, 0, 1), // Green
                     Color_GoLater = new Vector4(1, 1, 0, 1), // Yellow
                     DrawMode = DrawModeEnum.Imgui
@@ -2678,14 +2677,14 @@ namespace KodakkuAssistXSZYYS
         )]
         public void OnSealMeltStatus(Event @event, ScriptAccessory accessory)
         {
-            if (int.TryParse(@event["Param"], out int paramValue))
+            if(int.TryParse(@event["Param"], out int paramValue))
             {
-                if (paramValue == 851)
+                if(paramValue == 851)
                 {
                     _holyWeaponType = HolyWeaponType.Axe;
                     if(Enable_Developer_Mode) accessory.Log.Debug("神圣机制：记录为斧头。");
                 }
-                else if (paramValue == 852)
+                else if(paramValue == 852)
                 {
                     _holyWeaponType = HolyWeaponType.Lance;
                     if(Enable_Developer_Mode) accessory.Log.Debug("神圣机制：记录为长枪。");
@@ -2697,12 +2696,12 @@ namespace KodakkuAssistXSZYYS
             name: "灵气爆 - 提示",
             eventType: EventTypeEnum.StartCasting,
             eventCondition: ["ActionId:41562"],
-            suppress:2000
+            suppress: 2000
         )]
         public void OnHallowedPlumeCast(Event @event, ScriptAccessory accessory)
         {
             string hintText = "";
-            switch (_holyWeaponType)
+            switch(_holyWeaponType)
             {
                 case HolyWeaponType.Axe:
                     hintText = "打黄色罐子";
@@ -2715,7 +2714,7 @@ namespace KodakkuAssistXSZYYS
                     return;
             }
             if(EnableTextBanner) accessory.Method.TextInfo(hintText, 5000);
-            if (EnableTTS)
+            if(EnableTTS)
             {
                 accessory.Method.EdgeTTS(hintText);
             }
@@ -2732,7 +2731,7 @@ namespace KodakkuAssistXSZYYS
         public void OnHolyCast(Event @event, ScriptAccessory accessory)
         {
             string hintText = "";
-            switch (_holyWeaponType)
+            switch(_holyWeaponType)
             {
                 case HolyWeaponType.Axe:
                     hintText = "打黄色罐子";
@@ -2744,8 +2743,8 @@ namespace KodakkuAssistXSZYYS
                     accessory.Log.Error("神圣机制：未能获取到武器类型。");
                     return;
             }
-            if (EnableTextBanner) accessory.Method.TextInfo(hintText, 5000);
-            if (EnableTTS)
+            if(EnableTextBanner) accessory.Method.TextInfo(hintText, 5000);
+            if(EnableTTS)
             {
                 accessory.Method.EdgeTTS(hintText);
             }
@@ -2761,72 +2760,71 @@ namespace KodakkuAssistXSZYYS
         public void SacredBowPrey_RecordAndBroadcast(Event @event, ScriptAccessory accessory)
         {
             var player = accessory.Data.Objects.SearchById(@event.TargetId);
-            if (player == null) return;
-            lock (_sacredBowPreyLock)
+            if(player == null) return;
+            lock(_sacredBowPreyLock)
             {
-                if (_sacredBowPreyRecordedPlayers.Contains(player.EntityId)) return;
+                if(_sacredBowPreyRecordedPlayers.Contains(player.EntityId)) return;
                 _sacredBowPreyRecordedPlayers.Add(player.EntityId);
             }
-            if (float.TryParse(@event["Duration"], out var duration))
+            if(float.TryParse(@event["Duration"], out var duration))
             {
                 int platformIndex = -1;
-                lock (_lanceShareLock)
+                lock(_lanceShareLock)
                 {
                     bool alreadyRecorded = _lanceShareAssignments.Values.Any(list => list.Any(p => p.PlayerId == player.EntityId));
-                    if (!alreadyRecorded)
+                    if(!alreadyRecorded)
                     {
-                        for (int i = 0; i < SquarePositions.Count; i++)
+                        for(int i = 0; i < SquarePositions.Count; i++)
                         {
-                            if (IsPointInRotatedRect(player.Position, SquarePositions[i], 20, 20, SquareAngles[i]))
+                            if(IsPointInRotatedRect(player.Position, SquarePositions[i], 20, 20, SquareAngles[i]))
                             {
                                 platformIndex = i;
                                 break;
                             }
                         }
 
-                        if (platformIndex != -1)
+                        if(platformIndex != -1)
                         {
-                            if (!_lanceShareAssignments.ContainsKey(platformIndex))
+                            if(!_lanceShareAssignments.ContainsKey(platformIndex))
                             {
                                 _lanceShareAssignments[platformIndex] = new List<(ulong, float)>();
                             }
                             _lanceShareAssignments[platformIndex].Add((player.EntityId, duration));
-                            if (Enable_Developer_Mode)
+                            if(Enable_Developer_Mode)
                             {
                                 accessory.Log.Debug($"圣枪分摊记录: {player.Name.TextValue} 在平台 {platformIndex + 1}，持续时间 {duration:F2}s");
                             }
                         }
                         else
                         {
-                            if (Enable_Developer_Mode)
+                            if(Enable_Developer_Mode)
                             {
-                                 accessory.Log.Debug($"圣枪分摊记录: {player.Name.TextValue} 是战犯，不在任何平台。");
+                                accessory.Log.Debug($"圣枪分摊记录: {player.Name.TextValue} 是战犯，不在任何平台。");
                             }
                         }
                     }
                 }
 
-                if (PoliceMode)
+                if(PoliceMode)
                 {
                     // 为播报再次检查平台位置
                     int reportPlatformIndex = -1;
-                    for (int i = 0; i < SquarePositions.Count; i++)
+                    for(int i = 0; i < SquarePositions.Count; i++)
                     {
-                        if (IsPointInRotatedRect(player.Position, SquarePositions[i], 21, 21, SquareAngles[i]))
+                        if(IsPointInRotatedRect(player.Position, SquarePositions[i], 21, 21, SquareAngles[i]))
                         {
                             reportPlatformIndex = i;
                             break;
                         }
                     }
 
-                    string platformName = reportPlatformIndex switch
-                    {
+                    string platformName = reportPlatformIndex switch {
                         0 => "下",
                         1 => "右上",
                         2 => "左上",
                         _ => "战犯"
                     };
-                    
+
                     accessory.Method.SendChat($"/e 圣枪分摊点名: {player.Name.TextValue} - {platformName} ({duration:F1}s)");
                 }
             }
@@ -2839,23 +2837,23 @@ namespace KodakkuAssistXSZYYS
         public void SacredBowPrey_CheckOnExpire(Event @event, ScriptAccessory accessory)
         {
             // 检查buff是否为正常到期
-            if (!float.TryParse(@event["Duration"], out var remainingDuration) || remainingDuration > 0.1f)
+            if(!float.TryParse(@event["Duration"], out var remainingDuration) || remainingDuration > 0.1f)
             {
                 return; // 如果持续时间不为0，说明是提前移除，不检查
             }
 
             var player = accessory.Data.Objects.SearchById(@event.TargetId);
-            if (player == null || player.IsDead) return;
+            if(player == null || player.IsDead) return;
 
-            lock (_lanceShareLock)
+            lock(_lanceShareLock)
             {
                 int initialPlatform = -1;
                 (ulong PlayerId, float Duration) assignment = (0, 0);
 
-                foreach (var entry in _lanceShareAssignments)
+                foreach(var entry in _lanceShareAssignments)
                 {
                     var found = entry.Value.FirstOrDefault(p => p.PlayerId == player.EntityId);
-                    if (found.PlayerId != 0)
+                    if(found.PlayerId != 0)
                     {
                         initialPlatform = entry.Key;
                         assignment = found;
@@ -2863,69 +2861,69 @@ namespace KodakkuAssistXSZYYS
                     }
                 }
 
-                if (initialPlatform == -1) return;
+                if(initialPlatform == -1) return;
 
                 var sortedPlayers = _lanceShareAssignments[initialPlatform].OrderBy(p => p.Duration).ToList();
                 int orderIndex = sortedPlayers.FindIndex(p => p.PlayerId == player.EntityId);
 
                 bool shouldCheck = false;
-                switch (initialPlatform)
+                switch(initialPlatform)
                 {
                     case 0: // 平台1 (下)
-                        if (orderIndex == 0 || orderIndex == 2) shouldCheck = true;
+                        if(orderIndex == 0 || orderIndex == 2) shouldCheck = true;
                         break;
                     case 1: // 平台2 (右上)
-                        if (orderIndex == 1 || orderIndex == 2) shouldCheck = true;
+                        if(orderIndex == 1 || orderIndex == 2) shouldCheck = true;
                         break;
                     case 2: // 平台3 (左上)
-                        if (orderIndex == 0 || orderIndex == 1) shouldCheck = true;
+                        if(orderIndex == 0 || orderIndex == 1) shouldCheck = true;
                         break;
                 }
 
-                if (shouldCheck)
+                if(shouldCheck)
                 {
-                    if (!IsCircleFullyContainedInAnyPlatform(player.Position))
+                    if(!IsCircleFullyContainedInAnyPlatform(player.Position))
                     {
-                        if (PoliceMode) accessory.Method.SendChat($"/e 分摊擦边: {player.Name.TextValue}");
+                        if(PoliceMode) accessory.Method.SendChat($"/e 分摊擦边: {player.Name.TextValue}");
                     }
                 }
             }
         }
-        
-        
-        
-        
-        
+
+
+
+
+
         private void CheckPreyPosition(ScriptAccessory accessory, ulong targetId)
         {
             // 如果已经检查过该玩家，则直接返回
-            lock (_preyCheckLock)
+            lock(_preyCheckLock)
             {
-                if (_checkedPreyPlayers.Contains(targetId)) return;
+                if(_checkedPreyPlayers.Contains(targetId)) return;
                 _checkedPreyPlayers.Add(targetId);
             }
             // 这个检查由小警察模式统一控制
-            if (!PoliceMode) return;
-        
+            if(!PoliceMode) return;
+
             var player = accessory.Data.Objects.SearchById(targetId);
-            if (player == null) return; // 如果找不到该玩家（可能已离开范围），则不处理
-        
+            if(player == null) return; // 如果找不到该玩家（可能已离开范围），则不处理
+
             bool isInAnySquare = false;
-            for (int i = 0; i < SquarePositions.Count; i++)
+            for(int i = 0; i < SquarePositions.Count; i++)
             {
-                if (IsPointInRotatedRect(player.Position, SquarePositions[i], 20, 20, SquareAngles[i]))
+                if(IsPointInRotatedRect(player.Position, SquarePositions[i], 20, 20, SquareAngles[i]))
                 {
                     isInAnySquare = true;
                     break;
                 }
             }
 
-            if (!isInAnySquare)
+            if(!isInAnySquare)
             {
                 accessory.Method.SendChat($"/e {player.Name} 站位错误！");
             }
         }
-        
+
         private bool IsPointInRotatedRect(Vector3 point, Vector3 rectCenter, float rectWidth, float rectHeight, float rectAngleRad)
         {
             float translatedX = point.X - rectCenter.X;
@@ -2947,9 +2945,9 @@ namespace KodakkuAssistXSZYYS
             // 通过收缩平台来简化问题：如果圆心在一个更小的矩形内，那么整个圆就在原始矩形内
             float shrunkenSize = platformSize - 2 * circleRadius;
 
-            for (int i = 0; i < SquarePositions.Count; i++)
+            for(int i = 0; i < SquarePositions.Count; i++)
             {
-                if (IsPointInRotatedRect(circleCenter, SquarePositions[i], shrunkenSize, shrunkenSize, SquareAngles[i]))
+                if(IsPointInRotatedRect(circleCenter, SquarePositions[i], shrunkenSize, shrunkenSize, SquareAngles[i]))
                 {
                     return true;
                 }
@@ -2965,19 +2963,19 @@ namespace KodakkuAssistXSZYYS
         public async void CheckResurrection(Event @event, ScriptAccessory accessory)
         {
             string channel = @event["Type"].ToLower();
-            if (!ReceivePartyCheckRequest && channel == "party") return;
+            if(!ReceivePartyCheckRequest && channel == "party") return;
 
             string message = @event["Message"];
-            if (!message.StartsWith("复活检查")) return;
+            if(!message.StartsWith("复活检查")) return;
             string[] parts = message.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
             List<int> targetCounts = new();
-            if (parts.Length > 1)
+            if(parts.Length > 1)
             {
                 // 支持多个数字参数，如“复活检查 1 2 3”
-                foreach (var part in parts.Skip(1))
+                foreach(var part in parts.Skip(1))
                 {
-                    if (int.TryParse(part, out int c))
+                    if(int.TryParse(part, out int c))
                         targetCounts.Add(c);
                 }
             }
@@ -2988,9 +2986,9 @@ namespace KodakkuAssistXSZYYS
             }
             var allResurrectionData = new List<Tuple<string, string, string, int>>();
 
-            foreach (var gameObject in accessory.Data.Objects)
+            foreach(var gameObject in accessory.Data.Objects)
             {
-                if (gameObject is IPlayerCharacter player)
+                if(gameObject is IPlayerCharacter player)
                 {
                     string playerName = player.Name.TextValue;
                     string classJob = player.ClassJob.Value.Name.ToString();
@@ -2998,7 +2996,7 @@ namespace KodakkuAssistXSZYYS
                     int resurrectionCount = 0;
 
                     var resStatus = player.StatusList.FirstOrDefault(s => s.StatusId == 4262 || s.StatusId == 4263);
-                    if (resStatus != null)
+                    if(resStatus != null)
                     {
                         resurrectionCount = resStatus.Param;
                         allResurrectionData.Add(new Tuple<string, string, string, int>(playerName, classJob, supportJob, resurrectionCount));
@@ -3007,7 +3005,7 @@ namespace KodakkuAssistXSZYYS
             }
 
             accessory.Method.SendChat($"/{channel} --- 开始复活检查 ---");
-            foreach (var count in targetCounts)
+            foreach(var count in targetCounts)
             {
                 await Task.Delay(200);
                 await OutputResurrectionCheck(accessory, channel, allResurrectionData, count);
@@ -3016,11 +3014,11 @@ namespace KodakkuAssistXSZYYS
         private static async Task OutputResurrectionCheck(ScriptAccessory accessory, string channel, List<Tuple<string, string, string, int>> allResurrectionData, int targetCount)
         {
             var filteredData = allResurrectionData.Where(t => t.Item4 == targetCount).ToList();
-            if (filteredData.Count > 0)
+            if(filteredData.Count > 0)
             {
                 accessory.Method.SendChat($"/{channel} --- 复活次数为 {targetCount} 的玩家（共{filteredData.Count}人) ---");
 
-                foreach (var data in filteredData)
+                foreach(var data in filteredData)
                 {
                     await Task.Delay(100);
                     accessory.Method.SendChat($"/{channel} {data.Item1} ({data.Item2} | {data.Item3})");
@@ -3039,14 +3037,14 @@ namespace KodakkuAssistXSZYYS
         public async void CheckFoodStatus(Event @event, ScriptAccessory accessory)
         {
             string channel = @event["Type"].ToLower();
-            if (!ReceivePartyCheckRequest && channel == "party") return;
+            if(!ReceivePartyCheckRequest && channel == "party") return;
 
             int towerPlayerCount = 0;
             var foodStatusData = new List<Tuple<string, string, string, string>>();
 
-            foreach (var gameObject in accessory.Data.Objects)
+            foreach(var gameObject in accessory.Data.Objects)
             {
-                if (gameObject is IPlayerCharacter player
+                if(gameObject is IPlayerCharacter player
                     && player.HasStatusAny([4262, 4263])
                     )
                 {
@@ -3057,11 +3055,11 @@ namespace KodakkuAssistXSZYYS
 
                     var foodStatus = player.StatusList.FirstOrDefault(s => s.StatusId == 48);
 
-                    if (foodStatus != null && foodStatus.RemainingTime <= FoodRemainingTimeThreshold * 60)
+                    if(foodStatus != null && foodStatus.RemainingTime <= FoodRemainingTimeThreshold * 60)
                     {
                         foodStatusData.Add(new Tuple<string, string, string, string>(playerName, classJob, supportJob, $"食物剩余时间不足{Math.Ceiling(foodStatus.RemainingTime / 60)}分钟"));
                     }
-                    else if (foodStatus == null)
+                    else if(foodStatus == null)
                     {
                         foodStatusData.Add(new Tuple<string, string, string, string>(playerName, classJob, supportJob, "未进食"));
                     }
@@ -3070,11 +3068,11 @@ namespace KodakkuAssistXSZYYS
 
             accessory.Method.SendChat($"/{channel} --- 开始对塔内的{towerPlayerCount}名玩家进行食物检查 ---");
 
-            if (foodStatusData.Count > 0)
+            if(foodStatusData.Count > 0)
             {
                 var sortedData = foodStatusData.OrderBy(t => t.Item4).ToList();
 
-                foreach (var data in sortedData)
+                foreach(var data in sortedData)
                 {
                     await Task.Delay(100);
                     accessory.Method.SendChat($"/{channel} {data.Item1} ({data.Item2} | {data.Item3}): {data.Item4}");
@@ -3098,19 +3096,19 @@ namespace KodakkuAssistXSZYYS
             var target = accessory.Data.Objects.SearchById(@event.TargetId);
 
             // 确保来源和目标都存在，且目标不是玩家
-            if (source == null || target == null || !(source is IBattleChara) || !(target is IBattleChara))
+            if(source == null || target == null || !(source is IBattleChara) || !(target is IBattleChara))
                 return;
 
             string playerName = source.Name.TextValue;
             string bossName = target.Name.TextValue;
 
-            lock (_moneyThrowLock)
+            lock(_moneyThrowLock)
             {
-                if (!_moneyThrowCounts.ContainsKey(bossName))
+                if(!_moneyThrowCounts.ContainsKey(bossName))
                 {
                     _moneyThrowCounts[bossName] = new Dictionary<string, int>();
                 }
-                if (!_moneyThrowCounts[bossName].ContainsKey(playerName))
+                if(!_moneyThrowCounts[bossName].ContainsKey(playerName))
                 {
                     _moneyThrowCounts[bossName][playerName] = 0;
                 }
@@ -3125,28 +3123,28 @@ namespace KodakkuAssistXSZYYS
         public async void CheckMoneyThrow(Event @event, ScriptAccessory accessory)
         {
             string channel = @event["Type"].ToLower();
-            if (!ReceivePartyCheckRequest && channel == "party") return;
+            if(!ReceivePartyCheckRequest && channel == "party") return;
 
             Dictionary<string, List<KeyValuePair<string, int>>> sortedData;
-            lock (_moneyThrowLock)
+            lock(_moneyThrowLock)
             {
-                if (_moneyThrowCounts.Count == 0)
+                if(_moneyThrowCounts.Count == 0)
                 {
                     accessory.Method.SendChat($"/{channel} 未记录到任何扔钱数据。");
                     return;
                 }
 
                 sortedData = new Dictionary<string, List<KeyValuePair<string, int>>>();
-                foreach (var bossEntry in _moneyThrowCounts)
+                foreach(var bossEntry in _moneyThrowCounts)
                 {
                     sortedData[bossEntry.Key] = bossEntry.Value.OrderBy(kvp => kvp.Value).ToList();
                 }
             }
 
-            foreach (var bossEntry in sortedData)
+            foreach(var bossEntry in sortedData)
             {
                 accessory.Method.SendChat($"/{channel} --- {bossEntry.Key} 扔钱统计 ---");
-                foreach (var data in bossEntry.Value)
+                foreach(var data in bossEntry.Value)
                 {
                     await Task.Delay(100);
                     accessory.Method.SendChat($"/{channel} {data.Key}: {data.Value} 次");
@@ -3162,113 +3160,113 @@ namespace KodakkuAssistXSZYYS
         public void ClearMoneyThrowData(Event @event, ScriptAccessory accessory)
         {
             string channel = @event["Type"].ToLower();
-            if (!ReceivePartyCheckRequest && channel == "party") return;
+            if(!ReceivePartyCheckRequest && channel == "party") return;
 
-            lock (_moneyThrowLock)
+            lock(_moneyThrowLock)
             {
                 _moneyThrowCounts.Clear();
             }
             accessory.Method.SendChat($"/{channel} 扔钱数据已清理。");
         }
 
-       // [ScriptMethod(
-       //    name: "记录居合次数",
-       //    eventType: EventTypeEnum.ActionEffect,
-       //    eventCondition: ["ActionId:41605"],
-       //    userControl: false
-       //)]
-       // public void RecordIaido(Event @event, ScriptAccessory accessory)
-       // {
-       //     var source = accessory.Data.Objects.SearchById(@event.SourceId);
-       //     var target = accessory.Data.Objects.SearchById(@event.TargetId);
+        // [ScriptMethod(
+        //    name: "记录居合次数",
+        //    eventType: EventTypeEnum.ActionEffect,
+        //    eventCondition: ["ActionId:41605"],
+        //    userControl: false
+        //)]
+        // public void RecordIaido(Event @event, ScriptAccessory accessory)
+        // {
+        //     var source = accessory.Data.Objects.SearchById(@event.SourceId);
+        //     var target = accessory.Data.Objects.SearchById(@event.TargetId);
 
-       //     accessory.Log.Debug($"居合记录:{@event.SourceId} -> {@event.TargetId}");
+        //     accessory.Log.Debug($"居合记录:{@event.SourceId} -> {@event.TargetId}");
 
-       //     // 确保来源和目标都存在，且目标不是玩家
-       //     if (source == null || target == null || !(source is IBattleChara) || !(target is IBattleChara))
-       //         return;
+        //     // 确保来源和目标都存在，且目标不是玩家
+        //     if (source == null || target == null || !(source is IBattleChara) || !(target is IBattleChara))
+        //         return;
 
-       //     string playerName = source.Name.TextValue;
-       //     string bossName = target.Name.TextValue;
+        //     string playerName = source.Name.TextValue;
+        //     string bossName = target.Name.TextValue;
 
-       //     lock (_iaidoLock)
-       //     {
-       //         if (!_iaidoCounts.ContainsKey(bossName))
-       //         {
-       //             _iaidoCounts[bossName] = new Dictionary<string, int>();
-       //         }
-       //         if (!_iaidoCounts[bossName].ContainsKey(playerName))
-       //         {
-       //             _iaidoCounts[bossName][playerName] = 0;
-       //         }
-       //         _iaidoCounts[bossName][playerName]++;
-       //     }
-       // }
-       // [ScriptMethod(
-       //     name: "检查居合",
-       //     eventType: EventTypeEnum.Chat,
-       //     eventCondition: ["Type:regex:^(Echo|Party)$", "Message:居合检查"]
-       // )]
-       // public async void CheckIaido(Event @event, ScriptAccessory accessory)
-       // {
-       //     string channel = @event["Type"].ToLower();
-       //     if (!ReceivePartyCheckRequest && channel == "party") return;
+        //     lock (_iaidoLock)
+        //     {
+        //         if (!_iaidoCounts.ContainsKey(bossName))
+        //         {
+        //             _iaidoCounts[bossName] = new Dictionary<string, int>();
+        //         }
+        //         if (!_iaidoCounts[bossName].ContainsKey(playerName))
+        //         {
+        //             _iaidoCounts[bossName][playerName] = 0;
+        //         }
+        //         _iaidoCounts[bossName][playerName]++;
+        //     }
+        // }
+        // [ScriptMethod(
+        //     name: "检查居合",
+        //     eventType: EventTypeEnum.Chat,
+        //     eventCondition: ["Type:regex:^(Echo|Party)$", "Message:居合检查"]
+        // )]
+        // public async void CheckIaido(Event @event, ScriptAccessory accessory)
+        // {
+        //     string channel = @event["Type"].ToLower();
+        //     if (!ReceivePartyCheckRequest && channel == "party") return;
 
-       //     Dictionary<string, List<KeyValuePair<string, int>>> sortedData;
-       //     lock (_iaidoLock)
-       //     {
-       //         if (_iaidoCounts.Count == 0)
-       //         {
-       //             accessory.Method.SendChat($"/{channel} 未记录到任何居合数据。");
-       //             return;
-       //         }
+        //     Dictionary<string, List<KeyValuePair<string, int>>> sortedData;
+        //     lock (_iaidoLock)
+        //     {
+        //         if (_iaidoCounts.Count == 0)
+        //         {
+        //             accessory.Method.SendChat($"/{channel} 未记录到任何居合数据。");
+        //             return;
+        //         }
 
-       //         sortedData = new Dictionary<string, List<KeyValuePair<string, int>>>();
-       //         foreach (var bossEntry in _iaidoCounts)
-       //         {
-       //             sortedData[bossEntry.Key] = bossEntry.Value.OrderBy(kvp => kvp.Value).ToList();
-       //         }
-       //     }
+        //         sortedData = new Dictionary<string, List<KeyValuePair<string, int>>>();
+        //         foreach (var bossEntry in _iaidoCounts)
+        //         {
+        //             sortedData[bossEntry.Key] = bossEntry.Value.OrderBy(kvp => kvp.Value).ToList();
+        //         }
+        //     }
 
-       //     foreach (var bossEntry in sortedData)
-       //     {
-       //         accessory.Method.SendChat($"/{channel} --- {bossEntry.Key} 居合统计 ---");
-       //         foreach (var data in bossEntry.Value)
-       //         {
-       //             await Task.Delay(100);
-       //             accessory.Method.SendChat($"/{channel} {data.Key}: {data.Value} 次");
-       //         }
-       //     }
-       // }
-       // [ScriptMethod(
-       //     name: "清理居合数据",
-       //     eventType: EventTypeEnum.Chat,
-       //     eventCondition: ["Type:regex:^(Echo|Party)$", "Message:居合清理"]
-       // )]
-       // public void ClearIaido(Event @event, ScriptAccessory accessory)
-       // {
-       //     string channel = @event["Type"].ToLower();
-       //     if (!ReceivePartyCheckRequest && channel == "party") return;
+        //     foreach (var bossEntry in sortedData)
+        //     {
+        //         accessory.Method.SendChat($"/{channel} --- {bossEntry.Key} 居合统计 ---");
+        //         foreach (var data in bossEntry.Value)
+        //         {
+        //             await Task.Delay(100);
+        //             accessory.Method.SendChat($"/{channel} {data.Key}: {data.Value} 次");
+        //         }
+        //     }
+        // }
+        // [ScriptMethod(
+        //     name: "清理居合数据",
+        //     eventType: EventTypeEnum.Chat,
+        //     eventCondition: ["Type:regex:^(Echo|Party)$", "Message:居合清理"]
+        // )]
+        // public void ClearIaido(Event @event, ScriptAccessory accessory)
+        // {
+        //     string channel = @event["Type"].ToLower();
+        //     if (!ReceivePartyCheckRequest && channel == "party") return;
 
-       //     lock (_iaidoLock)
-       //     {
-       //         _iaidoCounts.Clear();
-       //     }
-       //     accessory.Method.SendChat($"/{channel} 居合数据已清理。");
-       // }
-       // [ScriptMethod(
-       //     name: "test顺序输出",
-       //     eventType: EventTypeEnum.Chat,
-       //     eventCondition: ["Type:regex:^(Echo|Party)$", "Message:测试"]
-       // )]
-       // public async void Test(Event @event, ScriptAccessory accessory)
-       // {
-       //     foreach (var value in Enumerable.Range(0,50))
-       //     {
-       //         await Task.Delay(100);
-       //         accessory.Method.SendChat($"/e {value} 次");
-       //     }
-       // }
+        //     lock (_iaidoLock)
+        //     {
+        //         _iaidoCounts.Clear();
+        //     }
+        //     accessory.Method.SendChat($"/{channel} 居合数据已清理。");
+        // }
+        // [ScriptMethod(
+        //     name: "test顺序输出",
+        //     eventType: EventTypeEnum.Chat,
+        //     eventCondition: ["Type:regex:^(Echo|Party)$", "Message:测试"]
+        // )]
+        // public async void Test(Event @event, ScriptAccessory accessory)
+        // {
+        //     foreach (var value in Enumerable.Range(0,50))
+        //     {
+        //         await Task.Delay(100);
+        //         accessory.Method.SendChat($"/e {value} 次");
+        //     }
+        // }
         [ScriptMethod(
             name: "记录蓝药次数",
             eventType: EventTypeEnum.ActionEffect,
@@ -3281,20 +3279,20 @@ namespace KodakkuAssistXSZYYS
             var target = accessory.Data.Objects.SearchById(@event.TargetId);
 
             // 修正：确保来源和目标都是玩家
-            if (source == null || target == null || !(source is IPlayerCharacter) || !(target is IPlayerCharacter))
+            if(source == null || target == null || !(source is IPlayerCharacter) || !(target is IPlayerCharacter))
                 return;
 
             string sourcePlayerName = source.Name.TextValue;
             string targetPlayerName = target.Name.TextValue;
 
-            lock (_bluePotionLock)
+            lock(_bluePotionLock)
             {
                 // 外层Key是目标玩家，内层Key是来源玩家
-                if (!_bluePotionCounts.ContainsKey(targetPlayerName))
+                if(!_bluePotionCounts.ContainsKey(targetPlayerName))
                 {
                     _bluePotionCounts[targetPlayerName] = new Dictionary<string, int>();
                 }
-                if (!_bluePotionCounts[targetPlayerName].ContainsKey(sourcePlayerName))
+                if(!_bluePotionCounts[targetPlayerName].ContainsKey(sourcePlayerName))
                 {
                     _bluePotionCounts[targetPlayerName][sourcePlayerName] = 0;
                 }
@@ -3308,27 +3306,27 @@ namespace KodakkuAssistXSZYYS
         )]
         public async void CheckBluePotion(Event @event, ScriptAccessory accessory)
         {
-            string channel = @event["Type"].ToLower();            
-            if (!ReceivePartyCheckRequest && channel == "party") return;
+            string channel = @event["Type"].ToLower();
+            if(!ReceivePartyCheckRequest && channel == "party") return;
 
             Dictionary<string, List<KeyValuePair<string, int>>> sortedData;
-            lock (_bluePotionLock)
+            lock(_bluePotionLock)
             {
-                if (_bluePotionCounts.Count == 0)
+                if(_bluePotionCounts.Count == 0)
                 {
                     accessory.Method.SendChat($"/{channel} 未记录到任何蓝药数据。");
                     return;
                 }
 
-                var partyMemberNames = Partycheck ? 
+                var partyMemberNames = Partycheck ?
                     accessory.Data.PartyList.Select(id => accessory.Data.Objects.SearchById(id)?.Name.TextValue).Where(name => name != null).ToHashSet()
                     : null;
 
                 sortedData = new Dictionary<string, List<KeyValuePair<string, int>>>();
-                foreach (var bossEntry in _bluePotionCounts)
+                foreach(var bossEntry in _bluePotionCounts)
                 {
-                    var filteredPlayers = Partycheck ? 
-                        bossEntry.Value.Where(kvp => partyMemberNames.Contains(kvp.Key) && partyMemberNames.Contains(bossEntry.Key)).ToList() 
+                    var filteredPlayers = Partycheck ?
+                        bossEntry.Value.Where(kvp => partyMemberNames.Contains(kvp.Key) && partyMemberNames.Contains(bossEntry.Key)).ToList()
                         : bossEntry.Value.ToList();
 
                     if(filteredPlayers.Count > 0)
@@ -3338,17 +3336,17 @@ namespace KodakkuAssistXSZYYS
                 }
             }
 
-            if (sortedData.Count == 0)
+            if(sortedData.Count == 0)
             {
                 accessory.Method.SendChat($"/{channel} 当前范围内未记录到符合条件的蓝药数据。");
                 return;
             }
 
-            foreach (var bossEntry in sortedData)
+            foreach(var bossEntry in sortedData)
             {
                 accessory.Method.SendChat($"/{channel} --- 对 {bossEntry.Key} 的蓝药统计 ---");
 
-                foreach (var data in bossEntry.Value)
+                foreach(var data in bossEntry.Value)
                 {
                     await Task.Delay(100);
                     accessory.Method.SendChat($"/{channel} {data.Key}: {data.Value} 次");
@@ -3363,9 +3361,9 @@ namespace KodakkuAssistXSZYYS
         public void ClearBluePotionData(Event @event, ScriptAccessory accessory)
         {
             string channel = @event["Type"].ToLower();
-            if (!ReceivePartyCheckRequest && channel == "party") return;
+            if(!ReceivePartyCheckRequest && channel == "party") return;
 
-            lock (_bluePotionLock)
+            lock(_bluePotionLock)
             {
                 _bluePotionCounts.Clear();
             }
@@ -3379,7 +3377,7 @@ namespace KodakkuAssistXSZYYS
         )]
         public void CheckTreasureChest(Event @event, ScriptAccessory accessory)
         {
-            if (Enable_Developer_Mode) accessory.Log.Debug("找到箱子");
+            if(Enable_Developer_Mode) accessory.Log.Debug("找到箱子");
             //var chestid = @event.SourceId;
             var dp = accessory.Data.GetDefaultDrawProperties();
             dp.Name = "Chest";
@@ -3410,62 +3408,62 @@ namespace KodakkuAssistXSZYYS
         )]
         public async void MarkChemists(Event @event, ScriptAccessory accessory)
         {
-            if (@event["Message"] != "标记药师") return;
-        
-            if (Enable_Developer_Mode) accessory.Log.Debug("检测到'标记药师'指令...");
+            if(@event["Message"] != "标记药师") return;
+
+            if(Enable_Developer_Mode) accessory.Log.Debug("检测到'标记药师'指令...");
             accessory.Method.MarkClear();
             await Task.Delay(1000); // 等待标记清除
-        
+
             var markType = MarkType.Attack1;
             int chemistsFound = 0;
-        
-            foreach (var gameObject in accessory.Data.Objects)
+
+            foreach(var gameObject in accessory.Data.Objects)
             {
-                if (gameObject is IPlayerCharacter player)
+                if(gameObject is IPlayerCharacter player)
                 {
                     bool isChemist = false;
-                    foreach (var status in player.StatusList)
+                    foreach(var status in player.StatusList)
                     {
-                        if (status.StatusId == 4367) // 辅助药剂师 Status ID
+                        if(status.StatusId == 4367) // 辅助药剂师 Status ID
                         {
                             isChemist = true;
                             break;
                         }
                     }
-        
-                    if (isChemist)
+
+                    if(isChemist)
                     {
                         accessory.Method.Mark(player.EntityId, markType);
                         chemistsFound++;
-                        if (markType < MarkType.Attack8)
+                        if(markType < MarkType.Attack8)
                         {
                             markType++;
                         }
                     }
                 }
             }
-        
+
             accessory.Method.SendChat($"/e 已标记 {chemistsFound} 名药师。");
         }
         #region Helper_Functions
 
         private bool IsTank(IPlayerCharacter player)
         {
-            if (player?.ClassJob.Value == null) return false;
+            if(player?.ClassJob.Value == null) return false;
             // 坦克的职业 Role ID 为 1
             return player.ClassJob.Value.Role == 1;
         }
 
         private bool IsHealer(IPlayerCharacter player)
         {
-            if (player?.ClassJob.Value == null) return false;
+            if(player?.ClassJob.Value == null) return false;
             // 治疗的职业 Role ID 为 4
             return player.ClassJob.Value.Role == 4;
         }
 
         private bool IsDps(IPlayerCharacter player)
         {
-            if (player?.ClassJob.Value == null) return false;
+            if(player?.ClassJob.Value == null) return false;
             // 只要不是坦克和治疗，就是DPS
             return !IsTank(player) && !IsHealer(player);
         }
@@ -3534,7 +3532,7 @@ namespace KodakkuAssistXSZYYS
             long startTimeMillis = prop.BaseDelay;
             const long preMs = 270;
             string guid = Guid.NewGuid().ToString();
-            for (int i = 0; i < list.Count; i++)
+            for(int i = 0; i < list.Count; i++)
             {
                 int count = 0;
                 DisplacementContainer dis = list[i];
@@ -3552,7 +3550,7 @@ namespace KodakkuAssistXSZYYS
                 dp_goNowLine.Color = prop.Color_GoNow;
                 accessory.Method.SendDraw(prop.DrawMode, DrawTypeEnum.Displacement, dp_goNowLine);
 
-                if (prop.EndCircleRadius > 0)
+                if(prop.EndCircleRadius > 0)
                 {
                     DrawPropertiesEdit dp_goNowCircle = accessory.Data.GetDefaultDrawProperties();
                     dp_goNowCircle.Name = name + count++;
@@ -3565,7 +3563,7 @@ namespace KodakkuAssistXSZYYS
                 }
 
                 //如果当前点位不是最后一个点位，则进行go later部分
-                if (i < list.Count - 1)
+                if(i < list.Count - 1)
                 {
                     DrawPropertiesEdit dp_goLaterLine = accessory.Data.GetDefaultDrawProperties();
                     dp_goLaterLine.Name = name + count++;
@@ -3578,7 +3576,7 @@ namespace KodakkuAssistXSZYYS
                     dp_goLaterLine.Color = prop.Color_GoLater;
                     accessory.Method.SendDraw(prop.DrawMode, DrawTypeEnum.Displacement, dp_goLaterLine);
 
-                    if (prop.EndCircleRadius > 0)
+                    if(prop.EndCircleRadius > 0)
                     {
                         DrawPropertiesEdit dp_goLaterCircle = accessory.Data.GetDefaultDrawProperties();
                         dp_goLaterCircle.Name = name + count++;
