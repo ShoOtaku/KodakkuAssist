@@ -61,9 +61,9 @@ namespace KodakkuAssistXSZYYS
     name: "力之塔",
     guid: "874D3ECF-BD6B-448F-BB42-AE7F082E4805",
     territorys: [1252],
-    version: "0.0.41",
+    version: "0.0.40",
     author: "XSZYYS",
-    note: "更新内容\r\n直接根据职能而非小队位置指向老二火球站位\r\n标记药师：输入【/e 标记药师】即可标记周围所有药师玩家\r\n藏宝图：1.5道中给箱子连线\r\n\r\n------------以下功能默认仅支持默语，可配置响应来自小队的检查指令并在小队频道输出------------\r\n检查蓝药：输入【/e 蓝药检查】会输出药师蓝药使用情况，输入【/e 蓝药清理】会清理所有数据\r\n检查复活：输入【/e 复活检查 <数字>】，比如【/e 复活检查 1】会输出周围所有剩余1次复活的玩家,支持空格分隔多个参数。默认输出复活次数在0~3次的所有玩家\r\n检查扔钱：输入【/e 扔钱检查】会输出所有使用扔钱的玩家和扔钱次数，输入【/e 扔钱清理】会清理所有数据\r\n------------------------------------------------------------\r\n请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
+    note: "更新内容\r\n直接根据职能而非小队位置指向老二火球站位\r\n标记药师：输入【/e 标记药师】即可标记周围所有药师玩家\r\n藏宝图：1.5道中给箱子连线\r\n\r\n------------以下功能默认仅支持默语，可配置响应来自小队的检查指令并在小队频道输出------------\r\n检查蓝药：输入【/e 蓝药检查】会输出药师蓝药使用情况，输入【/e 蓝药清理】会清理所有数据\r\n检查复活：输入【/e 复活检查 <数字>】，比如【/e 复活检查 1】会输出周围所有剩余1次复活的玩家\r\n检查扔钱：输入【/e 扔钱检查】会输出所有使用扔钱的玩家和扔钱次数，输入【/e 扔钱清理】会清理所有数据\r\n------------------------------------------------------------\r\n请选择自己小队的分组，指路可选ABC123/152463/柠檬松饼攻略\r\n老一:\r\nAOE绘制：旋转，压溃\r\n指路：陨石点名，第一次踩塔，第二次踩塔\r\n老二：\r\nAOE绘制：死刑，扇形，冰火爆炸\r\n指路：雪球，火球\r\n老三：\r\nAOE绘制：龙态行动，冰圈，俯冲\r\n指路：龙态行动预站位，踩塔，小怪\r\n尾王：\r\nAOE绘制：致命斧/枪，暗杀短剑\r\n指路：符文之斧，圣枪"
     )]
 
     public class 力之塔
@@ -91,10 +91,8 @@ namespace KodakkuAssistXSZYYS
         public LanceGuideOverride HolyLanceGroupOverride { get; set; } = LanceGuideOverride.None;
         [UserSetting("小警察（开启后默语频道输出关键机制被点名玩家名字）")]
         public bool PoliceMode { get; set; } = false;
-        [UserSetting("接收小队内的扔钱/复活/食物/蓝药检查请求")]
+        [UserSetting("接收小队内的扔钱/复活/蓝药检查请求")]
         public bool ReceivePartyCheckRequest { get; set; } = false;
-        [UserSetting("食物检查剩余时间阈值（单位：分钟)")]
-        public int FoodRemainingTimeThreshold { get; set; } = 10;
         [UserSetting("蓝药检查范围（仅小队）")]
         public bool Partycheck { get; set; } = false;
         [UserSetting("-----开发者设置----- (此设置无实际意义)")]
@@ -146,7 +144,7 @@ namespace KodakkuAssistXSZYYS
         {
             new Vector3(-817.32f, -876.00f, 350.00f), 
             new Vector3(-817.32f, -876.00f, 370.00f), 
-            new Vector3(-800.00f, -876.00f, 380.00f) 
+            new Vector3(-800.00f, -876.00f, 380.00f)  
         };
         private static readonly List<Vector3> NumberGroupFireballCoords = new()
         {
@@ -270,13 +268,6 @@ namespace KodakkuAssistXSZYYS
             { 4368, "辅助预言师" },
             { 4369, "辅助盗贼" }
         };
-        // 获取玩家的辅助职业
-        private string GetSupportJob(IPlayerCharacter player)
-        {
-            if (player == null) return "无";
-            var status = player.StatusList.FirstOrDefault(s => _supportJobStatus.ContainsKey(s.StatusId));
-            return status != null ? _supportJobStatus[status.StatusId] : "无";
-        }
         // 用于记录扔钱次数的字典和锁
         private readonly Dictionary<string, Dictionary<string, int>> _moneyThrowCounts = new();
         private readonly object _moneyThrowLock = new();
@@ -2927,7 +2918,7 @@ namespace KodakkuAssistXSZYYS
         {
             float translatedX = point.X - rectCenter.X;
             float translatedZ = point.Z - rectCenter.Z;
-
+            
             float cosAngle = MathF.Cos(-rectAngleRad);
             float sinAngle = MathF.Sin(-rectAngleRad);
 
@@ -2967,21 +2958,10 @@ namespace KodakkuAssistXSZYYS
             string message = @event["Message"];
             if (!message.StartsWith("复活检查")) return;
             string[] parts = message.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-
-            List<int> targetCounts = new();
-            if (parts.Length > 1)
+            int? targetCount = null;
+            if (parts.Length > 1 && int.TryParse(parts[1], out int count))
             {
-                // 支持多个数字参数，如“复活检查 1 2 3”
-                foreach (var part in parts.Skip(1))
-                {
-                    if (int.TryParse(part, out int c))
-                        targetCounts.Add(c);
-                }
-            }
-            else
-            {
-                // 默认检查0~3次
-                targetCounts.AddRange(Enumerable.Range(0, 4));
+                targetCount = count;
             }
             var allResurrectionData = new List<Tuple<string, string, string, int>>();
 
@@ -2991,96 +2971,49 @@ namespace KodakkuAssistXSZYYS
                 {
                     string playerName = player.Name.TextValue;
                     string classJob = player.ClassJob.Value.Name.ToString();
-                    string supportJob = GetSupportJob(player);
+                    string supportJob = "无";
                     int resurrectionCount = 0;
-
-                    var resStatus = player.StatusList.FirstOrDefault(s => s.StatusId == 4262 || s.StatusId == 4263);
-                    if (resStatus != null)
+                    bool hasResDebuff = false;
+                    foreach (var status in player.StatusList)
                     {
-                        resurrectionCount = resStatus.Param;
+                        if (status.StatusId == 4262 || status.StatusId == 4263)
+                        {
+                            resurrectionCount = status.Param; 
+                            hasResDebuff = true;
+                        }
+                        if (_supportJobStatus.TryGetValue(status.StatusId, out var jobName))
+                        {
+                            supportJob = jobName;
+                        }
+                    }
+                    if (hasResDebuff)
+                    {
                         allResurrectionData.Add(new Tuple<string, string, string, int>(playerName, classJob, supportJob, resurrectionCount));
                     }
                 }
             }
+            var filteredData = targetCount.HasValue
+                ? allResurrectionData.Where(t => t.Item4 == targetCount.Value).ToList()
+                : allResurrectionData;
 
-            accessory.Method.SendChat($"/{channel} --- 开始复活检查 ---");
-            foreach (var count in targetCounts)
-            {
-                await Task.Delay(200);
-                await OutputResurrectionCheck(accessory, channel, allResurrectionData, count);
-            }
-        }
-        private static async Task OutputResurrectionCheck(ScriptAccessory accessory, string channel, List<Tuple<string, string, string, int>> allResurrectionData, int targetCount)
-        {
-            var filteredData = allResurrectionData.Where(t => t.Item4 == targetCount).ToList();
             if (filteredData.Count > 0)
             {
-                accessory.Method.SendChat($"/{channel} --- 复活次数为 {targetCount} 的玩家（共{filteredData.Count}人) ---");
+                var sortedData = filteredData.OrderBy(t => t.Item4).ToList();
 
-                foreach (var data in filteredData)
-                {
-                    await Task.Delay(100);
-                    accessory.Method.SendChat($"/{channel} {data.Item1} ({data.Item2} | {data.Item3})");
-                }
-            }
-            else
-            {
-                accessory.Method.SendChat($"/{channel} --- 未找到复活次数为 {targetCount} 的玩家 ---");
-            }
-        }
-        [ScriptMethod(
-            name: "检查食物",
-            eventType: EventTypeEnum.Chat,
-            eventCondition: ["Type:regex:^(Echo|Party)$", "Message:食物检查"]
-        )]
-        public async void CheckFoodStatus(Event @event, ScriptAccessory accessory)
-        {
-            string channel = @event["Type"].ToLower();
-            if (!ReceivePartyCheckRequest && channel == "party") return;
-
-            int towerPlayerCount = 0;
-            var foodStatusData = new List<Tuple<string, string, string, string>>();
-
-            foreach (var gameObject in accessory.Data.Objects)
-            {
-                if (gameObject is IPlayerCharacter player
-                    && player.HasStatusAny([4262, 4263])
-                    )
-                {
-                    towerPlayerCount++;
-                    string playerName = player.Name.TextValue;
-                    string classJob = player.ClassJob.Value.Name.ToString();
-                    string supportJob = GetSupportJob(player);
-
-                    var foodStatus = player.StatusList.FirstOrDefault(s => s.StatusId == 48);
-
-                    if(foodStatus == null)
-                    {
-                        foodStatusData.Add(new Tuple<string, string, string, string>(playerName, classJob, supportJob, "未进食"));
-                    }
-                    else if(foodStatus.RemainingTime <= FoodRemainingTimeThreshold * 60)
-                    {
-                        foodStatusData.Add(new Tuple<string, string, string, string>(playerName, classJob, supportJob, $"食物剩余时间不足{Math.Ceiling(foodStatus.RemainingTime / 60)}分钟"));
-                    }
-                }
-            }
-
-            accessory.Method.SendChat($"/{channel} --- 开始对塔内的{towerPlayerCount}名玩家进行食物检查 ---");
-
-            if (foodStatusData.Count > 0)
-            {
-                var sortedData = foodStatusData.OrderBy(t => t.Item4).ToList();
+                string title = targetCount.HasValue ? $"--- 复活次数为 {targetCount.Value} 的玩家 ---" : "--- 复活次数检查 ---";
+                accessory.Method.SendChat($"/{channel} {title}");
 
                 foreach (var data in sortedData)
                 {
-                    await Task.Delay(100);
+                    await Task.Delay(10);
                     accessory.Method.SendChat($"/{channel} {data.Item1} ({data.Item2} | {data.Item3}): {data.Item4}");
                 }
             }
             else
             {
-                await Task.Delay(100);
-                accessory.Method.SendChat($"/{channel} 所有玩家均已进食");
+                await Task.Delay(10);
+                string notFoundMessage = targetCount.HasValue ? $"未找到复活次数为 {targetCount.Value} 的玩家。" : "未找到有限制复活的玩家。";
+                accessory.Method.SendChat($"/{channel} {notFoundMessage}");
             }
         }
         [ScriptMethod(
@@ -3148,7 +3081,6 @@ namespace KodakkuAssistXSZYYS
                     await Task.Delay(100);
                     accessory.Method.SendChat($"/{channel} {data.Key}: {data.Value} 次");
                 }
-                await Task.Delay(100);
             }
         }
         [ScriptMethod(
@@ -3262,7 +3194,7 @@ namespace KodakkuAssistXSZYYS
         {
             string channel = @event["Type"].ToLower();
             if (!ReceivePartyCheckRequest && channel == "party") return;
-
+            
             lock (_bluePotionLock)
             {
                 _bluePotionCounts.Clear();
