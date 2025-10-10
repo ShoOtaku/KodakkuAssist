@@ -8,25 +8,26 @@ using KodakkuAssist.Module.GameEvent;
 using KodakkuAssist.Module.Draw;
 using KodakkuAssist.Data;
 using KodakkuAssist.Module.GameOperate;
-using IBattleChara = Dalamud.Game.ClientState.Objects.Types.IBattleChara;
-
+using KodakkuAssist.Extensions;
 namespace KodakkuAssistXSZYYSPolice;
 
 [ScriptType(
     name: "力之塔（警察）",
     territorys: [1252],
     guid: "9F8E7D6C-5B4A-3C2D-1E0F-9A8B7C6D5E4F",
-    version: "0.0.1",
+    version: "0.0.2",
     author: "XSZYYS",
-    note: "力之塔副本的小警察功能，提供关键机制点名播报和检查功能"
+    note: "力之塔副本的小警察功能，提供关键机制点名播报和检查功能。同时可主动检查扔钱/复活/食物/蓝药等。\r\n\r\n------------以下为默语频道的主动查询功能示意，可配置响应来自小队的检查指令并在小队频道输出------------\r\n检查蓝药：输入【/e 蓝药检查】会输出药师蓝药使用情况，输入【/e 蓝药清理】会清理所有数据\r\n检查复活：输入【/e 复活检查 <数字>...】，支持空格分隔多个数字，比如【/e 复活检查 1 2】会输出周围所有剩余1次和2次复活的玩家。不指定次数则输出复活次数在0~3次的所有玩家\r\n检查食物：输入【/e 食物检查】会输出所有塔内未进食/食物剩余时间不足指定阈值的玩家\r\n检查扔钱：输入【/e 扔钱检查】会输出所有使用扔钱的玩家和扔钱次数，输入【/e 扔钱清理】会清空扔钱统计数据"
 )]
 public class TowerPolice
 {
     [UserSetting("小警察（开启后默语频道输出关键机制被点名玩家名字）")]
     public bool PoliceMode { get; set; } = false;
 
-    [UserSetting("接收小队内的扔钱/复活/蓝药检查请求")]
+    [UserSetting("接收小队内的扔钱/复活/食物/蓝药检查请求")]
     public bool ReceivePartyCheckRequest { get; set; } = false;
+    [UserSetting("食物检查剩余时间阈值（单位：分钟),仅输出时间小于等于该值的玩家")]
+    public int FoodRemainingTimeThreshold { get; set; } = 0;
 
     [UserSetting("蓝药检查范围（仅小队）")]
     public bool Partycheck { get; set; } = false;
@@ -51,7 +52,13 @@ public class TowerPolice
         { 4368, "辅助预言师" },
         { 4369, "辅助盗贼" }
     };
-
+    // 获取玩家的辅助职业
+    private string GetSupportJob(IPlayerCharacter player)
+    {
+        if (player == null) return "无";
+        var status = player.StatusList.FirstOrDefault(s => _supportJobStatus.ContainsKey(s.StatusId));
+        return status != null ? _supportJobStatus[status.StatusId] : "无";
+    }
     // 用于记录扔钱次数的字典和锁
     private readonly Dictionary<string, Dictionary<string, int>> _moneyThrowCounts = new();
     private readonly object _moneyThrowLock = new();
@@ -521,14 +528,23 @@ public class TowerPolice
 
             string message = @event["Message"];
             if (!message.StartsWith("复活检查")) return;
-
             string[] parts = message.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            int? targetCount = null;
-            if (parts.Length > 1 && int.TryParse(parts[1], out int count))
-            {
-                targetCount = count;
-            }
 
+            List<int> targetCounts = new();
+            if (parts.Length > 1)
+            {
+                // 支持多个数字参数，如“复活检查 1 2 3”
+                foreach (var part in parts.Skip(1))
+                {
+                    if (int.TryParse(part, out int c))
+                        targetCounts.Add(c);
+                }
+            }
+            else
+            {
+                // 默认检查0~3次
+                targetCounts.AddRange(Enumerable.Range(0, 4));
+            }
             var allResurrectionData = new List<Tuple<string, string, string, int>>();
 
             foreach (var gameObject in accessory.Data.Objects)
@@ -537,62 +553,113 @@ public class TowerPolice
                 {
                     string playerName = player.Name.TextValue;
                     string classJob = player.ClassJob.Value.Name.ToString();
-                    string supportJob = "无";
+                    string supportJob = GetSupportJob(player);
                     int resurrectionCount = 0;
-                    bool hasResDebuff = false;
 
-                    foreach (var status in player.StatusList)
+                    var resStatus = player.StatusList.FirstOrDefault(s => s.StatusId == 4262 || s.StatusId == 4263);
+                    if (resStatus != null)
                     {
-                        if (status.StatusId == 4262 || status.StatusId == 4263)
-                        {
-                            resurrectionCount = status.Param;
-                            hasResDebuff = true;
-                        }
-                        if (_supportJobStatus.TryGetValue(status.StatusId, out var jobName))
-                        {
-                            supportJob = jobName;
-                        }
-                    }
-
-                    if (hasResDebuff)
-                    {
-                        allResurrectionData.Add(new Tuple<string, string, string, int>(
-                            playerName, classJob, supportJob, resurrectionCount));
+                        resurrectionCount = resStatus.Param;
+                        allResurrectionData.Add(new Tuple<string, string, string, int>(playerName, classJob, supportJob, resurrectionCount));
                     }
                 }
             }
 
-            var filteredData = targetCount.HasValue
-                ? allResurrectionData.Where(t => t.Item4 == targetCount.Value).ToList()
-                : allResurrectionData;
-
-            if (filteredData.Count > 0)
+            accessory.Method.SendChat($"/{channel} --- 开始复活检查 ---");
+            foreach (var count in targetCounts)
             {
-                var sortedData = filteredData.OrderBy(t => t.Item4).ToList();
-
-                string title = targetCount.HasValue
-                    ? $"--- 复活次数为 {targetCount.Value} 的玩家 ---"
-                    : "--- 复活次数检查 ---";
-                accessory.Method.SendChat($"/{channel} {title}");
-
-                foreach (var data in sortedData)
-                {
-                    await Task.Delay(10);
-                    accessory.Method.SendChat($"/{channel} {data.Item1} ({data.Item2} | {data.Item3}): {data.Item4}");
-                }
-            }
-            else
-            {
-                await Task.Delay(10);
-                string notFoundMessage = targetCount.HasValue
-                    ? $"未找到复活次数为 {targetCount.Value} 的玩家。"
-                    : "未找到有限制复活的玩家。";
-                accessory.Method.SendChat($"/{channel} {notFoundMessage}");
+                await Task.Delay(200);
+                await OutputResurrectionCheck(accessory, channel, allResurrectionData, count);
             }
         }
         catch (Exception ex)
         {
             accessory.Log.Error($"CheckResurrection error: {ex.Message}");
+        }
+    }
+    private static async Task OutputResurrectionCheck(ScriptAccessory accessory, string channel, List<Tuple<string, string, string, int>> allResurrectionData, int targetCount)
+    {
+        var filteredData = allResurrectionData.Where(t => t.Item4 == targetCount).ToList();
+        if (filteredData.Count > 0)
+        {
+            accessory.Method.SendChat($"/{channel} --- 复活次数为 {targetCount} 的玩家（共{filteredData.Count}人) ---");
+
+            foreach (var data in filteredData)
+            {
+                await Task.Delay(100);
+                accessory.Method.SendChat($"/{channel} {data.Item1} ({data.Item2} | {data.Item3})");
+            }
+        }
+        else
+        {
+            accessory.Method.SendChat($"/{channel} --- 未找到复活次数为 {targetCount} 的玩家 ---");
+        }
+    }
+
+    #endregion
+
+    #region 食物检查功能
+
+    [ScriptMethod(
+        name: "检查食物",
+        eventType: EventTypeEnum.Chat,
+        eventCondition: ["Type:regex:^(Echo|Party)$", "Message:食物检查"]
+    )]
+    public async void CheckFoodStatus(Event @event, ScriptAccessory accessory)
+    {
+        try
+        {
+            string channel = @event["Type"].ToLower();
+            if (!ReceivePartyCheckRequest && channel == "party") return;
+
+            int towerPlayerCount = 0;
+            var foodStatusData = new List<Tuple<string, string, string, string>>();
+
+            foreach (var gameObject in accessory.Data.Objects)
+            {
+                if (gameObject is IPlayerCharacter player
+                    && player.HasStatusAny([4262, 4263])
+                    )
+                {
+                    towerPlayerCount++;
+                    string playerName = player.Name.TextValue;
+                    string classJob = player.ClassJob.Value.Name.ToString();
+                    string supportJob = GetSupportJob(player);
+
+                    var foodStatus = player.StatusList.FirstOrDefault(s => s.StatusId == 48);
+
+                    if(foodStatus == null)
+                    {
+                        foodStatusData.Add(new Tuple<string, string, string, string>(playerName, classJob, supportJob, "未进食"));
+                    }
+                    else if(foodStatus.RemainingTime <= FoodRemainingTimeThreshold * 60)
+                    {
+                        foodStatusData.Add(new Tuple<string, string, string, string>(playerName, classJob, supportJob, $"食物剩余时间不足{Math.Ceiling(foodStatus.RemainingTime / 60)}分钟"));
+                    }
+                }
+            }
+
+            accessory.Method.SendChat($"/{channel} --- 开始检查食物不足{FoodRemainingTimeThreshold}分钟的玩家（塔内共{towerPlayerCount}人） ---");
+
+            if (foodStatusData.Count > 0)
+            {
+                var sortedData = foodStatusData.OrderBy(t => t.Item4).ToList();
+
+                foreach (var data in sortedData)
+                {
+                    await Task.Delay(100);
+                    accessory.Method.SendChat($"/{channel} {data.Item1} ({data.Item2} | {data.Item3}): {data.Item4}");
+                }
+            }
+            else
+            {
+                await Task.Delay(100);
+                accessory.Method.SendChat($"/{channel} 所有玩家食物时间符合要求");
+            }
+        }
+        catch (Exception ex)
+        {
+            accessory.Log.Error($"CheckFoodStatus error: {ex.Message}");
         }
     }
 
