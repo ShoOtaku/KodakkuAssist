@@ -71,5 +71,23 @@ namespace XSZYYS.Script.新月岛
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp2);
         }
+
+        // ==================== 新月女王 ====================
+        [ScriptMethod(name: "新月女王_王权闪光 (扇形预警)", eventType: EventTypeEnum.StartCasting, eventCondition: ["ActionId:regex:^(49494|49495)$"])]
+        public void 新月女王_王权闪光(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "新月女王_王权闪光_扇形";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(40);
+            dp.Radian = MathF.PI;              // 180°
+            dp.Rotation = @event.SourceRotation; // 以读条时面向为基准
+            dp.FixRotation = true;
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 5000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+        }
     }
 }
