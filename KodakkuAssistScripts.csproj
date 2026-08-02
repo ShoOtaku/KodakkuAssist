@@ -1,0 +1,38 @@
+<Project Sdk="Dalamud.CN.Net.Sdk/15.0.0">
+
+  <!--
+    可达鸭脚本（KodakkuAssist 脚本）开发项目。
+    - 使用国服 Dalamud CN SDK，自动引用 XIVLauncherCN 的 Dalamud 运行库（dev 目录）。
+    - 引用已安装的 KodakkuAssist 插件 DLL，脚本可直接使用插件提供的全部 API。
+    - 本项目的产出是脚本源码（Scripts/ 目录），供 KodakkuAssist 游戏内编译加载；
+      此处仅用于 IDE 智能感知与编译期错误检查，不打包为独立插件。
+  -->
+
+  <PropertyGroup>
+    <AssemblyName>KodakkuAssistScripts</AssemblyName>
+    <RootNamespace>KodakkuAssistScripts</RootNamespace>
+    <Version>0.1.0</Version>
+
+    <!-- 不需要 DalamudPackager 打包流程，仅编译校验 -->
+    <Use_DalamudPackager>false</Use_DalamudPackager>
+
+    <!-- 只编译 Scripts/ 下的脚本；ScriptParser/ 是独立工具项目，不参与本编译 -->
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+
+    <!-- KodakkuAssist.dll 整体声明了 RequiresPreviewFeatures，引用其 API 时关闭对应分析器 -->
+    <NoWarn>$(NoWarn);CA2252</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Scripts/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- KodakkuAssist 插件本体（含其私有依赖，按 HintPath 目录解析） -->
+    <Reference Include="KodakkuAssist">
+      <HintPath>$(AppData)\XIVLauncherCN\installedPlugins\KodakkuAssist\0.5.1.46\KodakkuAssist.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>
