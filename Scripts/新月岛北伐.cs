@@ -175,5 +175,19 @@ namespace XSZYYS.Script.新月岛
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
+
+        // ==================== 魔许德拉 ====================
+        [ScriptMethod(name: "魔许德拉 (圆形预警)", eventType: EventTypeEnum.StartCasting, eventCondition: ["ActionId:regex:^(47199|47200|47201|47202|47203)$"])]
+        public void 魔许德拉_圆形预警(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "魔许德拉_圆形";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(8);         // 半径 8
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 7000;
+
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+        }
     }
 }
