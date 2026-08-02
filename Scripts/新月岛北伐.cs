@@ -38,5 +38,38 @@ namespace XSZYYS.Script.新月岛
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
         }
+
+        [ScriptMethod(name: "雪石膏之剑_左右刀 (正反扇形预警)", eventType: EventTypeEnum.StartCasting, eventCondition: ["ActionId:regex:^(47166|47167)$"])]
+        public void 雪石膏之剑_左右刀(Event @event, ScriptAccessory accessory)
+        {
+            // 第一刀：读条面向方向，180° 扇形，持续 5000ms
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "雪石膏之剑_左右刀_正向";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(40);
+            dp.Radian = MathF.PI;              // 180°
+            dp.Rotation = @event.SourceRotation; // 以读条时面向为基准
+            dp.FixRotation = true;
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 5000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+
+            // 第二刀：5000ms 后在反方向绘制，180° 扇形，持续 2000ms
+            var dp2 = accessory.Data.GetDefaultDrawProperties();
+            dp2.Name = "雪石膏之剑_左右刀_反向";
+            dp2.Owner = @event.SourceId;
+            dp2.Scale = new Vector2(40);
+            dp2.Radian = MathF.PI;             // 180°
+            dp2.Rotation = @event.SourceRotation + MathF.PI; // 反方向
+            dp2.FixRotation = true;
+            dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.Delay = 5000;                  // 延迟 5000ms 出现
+            dp2.DestoryAt = 2000;              // 出现后持续 2000ms
+            dp2.ScaleMode |= ScaleMode.ByTime;
+
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp2);
+        }
     }
 }
