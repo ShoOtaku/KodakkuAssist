@@ -156,5 +156,35 @@ namespace XSZYYS.Script.新月岛
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
         }
+
+        // ==================== 惨白魔人 ====================
+        [ScriptMethod(name: "惨白魔人_扇形 (扇形预警)", eventType: EventTypeEnum.StartCasting, eventCondition: ["ActionId:49777"])]
+        public void 惨白魔人_扇形(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "惨白魔人_扇形";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(50);
+            dp.Radian = MathF.PI / 2;          // 90°
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 3000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+        }
+
+        [ScriptMethod(name: "惨白魔人_圆形 (圆形预警)", eventType: EventTypeEnum.StartCasting, eventCondition: ["ActionId:49779"])]
+        public void 惨白魔人_圆形(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "惨白魔人_圆形";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(30);        // 半径 30
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 3000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+        }
     }
 }
