@@ -2,5 +2,5 @@
 /.claude
 
 # .NET build output
-/bin/
-/obj/
+bin/
+obj/
