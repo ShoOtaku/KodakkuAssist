@@ -89,5 +89,35 @@ namespace XSZYYS.Script.新月岛
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
         }
+
+        // ==================== 妖艳魔花珊迪 ====================
+        [ScriptMethod(name: "妖艳魔花珊迪_十字 (十字AOE预警)", eventType: EventTypeEnum.StartCasting, eventCondition: ["ActionId:48945"])]
+        public void 妖艳魔花珊迪_十字(Event @event, ScriptAccessory accessory)
+        {
+            // 十字 = 两条交叉的直线：水平 + 垂直（旋转90°），整体相对实体面向偏移45°
+            var baseRotation = @event.SourceRotation + MathF.PI / 4; // 45°偏移
+
+            var dp1 = accessory.Data.GetDefaultDrawProperties();
+            dp1.Name = "妖艳魔花珊迪_十字_1";
+            dp1.Owner = @event.SourceId;
+            dp1.Scale = new Vector2(6, 30);     // 宽度6, 长度30
+            dp1.Rotation = baseRotation;
+            dp1.FixRotation = true;
+            dp1.Color = accessory.Data.DefaultDangerColor;
+            dp1.DestoryAt = 5000;
+            dp1.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp1);
+
+            var dp2 = accessory.Data.GetDefaultDrawProperties();
+            dp2.Name = "妖艳魔花珊迪_十字_2";
+            dp2.Owner = @event.SourceId;
+            dp2.Scale = new Vector2(6, 30);
+            dp2.Rotation = baseRotation + MathF.PI / 2; // 垂直方向
+            dp2.FixRotation = true;
+            dp2.Color = accessory.Data.DefaultDangerColor;
+            dp2.DestoryAt = 5000;
+            dp2.ScaleMode |= ScaleMode.ByTime;
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
+        }
     }
 }
