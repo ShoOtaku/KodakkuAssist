@@ -119,5 +119,20 @@ namespace XSZYYS.Script.新月岛
             dp2.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
         }
+
+        // ==================== 毒气团 ====================
+        [ScriptMethod(name: "毒气团 (圆形预警)", eventType: EventTypeEnum.StartCasting, eventCondition: ["ActionId:48950"])]
+        public void 毒气团_圆形预警(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "毒气团_圆形";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(10);        // 半径 10
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 5000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+        }
     }
 }
