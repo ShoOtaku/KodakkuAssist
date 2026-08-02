@@ -32,7 +32,6 @@ namespace XSZYYS.Script.新月岛
             dp.Radian = MathF.PI / 2;          // 90°
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 3000;
-            dp.ScaleMode |= ScaleMode.ByTime;  // 随时间填充的预警效果
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
         }
@@ -48,7 +47,6 @@ namespace XSZYYS.Script.新月岛
             dp.Radian = MathF.PI;              // 180°
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 5000;
-            dp.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
 
@@ -62,7 +60,6 @@ namespace XSZYYS.Script.新月岛
             dp2.Color = accessory.Data.DefaultDangerColor;
             dp2.Delay = 5000;                  // 延迟 5000ms 出现
             dp2.DestoryAt = 2000;              // 出现后持续 2000ms
-            dp2.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp2);
         }
@@ -78,7 +75,6 @@ namespace XSZYYS.Script.新月岛
             dp.Radian = MathF.PI;              // 180°
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 5000;
-            dp.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
         }
@@ -97,7 +93,6 @@ namespace XSZYYS.Script.新月岛
             dp1.Rotation = baseRotation;
             dp1.Color = accessory.Data.DefaultDangerColor;
             dp1.DestoryAt = 5000;
-            dp1.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp1);
 
             var dp2 = accessory.Data.GetDefaultDrawProperties();
@@ -107,7 +102,6 @@ namespace XSZYYS.Script.新月岛
             dp2.Rotation = baseRotation + MathF.PI / 2; // 垂直方向
             dp2.Color = accessory.Data.DefaultDangerColor;
             dp2.DestoryAt = 5000;
-            dp2.ScaleMode |= ScaleMode.ByTime;
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Straight, dp2);
         }
 
@@ -121,7 +115,6 @@ namespace XSZYYS.Script.新月岛
             dp.Scale = new Vector2(10);        // 半径 10
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 5000;
-            dp.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
@@ -136,7 +129,6 @@ namespace XSZYYS.Script.新月岛
             dp.Scale = new Vector2(9);         // 半径 9
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 4000;
-            dp.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
@@ -148,11 +140,10 @@ namespace XSZYYS.Script.新月岛
             dp.Name = "奇美拉_雷电咆哮_圆环";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(30);        // 外圈半径 30
-            dp.InnerScale = new Vector2(9);    // 内圈半径 9
+            dp.InnerScale = new Vector2(8);    // 内圈半径 9
             dp.Radian = MathF.PI * 2;          // 完整圆环
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 4000;
-            dp.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
         }
@@ -168,7 +159,6 @@ namespace XSZYYS.Script.新月岛
             dp.Radian = MathF.PI / 2;          // 90°
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 3000;
-            dp.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
         }
@@ -182,7 +172,6 @@ namespace XSZYYS.Script.新月岛
             dp.Scale = new Vector2(30);        // 半径 30
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 3000;
-            dp.ScaleMode |= ScaleMode.ByTime;
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
