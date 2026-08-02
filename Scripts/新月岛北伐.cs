@@ -91,7 +91,7 @@ namespace XSZYYS.Script.新月岛
         }
 
         // ==================== 妖艳魔花珊迪 ====================
-        [ScriptMethod(name: "妖艳魔花珊迪_十字 (十字AOE预警)", eventType: EventTypeEnum.StartCasting, eventCondition: ["ActionId:48945"])]
+        [ScriptMethod(name: "妖艳魔花珊迪_十字 (十字AOE预警)", eventType: EventTypeEnum.StartCasting, eventCondition: ["ActionId:regex:^(48945|48946|48947)$"])]
         public void 妖艳魔花珊迪_十字(Event @event, ScriptAccessory accessory)
         {
             // 十字 = 两条交叉的直线：水平 + 垂直（旋转90°），整体相对实体面向偏移45°
