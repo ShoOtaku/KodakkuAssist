@@ -134,5 +134,36 @@ namespace XSZYYS.Script.新月岛
 
             accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
         }
+
+        // ==================== 奇美拉 ====================
+        [ScriptMethod(name: "奇美拉_寒冰咆哮 (圆形预警)", eventType: EventTypeEnum.StartCasting, eventCondition: ["ActionId:48633"])]
+        public void 奇美拉_寒冰咆哮(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "奇美拉_寒冰咆哮_圆形";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(9);         // 半径 9
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 4000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Circle, dp);
+        }
+
+        [ScriptMethod(name: "奇美拉_雷电咆哮 (圆环预警)", eventType: EventTypeEnum.StartCasting, eventCondition: ["ActionId:regex:^(48634|48636)$"])]
+        public void 奇美拉_雷电咆哮(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "奇美拉_雷电咆哮_圆环";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(30);        // 外圈半径 30
+            dp.InnerScale = new Vector2(9);    // 内圈半径 9
+            dp.Radian = MathF.PI * 2;          // 完整圆环
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 4000;
+            dp.ScaleMode |= ScaleMode.ByTime;
+
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Donut, dp);
+        }
     }
 }
