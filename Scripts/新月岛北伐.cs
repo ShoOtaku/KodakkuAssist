@@ -89,7 +89,7 @@ namespace XSZYYS.Script.新月岛
             var dp1 = accessory.Data.GetDefaultDrawProperties();
             dp1.Name = "妖艳魔花珊迪_十字_1";
             dp1.Owner = @event.SourceId;
-            dp1.Scale = new Vector2(6, 30);     // 宽度6, 长度30
+            dp1.Scale = new Vector2(6, 60);     // 宽度6, 长度60
             dp1.Rotation = baseRotation;
             dp1.Color = accessory.Data.DefaultDangerColor;
             dp1.DestoryAt = 5000;
@@ -98,7 +98,7 @@ namespace XSZYYS.Script.新月岛
             var dp2 = accessory.Data.GetDefaultDrawProperties();
             dp2.Name = "妖艳魔花珊迪_十字_2";
             dp2.Owner = @event.SourceId;
-            dp2.Scale = new Vector2(6, 30);
+            dp2.Scale = new Vector2(6, 60);
             dp2.Rotation = baseRotation + MathF.PI / 2; // 垂直方向
             dp2.Color = accessory.Data.DefaultDangerColor;
             dp2.DestoryAt = 5000;
