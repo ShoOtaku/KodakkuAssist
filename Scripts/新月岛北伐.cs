@@ -65,14 +65,29 @@ namespace XSZYYS.Script.新月岛
         }
 
         // ==================== 新月女王 ====================
-        [ScriptMethod(name: "新月女王_王权闪光 (扇形预警)", eventType: EventTypeEnum.StartCasting, eventCondition: ["ActionId:regex:^(49494|49495)$"])]
-        public void 新月女王_王权闪光(Event @event, ScriptAccessory accessory)
+        [ScriptMethod(name: "新月女王_王权闪光_正 (扇形预警)", eventType: EventTypeEnum.StartCasting, eventCondition: ["ActionId:49494"])]
+        public void 新月女王_王权闪光_正(Event @event, ScriptAccessory accessory)
         {
             var dp = accessory.Data.GetDefaultDrawProperties();
-            dp.Name = "新月女王_王权闪光_扇形";
+            dp.Name = "新月女王_王权闪光_正_扇形";
             dp.Owner = @event.SourceId;
             dp.Scale = new Vector2(40);
             dp.Radian = MathF.PI;              // 180°
+            dp.Color = accessory.Data.DefaultDangerColor;
+            dp.DestoryAt = 5000;
+
+            accessory.Method.SendDraw(DrawModeEnum.Default, DrawTypeEnum.Fan, dp);
+        }
+
+        [ScriptMethod(name: "新月女王_王权闪光_反 (扇形预警)", eventType: EventTypeEnum.StartCasting, eventCondition: ["ActionId:49495"])]
+        public void 新月女王_王权闪光_反(Event @event, ScriptAccessory accessory)
+        {
+            var dp = accessory.Data.GetDefaultDrawProperties();
+            dp.Name = "新月女王_王权闪光_反_扇形";
+            dp.Owner = @event.SourceId;
+            dp.Scale = new Vector2(40);
+            dp.Radian = MathF.PI;              // 180°
+            dp.Rotation = MathF.PI;            // 反方向（-180°）
             dp.Color = accessory.Data.DefaultDangerColor;
             dp.DestoryAt = 5000;
 
